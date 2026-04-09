@@ -32,31 +32,33 @@ export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut 
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!shortcut || result) return;
+    const key = e.key.toUpperCase();
+
+    // Ignore standalone modifier presses (Ctrl, Shift, Alt alone)
+    if (["CONTROL", "SHIFT", "ALT", "META"].includes(key)) return;
+
     e.preventDefault();
 
-    const keys: string[] = [];
-    if (e.ctrlKey || e.metaKey) keys.push("Ctrl");
-    if (e.shiftKey) keys.push("Shift");
-    if (e.altKey) keys.push("Alt");
+    const modifiers: string[] = [];
+    if (e.ctrlKey || e.metaKey) modifiers.push("Ctrl");
+    if (e.shiftKey) modifiers.push("Shift");
+    if (e.altKey) modifiers.push("Alt");
 
-    const key = e.key.toUpperCase();
-    if (!["CONTROL", "SHIFT", "ALT", "META"].includes(key)) {
-      keys.push(key);
+    // Only evaluate combos that have a modifier + letter (like Ctrl+B)
+    // This prevents standalone letter presses from triggering
+    if (modifiers.length === 0) return;
+
+    const combo = [...modifiers, key].join("+");
+    setUserInput([...modifiers, key]);
+
+    const expected = shortcut.keys.toUpperCase();
+    if (combo === expected) {
+      setResult("correct");
+      setScore(s => s + 1);
+    } else {
+      setResult("wrong");
     }
-
-    if (keys.length > 1 || (keys.length === 1 && !["CTRL", "SHIFT", "ALT"].includes(keys[0]))) {
-      setUserInput(keys);
-      const userCombo = keys.join("+");
-      const expected = shortcut.keys.toUpperCase();
-
-      if (userCombo === expected) {
-        setResult("correct");
-        setScore(s => s + 1);
-      } else {
-        setResult("wrong");
-      }
-      setTotal(t => t + 1);
-    }
+    setTotal(t => t + 1);
   }, [shortcut, result]);
 
   useEffect(() => {
