@@ -57,7 +57,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/image%205.png",
+        src: "/images/m5/image%205.webp",
         description: "Artificial Intelligence overview",
       },
       {
@@ -145,7 +145,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/machine-learning.png",
+        src: "/images/m5/machine-learning.webp",
         description: "Machine Learning overview",
       },
       {
@@ -233,7 +233,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/data-analytics.png",
+        src: "/images/m5/data-analytics.webp",
         description: "Data Analytics overview",
       },
       {
@@ -301,7 +301,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/image%2020.png",
+        src: "/images/m5/image%2020.webp",
         description: "Cloud Computing overview",
       },
       {
@@ -387,7 +387,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/blockchain.png",
+        src: "/images/m5/blockchain.webp",
         description: "Blockchain overview",
       },
       {
@@ -451,7 +451,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/image%2030.png",
+        src: "/images/m5/image%2030.webp",
         description: "Virtual Reality overview",
       },
       {
@@ -536,7 +536,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/augmented-reality.png",
+        src: "/images/m5/augmented-reality.webp",
         description: "Augmented Reality overview",
       },
       {
@@ -606,7 +606,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/iot.png",
+        src: "/images/m5/iot.webp",
         description: "Internet of Things overview",
       },
       {
@@ -670,7 +670,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/generative-ai.png",
+        src: "/images/m5/generative-ai.webp",
         description: "Generative AI overview",
       },
       {
@@ -738,7 +738,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/ethical-ai.png",
+        src: "/images/m5/ethical-ai.webp",
         description: "Ethical AI overview",
       },
       {
