@@ -4,62 +4,65 @@ export const topics: Topic[] = [
   // ─── Topic 1 ───
   {
     id: 1,
-    title: "Editing vs Word Processing — What's the Difference?",
-    time: "~4 mins",
+    title: "Editing vs Word Processing",
+    time: "~3 mins",
     badges: [{ text: "Foundation", type: "star" }],
-    hook: `You've been using Notepad and Word your whole life. But here's a question most people get wrong on exams: <strong>Are they the same thing?</strong> Nope. Not even close. One is a blank wall. The other is an interior designer's dream studio.`,
+    hook: `Think about Notepad on your computer. Now think about Microsoft Word. They both let you type, right? <strong>But are they the same thing? Nope! One is a bicycle, the other is a sports car.</strong> Let's find out the difference.`,
     content: [
       {
+        type: "image",
+        src: "/images/m2/office-automation.webp",
+        description: "Text Editor (plain text) vs Word Processor (formatted document) side-by-side comparison",
+      },
+      {
         type: "text",
-        html: `Before fancy software existed, "editing" just meant <mark>typing and changing text</mark> — nothing more. Word processing added superpowers on top: formatting, images, tables, spell-check, headers, footers, and print layouts. Let's break it down.`,
+        html: `"Editing" means you can type words and delete words. That's it. <mark>Word processing</mark> means you can also make text bold, add pictures, create tables, check spelling, and make your document look amazing.`,
       },
       {
         type: "analogy",
-        label: "\u270f\ufe0f Pencil vs Art Studio",
-        html: `<strong>A text editor is a pencil.</strong> You can write. You can erase. That's it. No colors, no stickers, no fancy borders.<br/><br/><strong>A word processor is an entire art studio.</strong> You still write — but now you have colors, fonts, rulers, stickers (images), tables, templates, and a printer-ready layout. Same paper, wildly different tools.`,
+        label: "Pencil vs Art Studio",
+        html: `<strong>A text editor is like a pencil.</strong> You can write and erase. Nothing else.<br/><br/><strong>A word processor is like an entire art studio.</strong> You still write, but now you have colours, stickers, rulers, fancy fonts, and a way to print everything beautifully.`,
       },
       {
         type: "cards",
         columns: 2,
         items: [
           {
-            icon: "\ud83d\udcdd",
-            title: "Text Editor (Editing)",
-            description: "Plain text only. No formatting, no images, no tables. Just raw characters. Examples: Notepad, nano, vim. Used for code and quick notes.",
-            tag: "Simple \u00b7 Plain text only",
+            icon: "\u270f\ufe0f",
+            title: "Text Editor (Notepad)",
+            description: "Plain text only. No bold, no pictures, no colours. Just letters on a screen. Good for quick notes or writing code.",
+            tag: "Simple \u00b7 .txt files",
             tagColor: "amber",
           },
           {
             icon: "\ud83d\udcc4",
-            title: "Word Processor (Word Processing)",
-            description: "Full formatting: bold, italic, fonts, colors, images, tables, headers, footers, page numbers, spell-check, print layout. Examples: MS Word, Google Docs.",
-            tag: "Powerful \u00b7 Rich formatting",
+            title: "Word Processor (MS Word)",
+            description: "Bold, italic, fonts, colours, images, tables, spell-check, page numbers, headers, footers, and print layouts. The full package!",
+            tag: "Powerful \u00b7 .docx files",
             tagColor: "blue",
           },
         ],
       },
       {
         type: "table",
-        headers: ["Feature", "Text Editor (Notepad)", "Word Processor (MS Word)"],
+        headers: ["Can you...", "Notepad (Editor)", "MS Word (Word Processor)"],
         rows: [
-          { cells: ["Bold / Italic / Underline", "\u274c No", "\u2705 Yes"] },
-          { cells: ["Insert Images", "\u274c No", "\u2705 Yes"] },
-          { cells: ["Create Tables", "\u274c No", "\u2705 Yes"] },
-          { cells: ["Spell Check", "\u274c No", "\u2705 Yes"] },
-          { cells: ["Page Layout & Print Preview", "\u274c No", "\u2705 Yes"] },
-          { cells: ["Headers & Footers", "\u274c No", "\u2705 Yes"] },
-          { cells: ["File Format", ".txt (plain)", ".docx (rich)"] },
+          { cells: ["Make text Bold or Italic?", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Add pictures?", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Create tables?", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Check spelling?", "\u274c No", "\u2705 Yes"] },
+          { cells: ["See how it looks when printed?", "\u274c No", "\u2705 Yes"] },
         ],
       },
       {
         type: "callout",
         variant: "red",
-        html: `<strong>\u274c Common exam mistake:</strong> Students say "editing and word processing are the same." They are NOT. Editing = basic text changes. Word processing = editing PLUS formatting, layout, images, tables, spell-check, and everything else. Word processing <em>includes</em> editing, but editing alone is NOT word processing.`,
+        html: `<strong>Common exam mistake:</strong> Students write "editing and word processing are the same thing." They are NOT. Word processing <em>includes</em> editing, but editing alone is NOT word processing. It's like saying "walking" and "running" are the same \u2014 running includes walking, but walking is not running!`,
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Why does this matter?</strong> When your professor asks you to submit a "word-processed document," they want formatted text with proper headings, spacing, and layout — NOT a plain .txt file from Notepad!`,
+        html: `<strong>Exam tip:</strong> If a question says "submit a word-processed document," your teacher wants a formatted .docx file from Word \u2014 NOT a plain .txt file from Notepad!`,
       },
     ],
   },
@@ -67,18 +70,43 @@ export const topics: Topic[] = [
   // ─── Topic 2 ───
   {
     id: 2,
-    title: "MS Word — Text Editing & Formatting",
-    time: "~6 mins",
+    title: "MS Word \u2014 Text Editing & Formatting",
+    time: "~5 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `Microsoft Word is the most used word processor on the planet. Your assignments, resumes, letters, reports — they all live here. But most people only use 10% of what Word can do. <strong>Let's unlock the other 90%.</strong>`,
+    hook: `Microsoft Word is where your homework, essays, and assignments come to life. But most people only know how to type in it. <strong>Let's learn how to make your documents look professional in just a few clicks!</strong>`,
     content: [
       {
         type: "text",
-        html: `MS Word has a <mark>Ribbon interface</mark> — that strip of icons at the top organized into tabs like Home, Insert, Layout, etc. The Home tab is where 80% of your formatting lives.`,
+        html: `When you open Word, you see a bar of buttons at the top called the <mark>Ribbon</mark>. It has tabs like Home, Insert, and Layout. The Home tab is where most of the magic happens.`,
       },
       {
         type: "image",
-        description: "MS Word Ribbon interface showing Home tab with Font group, Paragraph group, and Styles group highlighted",
+        description: "MS Word Ribbon showing Home tab with Font group (B, I, U buttons), Paragraph group (alignment buttons), and Styles group highlighted",
+      },
+      {
+        type: "text",
+        html: `<strong>Here's the golden rule of formatting:</strong> You must SELECT the text first, THEN apply formatting. If you don't select anything, nothing will change!`,
+      },
+      {
+        type: "steps",
+        items: [
+          {
+            title: "Step 1: Select Your Text",
+            description: "Click and drag your mouse over the words you want to format. They will turn blue (highlighted). You can also press Ctrl+A to select everything.",
+          },
+          {
+            title: "Step 2: Make It Bold, Italic, or Underlined",
+            description: "Press Ctrl+B for Bold, Ctrl+I for Italic, or Ctrl+U for Underline. The letter IS the hint! B = Bold, I = Italic, U = Underline.",
+          },
+          {
+            title: "Step 3: Change the Font or Size",
+            description: "Use the font dropdown on the Home tab to pick a font (like Arial or Times New Roman). Use the size dropdown to make text bigger or smaller (12 is normal, 14 is a heading).",
+          },
+          {
+            title: "Step 4: Check with Print Preview",
+            description: "Press Ctrl+P to see exactly how your document will look on paper before you print it.",
+          },
+        ],
       },
       {
         type: "cards",
@@ -87,63 +115,46 @@ export const topics: Topic[] = [
           {
             icon: "\ud83c\udd71\ufe0f",
             title: "Font Formatting",
-            description: "Change font name (Arial, Times New Roman), size (12pt, 14pt), color, Bold (Ctrl+B), Italic (Ctrl+I), Underline (Ctrl+U).",
+            description: "Change the font name, size, colour, or make it bold/italic/underlined. All in the Home tab, Font group.",
             tag: "Home \u2192 Font group",
           },
           {
             icon: "\u2261",
             title: "Paragraph Formatting",
-            description: "Alignment (Left, Center, Right, Justify), Line spacing (1.0, 1.5, 2.0), Bullets, Numbering, Indentation.",
+            description: "Change alignment (left, centre, right), add bullet points, change line spacing. Home tab, Paragraph group.",
             tag: "Home \u2192 Paragraph group",
           },
           {
             icon: "\ud83c\udfa8",
             title: "Styles",
-            description: "Pre-built formatting combos: Heading 1, Heading 2, Title, Subtitle. One click = consistent look across the whole document.",
+            description: "One-click formatting combos like 'Heading 1' or 'Title'. Makes your whole document look consistent without doing each thing manually.",
             tag: "Home \u2192 Styles group",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>The 4 types of text alignment — know them cold:</strong>`,
+        html: `<strong>The 4 alignments \u2014 where does your text sit on the page?</strong>`,
       },
       {
         type: "table",
-        headers: ["Alignment", "Shortcut", "What It Does", "Used For"],
+        headers: ["Alignment", "Shortcut", "What It Looks Like", "When to Use It"],
         rows: [
-          { cells: ["Left Align", "Ctrl + L", "Text starts from the left edge", "Body text, paragraphs (default)"] },
-          { cells: ["Center Align", "Ctrl + E", "Text sits in the middle", "Titles, headings, invitations"] },
-          { cells: ["Right Align", "Ctrl + R", "Text pushed to the right edge", "Dates, page numbers"] },
-          { cells: ["Justify", "Ctrl + J", "Text stretches to fill both edges evenly", "Formal reports, newspapers, books"] },
+          { cells: ["Left", "Ctrl + L", "Text starts from the left side", "Normal paragraphs (this is the default)"] },
+          { cells: ["Centre", "Ctrl + E", "Text sits in the middle", "Titles, headings, invitations"] },
+          { cells: ["Right", "Ctrl + R", "Text pushed to the right side", "Dates, page numbers"] },
+          { cells: ["Justify", "Ctrl + J", "Text stretches to fill both sides evenly", "Formal reports, newspapers"] },
         ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>Keyboard shortcuts that save your life:</strong> Ctrl+B = Bold \u00b7 Ctrl+I = Italic \u00b7 Ctrl+U = Underline \u00b7 Ctrl+S = Save \u00b7 Ctrl+Z = Undo \u00b7 Ctrl+Y = Redo \u00b7 Ctrl+A = Select All \u00b7 Ctrl+C = Copy \u00b7 Ctrl+V = Paste. Memorize these. They work in almost every application.`,
-      },
-      {
-        type: "steps",
-        items: [
-          {
-            title: "Select the text \ud83d\udc46",
-            description: "Click and drag, or use Ctrl+A to select everything. You MUST select text before formatting it.",
-          },
-          {
-            title: "Apply formatting \ud83c\udfa8",
-            description: "Use the Ribbon or keyboard shortcuts. Bold, change font, adjust size, pick a color — whatever you need.",
-          },
-          {
-            title: "Check your work \ud83d\udc40",
-            description: "Use Print Preview (Ctrl+P) to see exactly how it will look on paper before printing.",
-          },
-        ],
+        html: `<strong>Memory trick for shortcuts:</strong> Ctrl+B = <strong>B</strong> for Bold \u00b7 Ctrl+I = <strong>I</strong> for Italic \u00b7 Ctrl+U = <strong>U</strong> for Underline \u00b7 Ctrl+S = <strong>S</strong> for Save \u00b7 Ctrl+Z = Undo (think "Z for Zap away mistakes!") \u00b7 Ctrl+C = Copy \u00b7 Ctrl+V = Paste (V looks like a down arrow \u2014 "paste it down!"). These work in almost EVERY app!`,
       },
       {
         type: "callout",
-        variant: "purple",
-        html: `<strong>Pro tip — Format Painter \ud83c\udfa8:</strong> Select formatted text \u2192 Click the Format Painter brush \u2192 Drag across other text. It copies ALL formatting (font, size, color, spacing) instantly. Double-click the brush to paint multiple sections!`,
+        variant: "blue",
+        html: `<strong>Exam tip \u2014 Format Painter:</strong> Want to copy formatting from one place to another? Select the formatted text \u2192 click the paintbrush icon on the Home tab \u2192 drag across the text you want to format. Done! It copies all the formatting instantly.`,
       },
     ],
   },
@@ -151,74 +162,94 @@ export const topics: Topic[] = [
   // ─── Topic 3 ───
   {
     id: 3,
-    title: "MS Word — Images & Tables",
+    title: "MS Word \u2014 Images & Tables",
     time: "~5 mins",
     badges: [],
-    hook: `A wall of text is boring. Nobody wants to read a 10-page document that's just paragraphs. <strong>Images make it visual. Tables make it organized.</strong> These two features turn a boring document into a professional one.`,
+    hook: `Nobody wants to read a 5-page wall of text. Imagine a school project that's JUST paragraphs \u2014 boring! <strong>Pictures make it visual. Tables make it organised.</strong> Here's how to add both.`,
     content: [
       {
         type: "text",
-        html: `Both images and tables live under the <mark>Insert tab</mark> on the Ribbon. This tab is your go-to for adding anything that isn't plain text.`,
-      },
-      {
-        type: "cards",
-        columns: 2,
-        items: [
-          {
-            icon: "\ud83d\uddbc\ufe0f",
-            title: "Inserting Images",
-            description: "Insert \u2192 Pictures. Choose from your device or online. Resize using corner handles (keeps proportion). Use text wrapping to control how text flows around the image.",
-            tag: "Insert tab \u2192 Pictures",
-          },
-          {
-            icon: "\ud83d\udcca",
-            title: "Creating Tables",
-            description: "Insert \u2192 Table. Choose rows & columns with the grid, or use 'Insert Table' for exact numbers. Click inside any cell to type data.",
-            tag: "Insert tab \u2192 Table",
-          },
-        ],
+        html: `Both images and tables are added from the <mark>Insert tab</mark> on the Ribbon. Think of the Insert tab as your "add stuff" button.`,
       },
       {
         type: "text",
-        html: `<strong>Image Text Wrapping Options — how text behaves around your picture:</strong>`,
-      },
-      {
-        type: "table",
-        headers: ["Wrapping Style", "What Happens", "Best For"],
-        rows: [
-          { cells: ["In Line with Text", "Image sits inside the text like a giant character", "Small icons in a sentence"] },
-          { cells: ["Square", "Text wraps around the image in a square box", "Most common \u2014 photos in reports"] },
-          { cells: ["Tight", "Text wraps closely around the image shape", "Irregular-shaped images"] },
-          { cells: ["Behind Text", "Image sits behind the text like a watermark", "Background images, letterheads"] },
-          { cells: ["In Front of Text", "Image floats on top, covering text below", "Overlay effects, logos"] },
-        ],
+        html: `<strong>Adding a Picture to Your Document:</strong>`,
       },
       {
         type: "steps",
         items: [
           {
-            title: "Insert a Table \ud83d\udcca",
-            description: "Go to Insert \u2192 Table. Select the number of rows and columns you need from the grid (e.g., 3\u00d74 = 3 columns, 4 rows).",
+            title: "Step 1: Click the Insert Tab",
+            description: "Go to the Insert tab at the top of the screen. You'll see buttons for Pictures, Table, Shapes, and more.",
           },
           {
-            title: "Enter Your Data \u2328\ufe0f",
-            description: "Click inside each cell and type. Use Tab to jump to the next cell. Shift+Tab to go back.",
+            title: "Step 2: Click Pictures",
+            description: "Choose 'This Device' to pick a photo from your computer, or 'Online Pictures' to search the internet.",
           },
           {
-            title: "Format the Table \ud83c\udfa8",
-            description: "Use Table Design tab for borders, shading, and styles. Use Table Layout tab to merge cells, split cells, or adjust row height.",
+            title: "Step 3: Resize from the CORNERS",
+            description: "Drag the corner handles to make the image bigger or smaller. NEVER drag from the sides \u2014 that squishes and stretches the picture!",
+          },
+          {
+            title: "Step 4: Set Text Wrapping",
+            description: "Click the image, then the small layout button that appears. Choose 'Square' so text wraps neatly around your picture. This is the most common option.",
+          },
+        ],
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\u25fb\ufe0f",
+            title: "Square Wrapping",
+            description: "Text wraps around the image in a neat box shape. Best for most school projects and reports.",
+            tag: "Most common choice",
+          },
+          {
+            icon: "\ud83d\uddbc\ufe0f",
+            title: "Behind Text",
+            description: "Image sits behind your words like a watermark or background. Text goes right over it.",
+            tag: "For backgrounds",
+          },
+          {
+            icon: "\ud83d\udcc4",
+            title: "In Line with Text",
+            description: "Image acts like a giant letter sitting inside your paragraph. Moves with the text around it.",
+            tag: "For small icons",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>Adding a Table to Your Document:</strong>`,
+      },
+      {
+        type: "steps",
+        items: [
+          {
+            title: "Step 1: Insert \u2192 Table",
+            description: "Go to Insert tab \u2192 click Table. A grid appears. Hover over it to choose how many columns and rows you want (for example, 3 across and 4 down).",
+          },
+          {
+            title: "Step 2: Type in Each Cell",
+            description: "Click inside a cell (box) and type. Press the Tab key to jump to the next cell. Press Shift+Tab to go back.",
+          },
+          {
+            title: "Step 3: Make It Look Good",
+            description: "Click your table, then use the Table Design tab to add borders, colours, and styles. Use Table Layout tab to merge cells or change row height.",
           },
         ],
       },
       {
         type: "callout",
-        variant: "amber",
-        html: `<strong>Merge Cells:</strong> Select multiple cells \u2192 Table Layout \u2192 Merge Cells. This combines them into one big cell. Perfect for table headers that span multiple columns. <strong>Split Cells</strong> does the opposite \u2014 divides one cell into many.`,
+        variant: "red",
+        html: `<strong>Common exam mistake:</strong> Students forget the difference between Merge Cells and Split Cells. <strong>Merge</strong> = join several cells into one big cell (great for table headings). <strong>Split</strong> = divide one cell into smaller cells. They're opposites!`,
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Resize images properly:</strong> ALWAYS drag from the <mark>corner handles</mark>, not the side handles. Corner handles maintain the image's proportions. Side handles stretch and distort. Nobody wants a squished photo in their assignment!`,
+        html: `<strong>Exam tip:</strong> Always resize images from the <mark>corner handles</mark> to keep them looking normal. Side handles stretch the image and make it look weird. If a question asks "how to maintain image proportions," the answer is corner handles!`,
       },
     ],
   },
@@ -226,19 +257,19 @@ export const topics: Topic[] = [
   // ─── Topic 4 ───
   {
     id: 4,
-    title: "MS Excel — Creating Worksheets",
+    title: "MS Excel \u2014 Creating Worksheets",
     time: "~5 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `If Word is for writing, <strong>Excel is for numbers.</strong> Budgets, attendance, marks, invoices, data analysis — anything with numbers and calculations lives in Excel. It's a giant grid, and that grid is more powerful than you think.`,
+    hook: `If Word is for writing essays, <strong>Excel is for anything with numbers.</strong> Your marks, a monthly budget, attendance records, or a list of scores \u2014 they all belong in Excel. Think of it as a giant calculator notebook!`,
     content: [
       {
         type: "analogy",
-        label: "\ud83d\udcca Grid Paper Analogy",
-        html: `Imagine a massive sheet of graph paper — but every tiny square is smart. It can hold text, numbers, dates, or even a formula that calculates itself. That's Excel. <strong>Columns go A, B, C</strong> (left to right). <strong>Rows go 1, 2, 3</strong> (top to bottom). Where they cross = a <strong>Cell</strong>. Cell B3 = column B, row 3.`,
+        label: "Giant Calculator Notebook",
+        html: `Imagine a huge sheet of graph paper, but each little box is super smart. It can hold a number, a word, a date, or even a formula that calculates things for you. That's Excel! <strong>Columns go left-to-right: A, B, C.</strong> <strong>Rows go top-to-bottom: 1, 2, 3.</strong> Where a column and row meet, that's called a <strong>Cell</strong>. Cell B3 means column B, row 3.`,
       },
       {
         type: "image",
-        description: "Excel spreadsheet showing Column letters (A, B, C), Row numbers (1, 2, 3), a Cell reference (B3 highlighted), and the Name Box showing 'B3'",
+        description: "Excel spreadsheet showing Column letters (A, B, C), Row numbers (1, 2, 3), a Cell highlighted at B3, and the Name Box showing 'B3'",
       },
       {
         type: "cards",
@@ -247,44 +278,59 @@ export const topics: Topic[] = [
           {
             icon: "\ud83d\udfe9",
             title: "Cell",
-            description: "The intersection of a column and row. Each cell has a unique address like A1, B5, C12. This is where you type data.",
-            tag: "The basic unit",
+            description: "One single box where you type something. Every cell has an address like A1, B5, or C12 \u2014 like a seat number in a cinema.",
+            tag: "The basic building block",
           },
           {
-            icon: "\u2194\ufe0f",
-            title: "Column",
-            description: "Vertical strip labeled with letters: A, B, C... Z, AA, AB. Excel has 16,384 columns!",
-            tag: "Letters \u2192 A to XFD",
+            icon: "\ud83d\udcca",
+            title: "Worksheet (Sheet)",
+            description: "One full page of cells. You can see sheet tabs at the bottom of the screen. Think of it like one page in a notebook.",
+            tag: "One tab = one sheet",
           },
           {
-            icon: "\u2195\ufe0f",
-            title: "Row",
-            description: "Horizontal strip labeled with numbers: 1, 2, 3... Excel has over 1 million rows per sheet!",
-            tag: "Numbers \u2192 1 to 1,048,576",
+            icon: "\ud83d\udcd3",
+            title: "Workbook",
+            description: "The entire Excel file. It can contain many sheets inside it. Think of it like the whole notebook containing many pages.",
+            tag: "The whole file",
           },
         ],
+      },
+      {
+        type: "text",
+        html: `<strong>Key terms you need to know:</strong>`,
       },
       {
         type: "table",
-        headers: ["Excel Term", "What It Is", "Real-World Analogy"],
+        headers: ["Term", "What It Means", "Example"],
         rows: [
-          { cells: ["Cell", "One single box (e.g., A1)", "One square on graph paper"] },
-          { cells: ["Worksheet (Sheet)", "One full grid of cells \u2014 one tab at the bottom", "One page of graph paper"] },
-          { cells: ["Workbook", "The entire Excel file containing multiple sheets", "The whole notebook"] },
-          { cells: ["Cell Reference", "The cell's address like B5 or D12", "The seat number in a movie hall"] },
-          { cells: ["Range", "A group of cells like A1:A10 or B2:D5", "A block of seats together"] },
-          { cells: ["Active Cell", "The cell currently selected (blue border)", "The seat you're sitting in right now"] },
+          { cells: ["Cell Reference", "The address of a cell", "B5, D12, A1"] },
+          { cells: ["Range", "A group of cells together", "A1:A10 (cells A1 through A10)"] },
+          { cells: ["Active Cell", "The cell you've clicked on right now (has a blue border)", "Whatever cell is selected"] },
+          { cells: ["Column", "A vertical strip labelled with letters", "Column A, Column B, Column C"] },
+          { cells: ["Row", "A horizontal strip labelled with numbers", "Row 1, Row 2, Row 3"] },
         ],
       },
       {
-        type: "callout",
-        variant: "dark",
-        html: `<strong>Data types in cells:</strong> A cell can hold <mark>Numbers</mark> (100, 3.14), <mark>Text/Labels</mark> ("Student Name"), <mark>Dates</mark> (09/04/2026), or <mark>Formulas</mark> (=A1+B1). Excel automatically detects the type based on what you enter.`,
+        type: "steps",
+        items: [
+          {
+            title: "Step 1: Open Excel and Click a Cell",
+            description: "Click on any cell to make it the active cell. You'll see its address in the Name Box at the top-left (e.g., A1).",
+          },
+          {
+            title: "Step 2: Type Your Data",
+            description: "Just start typing! Press Enter to move down to the next row, or Tab to move right to the next column.",
+          },
+          {
+            title: "Step 3: Format Your Cells",
+            description: "Right-click a cell \u2192 Format Cells. You can change the number format (currency, percentage, date), add borders, or change colours.",
+          },
+        ],
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Formatting cells:</strong> Right-click \u2192 Format Cells to change number format (currency, percentage, date), font, alignment, borders, and fill color. Use the Home tab for quick formatting like Bold, Merge & Center, and cell borders.`,
+        html: `<strong>Exam tip:</strong> A cell can hold 4 types of data: <mark>Numbers</mark> (100, 3.14), <mark>Text</mark> ("Student Name"), <mark>Dates</mark> (09/04/2026), or <mark>Formulas</mark> (=A1+B1). Excel figures out the type automatically based on what you type.`,
       },
     ],
   },
@@ -292,34 +338,38 @@ export const topics: Topic[] = [
   // ─── Topic 5 ───
   {
     id: 5,
-    title: "MS Excel — Formulas & Functions",
-    time: "~7 mins",
+    title: "MS Excel \u2014 Formulas & Functions",
+    time: "~6 mins",
     badges: [{ text: "High yield", type: "star" }, { text: "Most tested", type: "hot" }],
-    hook: `This is <strong>the</strong> reason Excel exists. You don't open Excel to type text — you open it to <em>calculate</em>. Formulas turn Excel from a fancy table into a supercharged calculator that updates itself automatically. <strong>Change one number and everything recalculates instantly.</strong>`,
+    hook: `THIS is the reason Excel exists. You don't open Excel just to type numbers in boxes \u2014 you open it to <strong>calculate things automatically.</strong> Change one number and everything updates by itself. That's the superpower!`,
     content: [
       {
         type: "text",
-        html: `Every formula in Excel starts with an <mark>equals sign (=)</mark>. Without it, Excel treats your entry as plain text, not a calculation. Remember: <strong>= is the magic key.</strong>`,
+        html: `Every formula starts with an <mark>equals sign (=)</mark>. Without it, Excel thinks you're just typing regular text. The = sign is like saying "Hey Excel, do some maths!"`,
       },
       {
         type: "callout",
         variant: "red",
-        html: `<strong>\u274c #1 exam mistake:</strong> Forgetting the = sign. Typing "A1+B1" gives you the text "A1+B1". Typing "<mark>=A1+B1</mark>" gives you the actual sum. The equals sign tells Excel: "This is a formula, calculate it!"`,
+        html: `<strong>The #1 exam mistake EVER:</strong> Forgetting the = sign! If you type A1+B1, Excel shows the text "A1+B1". If you type <mark>=A1+B1</mark>, Excel actually adds the numbers. Always start with =`,
+      },
+      {
+        type: "text",
+        html: `<strong>Basic maths operators \u2014 the building blocks:</strong>`,
       },
       {
         type: "table",
-        headers: ["Operator", "Meaning", "Example", "Result (if A1=10, B1=3)"],
+        headers: ["Symbol", "What It Does", "Example Formula", "If A1=10 and B1=3, Result ="],
         rows: [
-          { cells: ["+", "Addition", "=A1+B1", "13"] },
-          { cells: ["-", "Subtraction", "=A1-B1", "7"] },
-          { cells: ["*", "Multiplication", "=A1*B1", "30"] },
-          { cells: ["/", "Division", "=A1/B1", "3.33"] },
-          { cells: ["^", "Power (exponent)", "=A1^2", "100"] },
+          { cells: ["+", "Adds", "=A1+B1", "13"] },
+          { cells: ["-", "Subtracts", "=A1-B1", "7"] },
+          { cells: ["*", "Multiplies", "=A1*B1", "30"] },
+          { cells: ["/", "Divides", "=A1/B1", "3.33"] },
+          { cells: ["^", "Power (exponent)", "=A1^2", "100 (10 squared)"] },
         ],
       },
       {
         type: "text",
-        html: `<strong>Built-in Functions — the power tools:</strong> Functions are pre-built formulas. Instead of typing =A1+A2+A3+A4+A5, just use <mark>=SUM(A1:A5)</mark>. Less typing, zero errors.`,
+        html: `<strong>Built-in Functions \u2014 shortcuts for common maths:</strong> Instead of typing =A1+A2+A3+A4+A5, just type <mark>=SUM(A1:A5)</mark>. Way less typing!`,
       },
       {
         type: "cards",
@@ -328,50 +378,67 @@ export const topics: Topic[] = [
           {
             icon: "\u2795",
             title: "SUM",
-            description: "Adds all numbers in a range. =SUM(A1:A10) adds cells A1 through A10. The most used function in Excel.",
-            tag: "=SUM(range)",
+            description: "Adds up all numbers in a range. =SUM(A1:A10) adds cells A1 through A10 together. The most used function ever!",
+            tag: "=SUM(A1:A10)",
           },
           {
             icon: "\ud83d\udcca",
             title: "AVERAGE",
-            description: "Calculates the mean. =AVERAGE(B1:B20) gives the average of 20 values. Perfect for marks and scores.",
-            tag: "=AVERAGE(range)",
+            description: "Finds the average (mean). =AVERAGE(B1:B20) adds them all up and divides by how many there are. Great for class marks!",
+            tag: "=AVERAGE(B1:B20)",
           },
           {
             icon: "\ud83d\udd22",
             title: "COUNT",
-            description: "Counts how many cells contain numbers. =COUNT(A1:A50) tells you how many entries have numeric data.",
-            tag: "=COUNT(range)",
+            description: "Counts how many cells have numbers in them. =COUNT(A1:A50) tells you how many entries exist.",
+            tag: "=COUNT(A1:A50)",
           },
           {
             icon: "\u2b06\ufe0f",
             title: "MAX",
-            description: "Returns the highest value. =MAX(C1:C100) finds the top score. Great for finding the best mark in a class.",
+            description: "Finds the biggest number. =MAX(C1:C100) finds the highest score in the class. Who got the top mark?",
             tag: "=MAX(range)",
           },
           {
             icon: "\u2b07\ufe0f",
             title: "MIN",
-            description: "Returns the lowest value. =MIN(C1:C100) finds the minimum score. Opposite of MAX.",
+            description: "Finds the smallest number. =MIN(C1:C100) finds the lowest score. Opposite of MAX.",
             tag: "=MIN(range)",
           },
           {
             icon: "\ud83e\udde0",
             title: "IF",
-            description: "Makes a decision. =IF(A1>=40,\"Pass\",\"Fail\") checks if A1 is 40 or above. If yes \u2192 \"Pass\". If no \u2192 \"Fail\".",
+            description: "Makes a decision! =IF(A1>=40,\"Pass\",\"Fail\") checks: is A1 at least 40? If yes, show \"Pass\". If no, show \"Fail\".",
             tag: "=IF(test, yes, no)",
+          },
+        ],
+      },
+      {
+        type: "steps",
+        items: [
+          {
+            title: "Step 1: Click the Cell Where You Want the Answer",
+            description: "Click on an empty cell where you want the result to appear (for example, C1).",
+          },
+          {
+            title: "Step 2: Type = to Start Your Formula",
+            description: "Type the equals sign, then your formula. For example: =SUM(A1:A10) or =B2*C2 or =AVERAGE(D1:D20).",
+          },
+          {
+            title: "Step 3: Press Enter",
+            description: "Hit Enter and the answer appears instantly! If you change any of the numbers the formula uses, the answer updates automatically.",
           },
         ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>IF function structure:</strong> =IF(<em>condition</em>, <em>value_if_true</em>, <em>value_if_false</em>)<br/>Example: =IF(B2>90, "Distinction", "Regular")<br/>Read it as: "If B2 is greater than 90, show Distinction. Otherwise, show Regular."`,
+        html: `<strong>How to read an IF formula:</strong> =IF(B2>90, "Distinction", "Regular")<br/>Read it like English: "IF the value in B2 is greater than 90, THEN show 'Distinction', OTHERWISE show 'Regular'."<br/>Structure: =IF( <em>question</em> , <em>answer if yes</em> , <em>answer if no</em> )`,
       },
       {
         type: "callout",
-        variant: "purple",
-        html: `<strong>Cell References in formulas are dynamic!</strong> If you write =A1+B1 and then change the number in A1, the result updates <em>automatically</em>. This is the whole point. Build the formula once, change data anytime \u2014 Excel recalculates instantly.`,
+        variant: "blue",
+        html: `<strong>Exam tip \u2014 Formulas are ALIVE:</strong> If you write =A1+B1 and later change the number in A1, the answer updates automatically. You build the formula once and it keeps working forever. That's the whole point of Excel!`,
       },
     ],
   },
@@ -379,10 +446,10 @@ export const topics: Topic[] = [
   // ─── Topic 6 ───
   {
     id: 6,
-    title: "MS Excel — Data Management",
+    title: "MS Excel \u2014 Data Management",
     time: "~5 mins",
     badges: [],
-    hook: `You have a spreadsheet with 500 student records. Your principal asks: "Show me only the students who scored above 80, arranged from highest to lowest." Without sorting and filtering, you'd spend hours. <strong>With Excel? Three clicks.</strong>`,
+    hook: `Imagine your school has 500 student records in Excel. Your principal says: "Show me only students who scored above 80, from highest to lowest." Without these tools, you'd spend hours. <strong>With sorting and filtering? Three clicks.</strong>`,
     content: [
       {
         type: "cards",
@@ -391,63 +458,84 @@ export const topics: Topic[] = [
           {
             icon: "\ud83d\udd3d",
             title: "Sorting",
-            description: "Arranges data in a specific order. A\u2192Z (ascending) or Z\u2192A (descending). Sort numbers low-to-high or high-to-low. Sort names alphabetically.",
+            description: "Rearranges your data in order. A to Z, Z to A, smallest to biggest, or biggest to smallest. Like arranging books on a shelf!",
             tag: "Data tab \u2192 Sort",
           },
           {
             icon: "\ud83d\udd0d",
             title: "Filtering",
-            description: "Hides rows that don't match your criteria. Shows ONLY the data you want to see. The hidden data isn't deleted \u2014 just temporarily invisible.",
+            description: "Hides rows you don't want to see right now. Only shows data that matches what you're looking for. The hidden rows aren't deleted \u2014 just invisible!",
             tag: "Data tab \u2192 Filter",
           },
           {
             icon: "\ud83d\udd17",
-            title: "Linking Worksheets",
-            description: "Pull data from one sheet into another using formulas like =Sheet2!A1. One workbook, multiple connected sheets sharing data.",
+            title: "Linking Sheets",
+            description: "Pull data from one sheet into another using a formula like =Sheet2!A1. One file, multiple connected pages!",
             tag: "=SheetName!Cell",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Sorting vs Filtering — they're different:</strong>`,
+        html: `<strong>Sorting vs Filtering \u2014 they sound similar but they're different!</strong>`,
       },
       {
         type: "table",
-        headers: ["Feature", "Sorting", "Filtering"],
+        headers: ["", "Sorting", "Filtering"],
         rows: [
-          { cells: ["What it does", "Rearranges the order of rows", "Hides rows that don't match"] },
-          { cells: ["Data affected", "ALL rows are still visible, just reordered", "Non-matching rows are HIDDEN"] },
-          { cells: ["Example", "Sort marks from highest to lowest", "Show only students who scored > 80"] },
-          { cells: ["Reversible?", "Sort again in different order", "Remove filter to show all data again"] },
+          { cells: ["What it does", "Rearranges the ORDER of rows", "HIDES rows that don't match"] },
+          { cells: ["Can you still see all rows?", "\u2705 Yes, just in a new order", "\u274c No, non-matching rows are hidden"] },
+          { cells: ["Example", "Sort names A to Z", "Show only students who scored > 80"] },
+          { cells: ["How to undo", "Sort again in a different order", "Remove the filter to see everything again"] },
         ],
+      },
+      {
+        type: "text",
+        html: `<strong>How to Sort Data:</strong>`,
       },
       {
         type: "steps",
         items: [
           {
-            title: "Sort Data \ud83d\udd3d",
-            description: "Click any cell in the column you want to sort \u2192 Data tab \u2192 Sort A\u2192Z (ascending) or Z\u2192A (descending). For multi-level sorting, use Data \u2192 Sort and add levels.",
+            title: "Step 1: Click Any Cell in the Column You Want to Sort",
+            description: "For example, click any cell in the 'Marks' column if you want to sort by marks.",
           },
           {
-            title: "Filter Data \ud83d\udd0d",
-            description: "Click any cell in your data \u2192 Data tab \u2192 Filter. Dropdown arrows appear on headers. Click an arrow and choose which values to show. Uncheck the rest.",
+            title: "Step 2: Go to Data Tab \u2192 Click Sort A\u2192Z or Z\u2192A",
+            description: "A\u2192Z sorts from smallest to biggest (or alphabetically A to Z). Z\u2192A sorts from biggest to smallest.",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>How to Filter Data:</strong>`,
+      },
+      {
+        type: "steps",
+        items: [
+          {
+            title: "Step 1: Click Any Cell in Your Data",
+            description: "Make sure you're inside your data table, not in an empty area.",
           },
           {
-            title: "Link Worksheets \ud83d\udd17",
-            description: "In the destination cell, type = then click on the source sheet tab and select the cell you want. Excel writes =Sheet2!B5 automatically. Changes in Sheet2 reflect instantly.",
+            title: "Step 2: Go to Data Tab \u2192 Click Filter",
+            description: "Small dropdown arrows appear on each column header.",
+          },
+          {
+            title: "Step 3: Click the Arrow and Choose What to Show",
+            description: "Uncheck the values you don't want to see. Only the checked values stay visible. Click again and check 'Select All' to show everything again.",
           },
         ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>Linking formula syntax:</strong> <mark>=SheetName!CellReference</mark><br/>Example: =Sheet2!A1 pulls the value from cell A1 on Sheet2 into your current sheet.<br/>Example: =Summary!B5 pulls cell B5 from a sheet named "Summary".<br/>If the sheet name has spaces, use single quotes: ='My Data'!C3`,
+        html: `<strong>Linking sheets formula:</strong> <mark>=SheetName!CellReference</mark><br/>Example: =Sheet2!A1 pulls the value from cell A1 on Sheet2 into your current sheet.<br/>If the sheet name has spaces, wrap it in quotes: ='My Data'!C3`,
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Why link worksheets?</strong> Imagine one sheet tracks "January Sales" and another tracks "February Sales." A third "Summary" sheet can pull totals from both using linking formulas. Change January data \u2192 Summary updates automatically. No manual copying!`,
+        html: `<strong>Exam tip \u2014 Why link sheets?</strong> Imagine one sheet has "January Sales" and another has "February Sales." A third "Summary" sheet can pull totals from both. Change January's numbers \u2192 Summary updates automatically. No copy-pasting needed!`,
       },
     ],
   },
@@ -455,19 +543,19 @@ export const topics: Topic[] = [
   // ─── Topic 7 ───
   {
     id: 7,
-    title: "MS PowerPoint — Creating Presentations",
+    title: "MS PowerPoint \u2014 Creating Presentations",
     time: "~5 mins",
     badges: [],
-    hook: `Word is for reading. Excel is for calculating. <strong>PowerPoint is for presenting.</strong> Every class project, business pitch, and conference talk uses slides. The difference between a boring presentation and a great one? Knowing how to use layouts, themes, and content the right way.`,
+    hook: `Word is for reading. Excel is for calculating. <strong>PowerPoint is for presenting!</strong> Every class project, every school assembly, every show-and-tell \u2014 it all uses slides. Let's learn how to make ones that actually look good.`,
     content: [
       {
         type: "analogy",
-        label: "\ud83c\udfa5 Movie Analogy",
-        html: `A PowerPoint presentation is like a short movie. Each <strong>slide is a scene</strong>. The <strong>theme is the visual style</strong> — colors, fonts, background (like a movie's color grading). <strong>Slide layouts</strong> are templates for each scene \u2014 where the title goes, where images go. You're the director.`,
+        label: "Movie Director Analogy",
+        html: `Think of yourself as a movie director. Each <strong>slide is one scene</strong>. The <strong>theme is the visual style</strong> \u2014 the colours, fonts, and background (like a movie's colour palette). <strong>Slide layouts</strong> are pre-made templates for each scene. You decide what goes where!`,
       },
       {
         type: "image",
-        description: "PowerPoint interface showing Slide panel (left), Main editing area (center), Notes section (bottom), and Ribbon with Home/Insert/Design tabs",
+        description: "PowerPoint interface showing Slide panel (left), Main editing area (centre), Notes section (bottom), and Ribbon with Home/Insert/Design tabs",
       },
       {
         type: "cards",
@@ -476,59 +564,62 @@ export const topics: Topic[] = [
           {
             icon: "\ud83d\udcbb",
             title: "Slides",
-            description: "Individual pages of your presentation. Each slide holds text, images, charts, or videos. Add new slides with Ctrl+M or Home \u2192 New Slide.",
+            description: "Individual pages of your presentation. Each one holds text, pictures, charts, or videos. Add a new slide with Ctrl+M.",
             tag: "Building blocks",
           },
           {
             icon: "\ud83c\udfa8",
             title: "Themes",
-            description: "Pre-designed visual styles. One click changes ALL slides' colors, fonts, and backgrounds. Design tab \u2192 Themes.",
+            description: "Pre-made visual styles. One click changes the look of ALL slides at once \u2014 colours, fonts, backgrounds. Found in the Design tab.",
             tag: "Design tab \u2192 Themes",
           },
           {
             icon: "\ud83d\udccf",
             title: "Slide Layouts",
-            description: "Pre-arranged content placeholders. Title Slide, Title + Content, Two Content, Blank, etc. Home \u2192 Layout to change.",
+            description: "Pre-arranged templates for what goes on each slide: Title Slide, Title + Content, Two Content, Blank, etc.",
             tag: "Home \u2192 Layout",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Common Slide Layouts you need to know:</strong>`,
+        html: `<strong>Common Slide Layouts:</strong>`,
       },
       {
         type: "table",
-        headers: ["Layout Name", "What It Contains", "Best Used For"],
+        headers: ["Layout Name", "What's On It", "Best Used For"],
         rows: [
-          { cells: ["Title Slide", "Large title + subtitle centered", "First slide of any presentation"] },
-          { cells: ["Title and Content", "Title at top + one content area below", "Most slides \u2014 text, bullets, images"] },
-          { cells: ["Two Content", "Title + two side-by-side content areas", "Comparisons, before/after"] },
-          { cells: ["Section Header", "Large text centered on slide", "Dividing sections of a long presentation"] },
-          { cells: ["Blank", "Nothing \u2014 completely empty canvas", "Custom layouts, full-screen images"] },
+          { cells: ["Title Slide", "Big title + subtitle in the centre", "The first slide of your presentation"] },
+          { cells: ["Title and Content", "Title on top, content area below", "Most slides \u2014 text, bullets, images"] },
+          { cells: ["Two Content", "Title + two side-by-side areas", "Comparisons (before/after, pros/cons)"] },
+          { cells: ["Blank", "Completely empty", "Custom designs, full-screen images"] },
         ],
       },
       {
         type: "steps",
         items: [
           {
-            title: "Choose a Theme \ud83c\udfa8",
-            description: "Design tab \u2192 pick a Theme. This sets your visual style. You can also choose Variants for color tweaks.",
+            title: "Step 1: Pick a Theme",
+            description: "Go to Design tab and click a Theme you like. This sets the colours, fonts, and background for your whole presentation.",
           },
           {
-            title: "Add Slides with Layouts \ud83d\udcbb",
-            description: "Home \u2192 New Slide dropdown \u2192 pick a layout. Use Title Slide for slide 1, then Title and Content for most others.",
+            title: "Step 2: Add New Slides",
+            description: "Home tab \u2192 click the dropdown arrow under 'New Slide' \u2192 pick a layout. Use 'Title Slide' for slide 1, then 'Title and Content' for most others.",
           },
           {
-            title: "Add Content \u270d\ufe0f",
-            description: "Click placeholders to type text. Use Insert tab for images, shapes, charts, and videos. Keep text minimal \u2014 slides are visual aids, not documents.",
+            title: "Step 3: Add Your Content",
+            description: "Click on the placeholder text and start typing. Use the Insert tab to add pictures, shapes, or videos.",
+          },
+          {
+            title: "Step 4: Keep It Simple!",
+            description: "Maximum 6 lines per slide, maximum 6 words per line. Slides are visual aids, not essays. If people are reading your slide, they're not listening to you!",
           },
         ],
       },
       {
         type: "callout",
         variant: "red",
-        html: `<strong>The #1 PowerPoint mistake:</strong> Putting entire paragraphs on slides. Slides are for <mark>key points and visuals only</mark>. If your audience is reading your slides, they're not listening to you. Rule of thumb: maximum 6 lines per slide, maximum 6 words per line.`,
+        html: `<strong>The #1 PowerPoint mistake:</strong> Putting entire paragraphs on slides. Your slide should have <mark>key points and pictures only</mark>. If you need to write a paragraph, that belongs in a Word document, not a slide!`,
       },
     ],
   },
@@ -536,15 +627,15 @@ export const topics: Topic[] = [
   // ─── Topic 8 ───
   {
     id: 8,
-    title: "MS PowerPoint — Master Slides & Slide Shows",
+    title: "MS PowerPoint \u2014 Master Slides & Slide Shows",
     time: "~5 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `You have a 30-slide presentation and your boss says "Change the logo on every slide." Without Master Slides, that's 30 manual edits. With Master Slides? <strong>One change. All 30 slides update instantly.</strong> That's the power of the Slide Master.`,
+    hook: `You have 30 slides and your teacher says "Add the school logo to every slide." Without Slide Master, that's 30 separate edits. <strong>With Slide Master? One change and all 30 slides update at once.</strong> Mind = blown.`,
     content: [
       {
         type: "analogy",
-        label: "\ud83c\udfe0 Blueprint Analogy",
-        html: `A <strong>Slide Master is the blueprint</strong> for every room (slide) in a building (presentation). If you change the blueprint — say, add a company logo to the corner — every room built from that blueprint gets the logo automatically. You don't go room by room. One change at the master level = every slide changes.`,
+        label: "Blueprint Analogy",
+        html: `A <strong>Slide Master is like a building blueprint</strong>. If you add a window to the blueprint, every room built from it gets a window. Similarly, if you add a logo to the Slide Master, every slide in your presentation gets that logo. One change = everywhere changes!`,
       },
       {
         type: "cards",
@@ -553,14 +644,14 @@ export const topics: Topic[] = [
           {
             icon: "\ud83d\udcdc",
             title: "Slide Master",
-            description: "The master template that controls the look of ALL slides. Change fonts, backgrounds, logos, or footers here once — it applies everywhere. View tab \u2192 Slide Master.",
+            description: "The master template that controls the look of ALL slides. Change fonts, backgrounds, or add a logo here and it appears on every single slide.",
             tag: "View \u2192 Slide Master",
             tagColor: "blue",
           },
           {
             icon: "\ud83d\udccf",
             title: "Layout Masters",
-            description: "Each Slide Master has multiple layout masters under it (Title, Content, Two Content, etc.). You can customize each layout individually while keeping the master's global style.",
+            description: "Under the Slide Master, there are individual layout templates (Title, Content, etc.). You can customise each one while keeping the master's global style.",
             tag: "Under the Slide Master",
             tagColor: "green",
           },
@@ -570,43 +661,43 @@ export const topics: Topic[] = [
         type: "steps",
         items: [
           {
-            title: "Open Slide Master View \ud83d\udcdc",
-            description: "View tab \u2192 Slide Master. The top slide in the left panel is the Master. Slides below it are Layout Masters.",
+            title: "Step 1: Open Slide Master View",
+            description: "Go to View tab \u2192 click Slide Master. The big slide at the top of the left panel is the Master. The smaller ones below are Layout Masters.",
           },
           {
-            title: "Make Global Changes \ud83c\udf0d",
-            description: "Edit the top Master Slide to change fonts, add a logo, change background color, or add footer text that appears on EVERY slide.",
+            title: "Step 2: Make Your Changes",
+            description: "Edit the top Master Slide \u2014 add a logo, change fonts, set a background colour. Whatever you do here appears on ALL slides.",
           },
           {
-            title: "Close Master View \u2705",
-            description: "Click 'Close Master View' on the Ribbon. All your slides now reflect the changes instantly.",
+            title: "Step 3: Close Master View",
+            description: "Click 'Close Master View' on the Ribbon. Go back to your normal slides and you'll see all the changes applied everywhere!",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Presenting your slides — Slide Show features:</strong>`,
+        html: `<strong>Presenting your slides \u2014 Slide Show features:</strong>`,
       },
       {
         type: "table",
-        headers: ["Feature", "What It Does", "Where to Find It"],
+        headers: ["Feature", "What It Does", "How to Use It"],
         rows: [
-          { cells: ["Transitions", "Animations BETWEEN slides (fade, wipe, push)", "Transitions tab"] },
-          { cells: ["Animations", "Animations of OBJECTS on a slide (appear, fly in, bounce)", "Animations tab"] },
-          { cells: ["Slide Show \u2014 From Beginning", "Starts the presentation from slide 1", "F5 or Slide Show tab"] },
-          { cells: ["Slide Show \u2014 From Current", "Starts from the slide you're on right now", "Shift+F5"] },
-          { cells: ["Presenter View", "Shows notes and next slide to YOU while audience sees only the current slide", "Slide Show tab \u2192 Presenter View"] },
+          { cells: ["Transitions", "Cool effects BETWEEN slides (fade, wipe, push)", "Transitions tab \u2192 pick one"] },
+          { cells: ["Animations", "Effects for OBJECTS on a slide (text flying in, images bouncing)", "Animations tab \u2192 pick one"] },
+          { cells: ["Start from Beginning", "Starts the slideshow from slide 1", "Press F5"] },
+          { cells: ["Start from Current Slide", "Starts from whatever slide you're on", "Press Shift+F5"] },
+          { cells: ["Presenter View", "YOU see your notes and next slide. Audience sees only the current slide!", "Slide Show tab \u2192 Presenter View"] },
         ],
       },
       {
         type: "callout",
-        variant: "amber",
-        html: `<strong>Transitions vs Animations — don't confuse them!</strong><br/><mark>Transitions</mark> = how one slide changes to the next (fade, dissolve, wipe).<br/><mark>Animations</mark> = how objects (text boxes, images) appear/move WITHIN a single slide (fly in, bounce, fade in).`,
+        variant: "red",
+        html: `<strong>Common exam mistake \u2014 Transitions vs Animations:</strong><br/><mark>Transitions</mark> = effects when moving FROM one slide TO the next (like a fade between scenes in a movie).<br/><mark>Animations</mark> = effects for objects WITHIN a single slide (like text flying in from the left). Don't mix them up!`,
       },
       {
         type: "callout",
-        variant: "purple",
-        html: `<strong>Presenter View is a secret weapon.</strong> You see your notes, upcoming slides, and a timer. The audience only sees the current slide. Perfect for remembering key points without reading from the slide. Enable it from Slide Show tab before presenting.`,
+        variant: "blue",
+        html: `<strong>Exam tip \u2014 Presenter View is a secret weapon:</strong> You get to see your speaker notes, the upcoming slide, and a timer on your screen. The audience only sees the current slide. Perfect for remembering what to say without reading directly from the slide!`,
       },
     ],
   },
@@ -614,29 +705,15 @@ export const topics: Topic[] = [
   // ─── Topic 9 ───
   {
     id: 9,
-    title: "Putting It All Together — Which Tool When?",
-    time: "~4 mins",
+    title: "Putting It All Together \u2014 Which Tool When?",
+    time: "~3 mins",
     badges: [{ text: "Exam scenarios", type: "hot" }],
-    hook: `You now know Word, Excel, and PowerPoint. But the real exam question is: <strong>"Which application would you use for ___?"</strong> Getting this wrong is the easiest way to lose marks. Let's make sure you never pick the wrong tool.`,
+    hook: `You now know Word, Excel, and PowerPoint. But the real exam question is: <strong>"Which application would you use for ___?"</strong> Pick the wrong one and you lose easy marks. Let's make sure that never happens.`,
     content: [
       {
         type: "analogy",
-        label: "\ud83e\uddf0 Toolbox Analogy",
-        html: `A carpenter doesn't use a hammer for everything. Nails need a hammer, screws need a screwdriver, measurements need a tape. Same idea: <strong>Word = documents</strong> (writing), <strong>Excel = data & calculations</strong> (numbers), <strong>PowerPoint = presentations</strong> (presenting to an audience). Using the wrong tool = messy results and lost marks.`,
-      },
-      {
-        type: "table",
-        headers: ["Scenario", "Best Tool", "Why"],
-        rows: [
-          { cells: ["Writing a college assignment", "MS Word", "Rich text formatting, headings, images, page layout"] },
-          { cells: ["Creating a monthly budget", "MS Excel", "Numbers, formulas, auto-calculations, charts"] },
-          { cells: ["Presenting a project to the class", "MS PowerPoint", "Visual slides, animations, speaker notes"] },
-          { cells: ["Maintaining student attendance records", "MS Excel", "Tabular data, sorting, filtering, formulas"] },
-          { cells: ["Writing a formal letter to a company", "MS Word", "Formatted text, letterhead layout, print-ready"] },
-          { cells: ["Analyzing exam results for 200 students", "MS Excel", "SUM, AVERAGE, IF, sorting, filtering, charts"] },
-          { cells: ["Company product pitch to investors", "MS PowerPoint", "Visual impact, slides, animations, presenting live"] },
-          { cells: ["Creating a resume / CV", "MS Word", "Formatted document, layout, fonts, print/PDF export"] },
-        ],
+        label: "Toolbox Analogy",
+        html: `A carpenter doesn't use a hammer for everything. Nails need a hammer, screws need a screwdriver. Same idea: <strong>Word = writing</strong>, <strong>Excel = numbers</strong>, <strong>PowerPoint = presenting</strong>. Using the wrong tool is like trying to hammer a screw \u2014 it doesn't work well!`,
       },
       {
         type: "cards",
@@ -644,33 +721,51 @@ export const topics: Topic[] = [
         items: [
           {
             icon: "\ud83d\udcdd",
-            title: "Use MS Word When...",
-            description: "You need to WRITE something: essays, letters, reports, resumes, assignments. Anything that will be read as a document.",
-            tag: "Writing \u00b7 Documents \u00b7 Print",
+            title: "Use Word When...",
+            description: "You need to WRITE something that people will READ: essays, letters, assignments, resumes, reports.",
+            tag: "Writing \u00b7 Reading \u00b7 Printing",
           },
           {
             icon: "\ud83d\udcca",
-            title: "Use MS Excel When...",
-            description: "You need to CALCULATE or ORGANIZE data: budgets, marks, invoices, attendance, any data with numbers, sorting, or formulas.",
+            title: "Use Excel When...",
+            description: "You need to work with NUMBERS or ORGANISE DATA: budgets, marks, attendance, invoices, anything with calculations.",
             tag: "Numbers \u00b7 Formulas \u00b7 Data",
           },
           {
-            icon: "\ud83d\udcfd\ufe0f",
-            title: "Use MS PowerPoint When...",
-            description: "You need to PRESENT to an audience: class projects, business pitches, training sessions. Visual slides, not documents.",
+            icon: "\ud83c\udfa5",
+            title: "Use PowerPoint When...",
+            description: "You need to PRESENT to an audience: class projects, pitches, training sessions. Visual slides, not long documents.",
             tag: "Presenting \u00b7 Slides \u00b7 Visual",
           },
         ],
       },
       {
+        type: "text",
+        html: `<strong>Practice scenarios \u2014 which tool would YOU pick?</strong>`,
+      },
+      {
+        type: "table",
+        headers: ["Scenario", "Best Tool", "Why?"],
+        rows: [
+          { cells: ["Writing a school essay", "MS Word", "You're writing text with headings and formatting"] },
+          { cells: ["Making a monthly pocket money budget", "MS Excel", "You need numbers, formulas, and calculations"] },
+          { cells: ["Presenting your science project to class", "MS PowerPoint", "You're showing slides to an audience"] },
+          { cells: ["Tracking attendance for your sports team", "MS Excel", "It's a table of data with names and dates"] },
+          { cells: ["Writing a formal letter to the principal", "MS Word", "It's a formatted letter meant to be read or printed"] },
+          { cells: ["Calculating average marks for 200 students", "MS Excel", "You need AVERAGE, SUM, sorting, and filtering"] },
+          { cells: ["Pitching a business idea to judges", "MS PowerPoint", "You're presenting live to an audience"] },
+          { cells: ["Creating your CV / resume", "MS Word", "It's a formatted document you print or email"] },
+        ],
+      },
+      {
         type: "callout",
-        variant: "dark",
-        html: `<strong>The golden decision rule:</strong><br/>\ud83d\udcdd Writing a document to be read? \u2192 <strong>Word</strong><br/>\ud83d\udcca Working with numbers, data, or formulas? \u2192 <strong>Excel</strong><br/>\ud83d\udcfd\ufe0f Presenting to an audience live? \u2192 <strong>PowerPoint</strong><br/>Ask yourself: "Is this for reading, calculating, or presenting?" and you'll never pick wrong.`,
+        variant: "amber",
+        html: `<strong>The 3-second decision rule:</strong> Ask yourself ONE question \u2014<br/>"Am I <strong>writing</strong> something?" \u2192 Word<br/>"Am I <strong>calculating</strong> something?" \u2192 Excel<br/>"Am I <strong>presenting</strong> something?" \u2192 PowerPoint<br/>That's it. You'll never pick wrong!`,
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>They work together!</strong> You can embed an Excel chart into a Word report. You can paste a Word outline into PowerPoint slides. You can link Excel data to PowerPoint charts. These tools are a team — each handles what it does best.`,
+        html: `<strong>Exam tip \u2014 They work together!</strong> You can paste an Excel chart into a Word report. You can link Excel data to PowerPoint slides. You can copy a Word outline into PowerPoint. They're a team \u2014 each one handles what it does best!`,
       },
     ],
   },
