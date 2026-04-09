@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
 
 interface Question {
   q: string;
@@ -49,6 +50,12 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
       setTimeout(() => setCurrentQ((c) => c + 1), 50);
     } else {
       setShowResult(true);
+      // Award XP based on score
+      const finalScore = questions[currentQ].ans === answered[currentQ] ? score + 1 : score;
+      const finalPct = (finalScore / total) * 100;
+      if (finalPct === 100) { addXP(XP_REWARDS.QUIZ_PERFECT); earnBadge("perfect_quiz"); }
+      else if (finalPct >= 80) addXP(XP_REWARDS.QUIZ_GOOD);
+      else if (finalPct >= 60) addXP(XP_REWARDS.QUIZ_PASS);
       onComplete?.(score, total);
     }
   }

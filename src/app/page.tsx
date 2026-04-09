@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
+import XpBar from "@/components/XpBar";
 
 const modules = [
   {
@@ -234,6 +235,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <XpBar />
 
       {/* ─── FOOTER ─── */}
       <footer className="py-12 px-6 border-t border-white/[0.04] text-center">

@@ -7,6 +7,8 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
 import Confetti from "@/components/module/Confetti";
+import XpBar from "@/components/XpBar";
+import { addXP, XP_REWARDS, earnBadge, updateStreak } from "@/lib/gamification";
 
 interface Topic {
   id: number;
@@ -105,7 +107,17 @@ export default function ModulePage({
   }, [activeTab, TOTAL_TOPICS]);
 
   function markDone(topicId: number) {
-    setDone((prev) => new Set([...prev, topicId]));
+    setDone((prev) => {
+      const next = new Set([...prev, topicId]);
+      // XP rewards
+      addXP(XP_REWARDS.TOPIC_DONE);
+      updateStreak();
+      // Badges
+      if (next.size === 1) earnBadge("first_topic");
+      if (next.size === TOTAL_TOPICS) earnBadge("module_done");
+      if (next.size >= 25) earnBadge("halfway");
+      return next;
+    });
     setConfettiTrigger((prev) => prev + 1);
     if (topicId < TOTAL_TOPICS) {
       setTimeout(() => { switchTab(topicId + 1); }, 400);
@@ -134,6 +146,7 @@ export default function ModulePage({
   return (
     <main className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
+      <XpBar />
       <Navbar showBack title={`Module ${moduleNumber} — ${moduleTitle}`} />
 
       {/* Reading progress bar */}
