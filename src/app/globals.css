@@ -166,3 +166,18 @@ body {
 .delay-8 { animation-delay: 0.94s; }
 .delay-9 { animation-delay: 1.06s; }
 .delay-10 { animation-delay: 1.18s; }
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
