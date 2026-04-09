@@ -34,16 +34,17 @@ const tagColors: Record<string, { bg: string; color: string }> = {
   grn: { bg: 'rgba(34,197,94,0.12)', color: '#4ADE80' },
 };
 
-function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
-  const delay = Math.min(index * 0.05, 0.3);
+const vp = { once: true, margin: "-60px" as const };
 
+function RenderBlock({ block }: { block: ContentBlock }) {
   switch (block.type) {
     case "text":
       return (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay }}
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={vp}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="text-[14px] text-zinc-400 leading-[1.9] my-3 [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
           dangerouslySetInnerHTML={{ __html: block.html }}
         />
@@ -51,20 +52,26 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
 
     case "cards":
       return (
-        <div className={`grid gap-3 my-4 ${
-          block.columns === 4 ? 'grid-cols-2 md:grid-cols-4' :
-          block.columns === 3 ? 'grid-cols-2 md:grid-cols-3' :
-          'grid-cols-1 sm:grid-cols-2'
-        }`}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={vp}
+          transition={{ duration: 0.3 }}
+          className={`grid gap-3 my-4 ${
+            block.columns === 4 ? 'grid-cols-2 md:grid-cols-4' :
+            block.columns === 3 ? 'grid-cols-2 md:grid-cols-3' :
+            'grid-cols-1 sm:grid-cols-2'
+          }`}
+        >
           {block.items.map((card, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: delay + i * 0.06 }}
-              whileHover={{ y: -2, borderColor: '#4F46E5' }}
-              className="p-4 rounded-xl transition-all"
-              style={{ background: '#151518', border: '1px solid #2a2a33' }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={vp}
+              transition={{ duration: 0.4, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              whileHover={{ y: -3, borderColor: '#4F46E5' }}
+              className="card-glass p-4 rounded-xl"
             >
               <span className="text-xl mb-2 block">{card.icon}</span>
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
@@ -79,20 +86,26 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
               )}
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       );
 
     case "era-cards":
       return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={vp}
+          transition={{ duration: 0.3 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 my-4"
+        >
           {block.items.map((card, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: delay + i * 0.06 }}
-              className="p-4 rounded-xl relative overflow-hidden"
-              style={{ background: '#151518', border: '1px solid #2a2a33' }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={vp}
+              transition={{ duration: 0.4, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className="card-glass p-4 rounded-xl relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #4F46E5, #7C3AED)' }} />
               <span className="text-xl mb-2 block">{card.icon}</span>
@@ -104,16 +117,17 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       );
 
     case "callout": {
       const colors = calloutColors[block.variant || 'default'];
       return (
         <motion.div
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay }}
+          initial={{ opacity: 0, x: -16 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={vp}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="my-4 px-4 py-3 rounded-r-xl text-[13px] leading-[1.85] [&_strong]:font-bold"
           style={{
             background: colors.bg,
@@ -128,11 +142,11 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
     case "analogy":
       return (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay }}
-          className="my-4 p-5 rounded-xl relative overflow-hidden"
-          style={{ background: '#131316', border: '1px solid #2a2a33' }}
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={vp}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="my-4 p-5 rounded-xl relative overflow-hidden card-glass"
         >
           <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #7C3AED, #4F46E5, #2563EB)' }} />
           <div className="text-[9px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2 pl-3">{block.label}</div>
@@ -143,10 +157,11 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
     case "table":
       return (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay }}
-          className="my-4 rounded-xl overflow-hidden"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={vp}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="my-4 rounded-xl overflow-hidden inner-glow"
           style={{ border: '1px solid #2a2a33' }}
         >
           <table className="w-full text-[12px]">
@@ -178,12 +193,12 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
           {block.items.map((step, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.35, delay: delay + i * 0.08 }}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={vp}
+              transition={{ duration: 0.4, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
               whileHover={{ borderColor: '#4F46E5' }}
-              className="flex gap-3.5 items-start p-4 rounded-xl transition-colors"
-              style={{ background: '#151518', border: '1px solid #2a2a33' }}
+              className="flex gap-3.5 items-start p-4 rounded-xl transition-colors card-glass"
             >
               <div
                 className="w-8 h-8 rounded-lg text-xs font-bold flex items-center justify-center shrink-0"
@@ -203,9 +218,10 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
     case "image":
       return (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay }}
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={vp}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="my-4 rounded-xl overflow-hidden"
           style={{ background: '#111116', border: '1px solid #2a2a33' }}
         >
@@ -218,7 +234,7 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
             />
           ) : (
             <div className="p-4 text-center text-xs text-zinc-500">
-              📸 {block.description}
+              {block.description}
             </div>
           )}
         </motion.div>
@@ -237,7 +253,7 @@ export default function TopicRenderer({ content }: TopicRendererProps) {
   return (
     <div>
       {content.map((block, i) => (
-        <RenderBlock key={i} block={block} index={i} />
+        <RenderBlock key={i} block={block} />
       ))}
     </div>
   );

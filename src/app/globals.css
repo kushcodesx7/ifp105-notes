@@ -71,3 +71,98 @@ body {
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 64px 64px;
 }
+
+/* ─── Futuristic Utilities ─── */
+
+/* Glassmorphism card surface */
+.card-glass {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-glass:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(99,102,241,0.3);
+  box-shadow: 0 0 30px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* Animated rotating gradient border */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.animated-border {
+  position: relative;
+}
+.animated-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle), transparent 60%, var(--accent, #6366F1) 80%, transparent 100%);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  animation: border-rotate 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.animated-border:hover::before { opacity: 1; }
+
+/* Animated gradient text */
+.gradient-text-animated {
+  background: linear-gradient(135deg, #818CF8, #C084FC, #F472B6, #818CF8);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 6s ease infinite;
+}
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Subtle inner glow for depth */
+.inner-glow {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Hover glow ring */
+.glow-ring {
+  transition: box-shadow 0.3s ease;
+}
+.glow-ring:hover {
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.2), 0 0 20px rgba(99,102,241,0.06);
+}
+
+/* Focus ring for accessibility */
+.focus-glow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #09090F, 0 0 0 4px rgba(99,102,241,0.5);
+}
+
+/* CSS fade-up animation (no Framer Motion needed) */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.22s; }
+.delay-3 { animation-delay: 0.34s; }
+.delay-4 { animation-delay: 0.46s; }
+.delay-5 { animation-delay: 0.58s; }
+.delay-6 { animation-delay: 0.7s; }
+.delay-7 { animation-delay: 0.82s; }
+.delay-8 { animation-delay: 0.94s; }
+.delay-9 { animation-delay: 1.06s; }
+.delay-10 { animation-delay: 1.18s; }
