@@ -118,6 +118,14 @@ export default function ModulePage({
     setDirection(n > activeTab ? 1 : -1);
     setIsCheatSheet(false);
     setActiveTab(n);
+    // Scroll to top of content area (just below the tab bar)
+    setTimeout(() => {
+      const tabBar = document.querySelector('[role="tablist"]');
+      if (tabBar) {
+        const top = tabBar.getBoundingClientRect().bottom + window.scrollY - 56;
+        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+      }
+    }, 50);
   }
 
   const progressPct = (done.size / TOTAL_TOPICS) * 100;
