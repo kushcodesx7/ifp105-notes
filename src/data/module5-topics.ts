@@ -57,7 +57,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/image%205.webp",
+        src: "/images/m5/ai-overview.webp",
         description: "Artificial Intelligence overview",
       },
       {
@@ -301,7 +301,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/image%2020.webp",
+        src: "/images/m5/cloud-computing.webp",
         description: "Cloud Computing overview",
       },
       {
@@ -451,7 +451,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m5/image%2030.webp",
+        src: "/images/m5/vr.webp",
         description: "Virtual Reality overview",
       },
       {

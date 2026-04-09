@@ -57,7 +57,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m1/unnamed_(2).webp",
+        src: "/images/m1/why-computers.webp",
         description: "4 reasons for computers (Speed \u00b7 Accuracy \u00b7 Storage \u00b7 Connectivity)",
       },
       {
@@ -320,7 +320,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
-        src: "/images/m1/d129a95d-c599-4aee-ab80-d6586aa795c9.webp",
+        src: "/images/m1/input-devices.webp",
         description: "Input devices (Keyboard, Mouse, Mic, Webcam, Scanner, Touchscreen) with arrows pointing INTO computer \u2014 each labeled",
       },
       {
@@ -381,7 +381,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
-        src: "/images/m1/image%204.webp",
+        src: "/images/m1/output-devices.webp",
         description: "Output devices (Monitor, Speakers, Printer, Projector, Headphones) with arrows pointing AWAY from computer \u2014 each labeled",
       },
       {
@@ -441,7 +441,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
-        src: "/images/m1/image%205.webp",
+        src: "/images/m1/storage-devices.webp",
         description: "4 storage types: HDD (spinning disk) \u00b7 SSD (chip) \u00b7 USB Drive (plug) \u00b7 Cloud (server) \u2014 labeled with speed & size",
       },
       {
@@ -510,7 +510,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m1/image%207.webp",
+        src: "/images/m1/software-types.webp",
         description: "Software pyramid: System Software (base) \u2192 Application Software (middle) \u2192 Utility Software (maintenance) \u2014 all labeled with examples",
       },
       {
@@ -584,7 +584,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m1/image%2011.webp",
+        src: "/images/m1/internet.webp",
         description: "4-step journey: Type URL \u2192 DNS converts \u2192 Server prepares \u2192 Page arrives \u2014 labeled flow diagram",
       },
       {
