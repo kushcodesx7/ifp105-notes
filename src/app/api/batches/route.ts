@@ -49,8 +49,11 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  if (!linkedinUrl.includes("linkedin.com/")) {
-    return Response.json({ error: "Invalid LinkedIn URL" }, { status: 400 });
+  if (!/^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/.test(linkedinUrl)) {
+    return Response.json(
+      { error: "Invalid LinkedIn URL. Use format: https://linkedin.com/in/yourname" },
+      { status: 400 }
+    );
   }
 
   // Check batch exists
