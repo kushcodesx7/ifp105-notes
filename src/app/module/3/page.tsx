@@ -7,9 +7,9 @@ export default function Module3() {
   return (
     <ModulePage
       moduleNumber={3}
-      moduleTitle="MS Office"
-      moduleSubtitle="& Productivity"
-      moduleDescription="Word processing, spreadsheets, presentations — the tools you'll use in every job and assignment."
+      moduleTitle="Social Media"
+      moduleSubtitle="Foundation"
+      moduleDescription="Social media platforms, management tools, metrics, advertising, Facebook and Twitter marketing strategies."
       accentFrom="#3B82F6"
       accentTo="#2563EB"
       orbColor1="rgba(59,130,246,0.15)"
@@ -17,9 +17,9 @@ export default function Module3() {
       topics={topics}
       mcqData={mcqData}
       stats={[
-        { n: "9", l: "Topics" },
-        { n: "~45", l: "Minutes" },
-        { n: "90", l: "Practice Qs" },
+        { n: "7", l: "Topics" },
+        { n: "~35", l: "Minutes" },
+        { n: "70", l: "Practice Qs" },
       ]}
     />
   );

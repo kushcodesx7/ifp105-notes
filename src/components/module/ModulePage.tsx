@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
+import Confetti from "@/components/module/Confetti";
 
 interface Topic {
   id: number;
@@ -34,6 +35,7 @@ interface ModulePageProps {
   topics: Topic[];
   mcqData: Record<number, Question[]>;
   stats: { n: string; l: string }[];
+  renderAfterContent?: (topicId: number) => React.ReactNode;
 }
 
 export default function ModulePage({
@@ -48,6 +50,7 @@ export default function ModulePage({
   topics,
   mcqData,
   stats,
+  renderAfterContent,
 }: ModulePageProps) {
   const TOTAL_TOPICS = topics.length;
   const LS_KEY = `ifp105_m${moduleNumber}_progress`;
@@ -55,6 +58,7 @@ export default function ModulePage({
   const [activeTab, setActiveTab] = useState(1);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [isCheatSheet, setIsCheatSheet] = useState(false);
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   useEffect(() => {
     try {
@@ -69,6 +73,7 @@ export default function ModulePage({
 
   function markDone(topicId: number) {
     setDone((prev) => new Set([...prev, topicId]));
+    setConfettiTrigger((prev) => prev + 1);
     if (topicId < TOTAL_TOPICS) {
       setTimeout(() => { setActiveTab(topicId + 1); setIsCheatSheet(false); }, 400);
     } else {
@@ -86,6 +91,7 @@ export default function ModulePage({
 
   return (
     <main className="relative min-h-screen">
+      <Confetti trigger={confettiTrigger} />
       <Navbar showBack title={`Module ${moduleNumber} — ${moduleTitle}`} />
 
       {/* Hero */}
@@ -219,6 +225,8 @@ export default function ModulePage({
               </motion.div>
 
               <TopicRenderer content={activeTopic.content} />
+
+              {renderAfterContent && renderAfterContent(activeTab)}
 
               {mcqData[activeTab] && <McqQuiz topicId={activeTab} questions={mcqData[activeTab]} />}
 

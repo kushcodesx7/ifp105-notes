@@ -1,106 +1,65 @@
-export interface TopicCard {
-  icon: string;
-  title: string;
-  description: string;
-  tag?: string;
-  tagColor?: string;
-}
-
-export interface EraCard {
-  icon: string;
-  period: string;
-  title: string;
-  description: string;
-  limitation: string;
-}
-
-export interface TableRow {
-  cells: string[];
-}
-
-export interface Step {
-  title: string;
-  description: string;
-}
-
-export type ContentBlock =
-  | { type: "text"; html: string }
-  | { type: "cards"; columns: 2 | 3 | 4; items: TopicCard[] }
-  | { type: "era-cards"; columns: 4; items: EraCard[] }
-  | { type: "callout"; variant?: "amber" | "blue" | "red" | "purple" | "dark"; html: string }
-  | { type: "analogy"; label: string; html: string }
-  | { type: "table"; headers: string[]; rows: TableRow[] }
-  | { type: "steps"; items: Step[] }
-  | { type: "image"; description: string };
-
-export interface Topic {
-  id: number;
-  title: string;
-  time: string;
-  badges: { text: string; type: "star" | "hot" }[];
-  hook: string;
-  content: ContentBlock[];
-}
+import type { Topic } from "./module1-topics";
 
 export const topics: Topic[] = [
   // ─── Topic 1 ───
   {
     id: 1,
-    title: "Why Number Systems Matter",
+    title: "Editing vs Word Processing — What's the Difference?",
     time: "~4 mins",
-    badges: [],
-    hook: `You speak English. Your friend speaks French. Your computer? It speaks <strong>electricity</strong> \u2014 and electricity only has two states: ON or OFF. That's it. 1 or 0. Every photo, song, game, and message on your phone is secretly just a massive wall of 1s and 0s. <strong>Welcome to the language your computer actually understands.</strong>`,
+    badges: [{ text: "Foundation", type: "star" }],
+    hook: `You've been using Notepad and Word your whole life. But here's a question most people get wrong on exams: <strong>Are they the same thing?</strong> Nope. Not even close. One is a blank wall. The other is an interior designer's dream studio.`,
     content: [
       {
         type: "text",
-        html: `Humans use <mark>10 digits (0\u20139)</mark> because we have 10 fingers. Computers use <mark>2 digits (0 and 1)</mark> because they run on electricity \u2014 a wire is either ON (1) or OFF (0). That's the entire alphabet of a computer. Everything else is built from those two tiny symbols.`,
-      },
-      {
-        type: "image",
-        description: "Light switch analogy: OFF = 0, ON = 1 \u00b7 Every piece of data is combinations of these switches",
+        html: `Before fancy software existed, "editing" just meant <mark>typing and changing text</mark> — nothing more. Word processing added superpowers on top: formatting, images, tables, spell-check, headers, footers, and print layouts. Let's break it down.`,
       },
       {
         type: "analogy",
-        label: "\ud83d\udca1 Light Switch Analogy",
-        html: `Imagine a row of light switches on a wall. Each switch can only be <strong>OFF (0)</strong> or <strong>ON (1)</strong>. One switch = 1 bit. With 8 switches (8 bits = 1 byte), you can make <strong>256 different patterns</strong> \u2014 enough to represent every letter, number, and symbol you type. Your keyboard's "A" key? Internally it's just the pattern <strong>01000001</strong>. That's how a computer "sees" the letter A.`,
+        label: "\u270f\ufe0f Pencil vs Art Studio",
+        html: `<strong>A text editor is a pencil.</strong> You can write. You can erase. That's it. No colors, no stickers, no fancy borders.<br/><br/><strong>A word processor is an entire art studio.</strong> You still write — but now you have colors, fonts, rulers, stickers (images), tables, templates, and a printer-ready layout. Same paper, wildly different tools.`,
       },
       {
         type: "cards",
-        columns: 3,
+        columns: 2,
         items: [
           {
-            icon: "\ud83d\udd22",
-            title: "Decimal (Base 10)",
-            description: "The system YOU use every day. 10 digits: 0\u20139. Based on our 10 fingers. Humans love it.",
-            tag: "Human language",
+            icon: "\ud83d\udcdd",
+            title: "Text Editor (Editing)",
+            description: "Plain text only. No formatting, no images, no tables. Just raw characters. Examples: Notepad, nano, vim. Used for code and quick notes.",
+            tag: "Simple \u00b7 Plain text only",
+            tagColor: "amber",
           },
           {
-            icon: "\ud83d\udcbb",
-            title: "Binary (Base 2)",
-            description: "The system COMPUTERS use. Only 2 digits: 0 and 1. Based on electricity being ON or OFF.",
-            tag: "Computer language",
+            icon: "\ud83d\udcc4",
+            title: "Word Processor (Word Processing)",
+            description: "Full formatting: bold, italic, fonts, colors, images, tables, headers, footers, page numbers, spell-check, print layout. Examples: MS Word, Google Docs.",
+            tag: "Powerful \u00b7 Rich formatting",
+            tagColor: "blue",
           },
-          {
-            icon: "\ud83d\udd17",
-            title: "Hex & Octal",
-            description: "Shortcuts for humans to read long binary numbers without going cross-eyed. Base 16 and Base 8.",
-            tag: "Translator languages",
-          },
+        ],
+      },
+      {
+        type: "table",
+        headers: ["Feature", "Text Editor (Notepad)", "Word Processor (MS Word)"],
+        rows: [
+          { cells: ["Bold / Italic / Underline", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Insert Images", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Create Tables", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Spell Check", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Page Layout & Print Preview", "\u274c No", "\u2705 Yes"] },
+          { cells: ["Headers & Footers", "\u274c No", "\u2705 Yes"] },
+          { cells: ["File Format", ".txt (plain)", ".docx (rich)"] },
         ],
       },
       {
         type: "callout",
-        variant: "amber",
-        html: `<strong>\ud83e\udde0 Key idea:</strong> Number systems are NOT different numbers \u2014 they're different LANGUAGES for the same number. The number "thirteen" is 13 in decimal, 1101 in binary, 15 in octal, and D in hexadecimal. Same value, different spelling!`,
+        variant: "red",
+        html: `<strong>\u274c Common exam mistake:</strong> Students say "editing and word processing are the same." They are NOT. Editing = basic text changes. Word processing = editing PLUS formatting, layout, images, tables, spell-check, and everything else. Word processing <em>includes</em> editing, but editing alone is NOT word processing.`,
       },
       {
-        type: "table",
-        headers: ["Term", "Meaning", "Example"],
-        rows: [
-          { cells: ["<strong>Bit</strong>", "A single 0 or 1 \u2014 smallest unit of data", "1"] },
-          { cells: ["<strong>Byte</strong>", "8 bits grouped together", "01000001 (= letter A)"] },
-          { cells: ["<strong>Base</strong>", "How many digits a number system uses", "Base 10 uses 0\u20139"] },
-        ],
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Why does this matter?</strong> When your professor asks you to submit a "word-processed document," they want formatted text with proper headings, spacing, and layout — NOT a plain .txt file from Notepad!`,
       },
     ],
   },
@@ -108,41 +67,83 @@ export const topics: Topic[] = [
   // ─── Topic 2 ───
   {
     id: 2,
-    title: "The Decimal System \u2014 Base 10",
-    time: "~4 mins",
-    badges: [],
-    hook: `You already know this system perfectly. You've been using it since you were 5 years old. <strong>But do you actually know WHY it works?</strong> Understanding how decimal works is the secret key to understanding binary, octal, and hex. Master this one, and the rest are just copy-paste with different numbers.`,
+    title: "MS Word — Text Editing & Formatting",
+    time: "~6 mins",
+    badges: [{ text: "High yield", type: "star" }],
+    hook: `Microsoft Word is the most used word processor on the planet. Your assignments, resumes, letters, reports — they all live here. But most people only use 10% of what Word can do. <strong>Let's unlock the other 90%.</strong>`,
     content: [
       {
         type: "text",
-        html: `Decimal = <mark>Base 10</mark>. It uses <strong>10 digits: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9</strong>. Why 10? Because humans have 10 fingers! Ancient humans literally counted on their hands, and the system stuck for thousands of years.`,
-      },
-      {
-        type: "text",
-        html: `The magic of decimal (and ALL number systems) is <mark>positional value</mark>. The POSITION of a digit determines its value. The digit "5" in <strong>500</strong> is worth way more than "5" in <strong>5</strong> \u2014 even though it's the same digit!`,
+        html: `MS Word has a <mark>Ribbon interface</mark> — that strip of icons at the top organized into tabs like Home, Insert, Layout, etc. The Home tab is where 80% of your formatting lives.`,
       },
       {
         type: "image",
-        description: "Breakdown of number 365: 3\u00d7100 + 6\u00d710 + 5\u00d71 = 300 + 60 + 5 = 365 \u2014 each position labeled with power of 10",
+        description: "MS Word Ribbon interface showing Home tab with Font group, Paragraph group, and Styles group highlighted",
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\ud83c\udd71\ufe0f",
+            title: "Font Formatting",
+            description: "Change font name (Arial, Times New Roman), size (12pt, 14pt), color, Bold (Ctrl+B), Italic (Ctrl+I), Underline (Ctrl+U).",
+            tag: "Home \u2192 Font group",
+          },
+          {
+            icon: "\u2261",
+            title: "Paragraph Formatting",
+            description: "Alignment (Left, Center, Right, Justify), Line spacing (1.0, 1.5, 2.0), Bullets, Numbering, Indentation.",
+            tag: "Home \u2192 Paragraph group",
+          },
+          {
+            icon: "\ud83c\udfa8",
+            title: "Styles",
+            description: "Pre-built formatting combos: Heading 1, Heading 2, Title, Subtitle. One click = consistent look across the whole document.",
+            tag: "Home \u2192 Styles group",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>The 4 types of text alignment — know them cold:</strong>`,
       },
       {
         type: "table",
-        headers: ["Position", "Power of 10", "Value", "Digit \u00d7 Value"],
+        headers: ["Alignment", "Shortcut", "What It Does", "Used For"],
         rows: [
-          { cells: ["Hundreds", "10\u00b2 = 100", "100", "3 \u00d7 100 = <strong>300</strong>"] },
-          { cells: ["Tens", "10\u00b9 = 10", "10", "6 \u00d7 10 = <strong>60</strong>"] },
-          { cells: ["Ones", "10\u2070 = 1", "1", "5 \u00d7 1 = <strong>5</strong>"] },
+          { cells: ["Left Align", "Ctrl + L", "Text starts from the left edge", "Body text, paragraphs (default)"] },
+          { cells: ["Center Align", "Ctrl + E", "Text sits in the middle", "Titles, headings, invitations"] },
+          { cells: ["Right Align", "Ctrl + R", "Text pushed to the right edge", "Dates, page numbers"] },
+          { cells: ["Justify", "Ctrl + J", "Text stretches to fill both edges evenly", "Formal reports, newspapers, books"] },
         ],
       },
       {
         type: "callout",
-        variant: "blue",
-        html: `<strong>The rule for ANY base:</strong> Each position is worth <mark>base<sup>position</sup></mark>, counting from 0 on the right. In base 10: positions are 10\u2070=1, 10\u00b9=10, 10\u00b2=100, 10\u00b3=1000... This SAME rule applies to binary (base 2), octal (base 8), and hex (base 16). Learn it once, use it everywhere. \ud83d\udca1`,
+        variant: "amber",
+        html: `<strong>Keyboard shortcuts that save your life:</strong> Ctrl+B = Bold \u00b7 Ctrl+I = Italic \u00b7 Ctrl+U = Underline \u00b7 Ctrl+S = Save \u00b7 Ctrl+Z = Undo \u00b7 Ctrl+Y = Redo \u00b7 Ctrl+A = Select All \u00b7 Ctrl+C = Copy \u00b7 Ctrl+V = Paste. Memorize these. They work in almost every application.`,
       },
       {
-        type: "analogy",
-        label: "\ud83d\udcb0 Money Analogy",
-        html: `Think of decimal like money slots. You have a <strong>R1 slot</strong>, a <strong>R10 slot</strong>, a <strong>R100 slot</strong>. Each slot can hold 0\u20139 of that denomination. The number 247 means: 2 hundreds + 4 tens + 7 ones. When a slot reaches 9, the next number <strong>carries over</strong> to the next slot (like 99 + 1 = 100). This carry-over idea is identical in binary!`,
+        type: "steps",
+        items: [
+          {
+            title: "Select the text \ud83d\udc46",
+            description: "Click and drag, or use Ctrl+A to select everything. You MUST select text before formatting it.",
+          },
+          {
+            title: "Apply formatting \ud83c\udfa8",
+            description: "Use the Ribbon or keyboard shortcuts. Bold, change font, adjust size, pick a color — whatever you need.",
+          },
+          {
+            title: "Check your work \ud83d\udc40",
+            description: "Use Print Preview (Ctrl+P) to see exactly how it will look on paper before printing.",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>Pro tip — Format Painter \ud83c\udfa8:</strong> Select formatted text \u2192 Click the Format Painter brush \u2192 Drag across other text. It copies ALL formatting (font, size, color, spacing) instantly. Double-click the brush to paint multiple sections!`,
       },
     ],
   },
@@ -150,58 +151,74 @@ export const topics: Topic[] = [
   // ─── Topic 3 ───
   {
     id: 3,
-    title: "The Binary System \u2014 Base 2",
+    title: "MS Word — Images & Tables",
     time: "~5 mins",
-    badges: [{ text: "High yield", type: "star" }],
-    hook: `This is THE language of every computer, phone, and smart device on the planet. <strong>Binary only has two digits: 0 and 1.</strong> That's it. No 2, no 3, no 9. Just two options \u2014 like a coin flip, a yes/no question, or a light switch. Simple? Yes. Powerful? Insanely.`,
+    badges: [],
+    hook: `A wall of text is boring. Nobody wants to read a 10-page document that's just paragraphs. <strong>Images make it visual. Tables make it organized.</strong> These two features turn a boring document into a professional one.`,
     content: [
       {
         type: "text",
-        html: `Binary = <mark>Base 2</mark>. It uses only <strong>2 digits: 0 and 1</strong>. Each digit is called a <mark>bit</mark> (binary digit). Why base 2? Because electricity has two states: OFF (0) and ON (1). Computers are built from billions of tiny switches (transistors) that are either on or off.`,
+        html: `Both images and tables live under the <mark>Insert tab</mark> on the Ribbon. This tab is your go-to for adding anything that isn't plain text.`,
       },
       {
-        type: "analogy",
-        label: "\u270a Finger Counting Analogy",
-        html: `In decimal you have 10 fingers, so you count 0\u20139 before you need a new column. In binary, pretend you only have <strong>2 fingers</strong>. You count 0, 1... done! Out of fingers! So you start a new column: <strong>10</strong> (which equals "two" in decimal). Then 11 (= three). Then you need ANOTHER new column: <strong>100</strong> (= four). Binary numbers get long fast because you run out of digits so quickly!`,
+        type: "cards",
+        columns: 2,
+        items: [
+          {
+            icon: "\ud83d\uddbc\ufe0f",
+            title: "Inserting Images",
+            description: "Insert \u2192 Pictures. Choose from your device or online. Resize using corner handles (keeps proportion). Use text wrapping to control how text flows around the image.",
+            tag: "Insert tab \u2192 Pictures",
+          },
+          {
+            icon: "\ud83d\udcca",
+            title: "Creating Tables",
+            description: "Insert \u2192 Table. Choose rows & columns with the grid, or use 'Insert Table' for exact numbers. Click inside any cell to type data.",
+            tag: "Insert tab \u2192 Table",
+          },
+        ],
       },
       {
-        type: "image",
-        description: "Binary counting from 0 to 15: 0000, 0001, 0010, 0011, 0100... with decimal equivalents shown",
+        type: "text",
+        html: `<strong>Image Text Wrapping Options — how text behaves around your picture:</strong>`,
       },
       {
         type: "table",
-        headers: ["Decimal", "Binary", "How to read it"],
+        headers: ["Wrapping Style", "What Happens", "Best For"],
         rows: [
-          { cells: ["0", "0000", "Zero"] },
-          { cells: ["1", "0001", "One"] },
-          { cells: ["2", "0010", "One-zero (NOT ten!)"] },
-          { cells: ["3", "0011", "One-one"] },
-          { cells: ["4", "0100", "One-zero-zero"] },
-          { cells: ["5", "0101", "One-zero-one"] },
-          { cells: ["6", "0110", "One-one-zero"] },
-          { cells: ["7", "0111", "One-one-one"] },
-          { cells: ["8", "1000", "One-zero-zero-zero"] },
-          { cells: ["9", "1001", "One-zero-zero-one"] },
-          { cells: ["10", "1010", "One-zero-one-zero"] },
-          { cells: ["15", "1111", "One-one-one-one"] },
+          { cells: ["In Line with Text", "Image sits inside the text like a giant character", "Small icons in a sentence"] },
+          { cells: ["Square", "Text wraps around the image in a square box", "Most common \u2014 photos in reports"] },
+          { cells: ["Tight", "Text wraps closely around the image shape", "Irregular-shaped images"] },
+          { cells: ["Behind Text", "Image sits behind the text like a watermark", "Background images, letterheads"] },
+          { cells: ["In Front of Text", "Image floats on top, covering text below", "Overlay effects, logos"] },
+        ],
+      },
+      {
+        type: "steps",
+        items: [
+          {
+            title: "Insert a Table \ud83d\udcca",
+            description: "Go to Insert \u2192 Table. Select the number of rows and columns you need from the grid (e.g., 3\u00d74 = 3 columns, 4 rows).",
+          },
+          {
+            title: "Enter Your Data \u2328\ufe0f",
+            description: "Click inside each cell and type. Use Tab to jump to the next cell. Shift+Tab to go back.",
+          },
+          {
+            title: "Format the Table \ud83c\udfa8",
+            description: "Use Table Design tab for borders, shading, and styles. Use Table Layout tab to merge cells, split cells, or adjust row height.",
+          },
         ],
       },
       {
         type: "callout",
-        variant: "red",
-        html: `<strong>\u274c Never say "ten" for binary 10!</strong> Binary 10 = decimal 2. Binary 110 = decimal 6. Always say "one-zero" or "one-one-zero". If someone says "binary ten," they mean the number <strong>two</strong>, not ten!`,
+        variant: "amber",
+        html: `<strong>Merge Cells:</strong> Select multiple cells \u2192 Table Layout \u2192 Merge Cells. This combines them into one big cell. Perfect for table headers that span multiple columns. <strong>Split Cells</strong> does the opposite \u2014 divides one cell into many.`,
       },
       {
-        type: "text",
-        html: `<strong>Binary position values (from right to left):</strong> Each position doubles. The values are: <mark>1, 2, 4, 8, 16, 32, 64, 128</mark>. Memorise this row \u2014 you'll use it for every single conversion! \ud83e\udde0`,
-      },
-      {
-        type: "table",
-        headers: ["Position (right to left)", "7", "6", "5", "4", "3", "2", "1", "0"],
-        rows: [
-          { cells: ["Power of 2", "2\u2077", "2\u2076", "2\u2075", "2\u2074", "2\u00b3", "2\u00b2", "2\u00b9", "2\u2070"] },
-          { cells: ["Value", "128", "64", "32", "16", "8", "4", "2", "1"] },
-        ],
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Resize images properly:</strong> ALWAYS drag from the <mark>corner handles</mark>, not the side handles. Corner handles maintain the image's proportions. Side handles stretch and distort. Nobody wants a squished photo in their assignment!`,
       },
     ],
   },
@@ -209,76 +226,65 @@ export const topics: Topic[] = [
   // ─── Topic 4 ───
   {
     id: 4,
-    title: "Decimal to Binary Conversion",
-    time: "~6 mins",
-    badges: [{ text: "High yield", type: "star" }, { text: "Exam favourite", type: "hot" }],
-    hook: `Your teacher gives you the number 13 and says "convert to binary." Your friends panic. <strong>You don't \u2014 because you know the trick.</strong> It's just dividing by 2, writing remainders, and reading backwards. 30 seconds, done. Let's learn the method that makes this effortless.`,
+    title: "MS Excel — Creating Worksheets",
+    time: "~5 mins",
+    badges: [{ text: "High yield", type: "star" }],
+    hook: `If Word is for writing, <strong>Excel is for numbers.</strong> Budgets, attendance, marks, invoices, data analysis — anything with numbers and calculations lives in Excel. It's a giant grid, and that grid is more powerful than you think.`,
     content: [
       {
-        type: "text",
-        html: `The method is called <mark>Repeated Division by 2</mark>. Divide the decimal number by 2 over and over. Write down the <strong>remainder</strong> each time (0 or 1). When you reach 0, stop. Then read the remainders from <strong>BOTTOM to TOP</strong> \u2014 that's your binary number!`,
+        type: "analogy",
+        label: "\ud83d\udcca Grid Paper Analogy",
+        html: `Imagine a massive sheet of graph paper — but every tiny square is smart. It can hold text, numbers, dates, or even a formula that calculates itself. That's Excel. <strong>Columns go A, B, C</strong> (left to right). <strong>Rows go 1, 2, 3</strong> (top to bottom). Where they cross = a <strong>Cell</strong>. Cell B3 = column B, row 3.`,
       },
       {
         type: "image",
-        description: "Step-by-step division of 13 by 2 showing quotient and remainder columns, with arrow reading remainders bottom-to-top = 1101",
+        description: "Excel spreadsheet showing Column letters (A, B, C), Row numbers (1, 2, 3), a Cell reference (B3 highlighted), and the Name Box showing 'B3'",
       },
       {
-        type: "text",
-        html: `<strong>\ud83d\udcdd Example: Convert 13 to binary</strong>`,
-      },
-      {
-        type: "steps",
+        type: "cards",
+        columns: 3,
         items: [
           {
-            title: "13 \u00f7 2 = 6 remainder 1 \u2b07\ufe0f",
-            description: "13 divided by 2 is 6 with remainder 1. Write down the remainder: 1",
+            icon: "\ud83d\udfe9",
+            title: "Cell",
+            description: "The intersection of a column and row. Each cell has a unique address like A1, B5, C12. This is where you type data.",
+            tag: "The basic unit",
           },
           {
-            title: "6 \u00f7 2 = 3 remainder 0 \u2b07\ufe0f",
-            description: "6 divided by 2 is 3 with remainder 0. Write it down: 0",
+            icon: "\u2194\ufe0f",
+            title: "Column",
+            description: "Vertical strip labeled with letters: A, B, C... Z, AA, AB. Excel has 16,384 columns!",
+            tag: "Letters \u2192 A to XFD",
           },
           {
-            title: "3 \u00f7 2 = 1 remainder 1 \u2b07\ufe0f",
-            description: "3 divided by 2 is 1 with remainder 1. Write it down: 1",
+            icon: "\u2195\ufe0f",
+            title: "Row",
+            description: "Horizontal strip labeled with numbers: 1, 2, 3... Excel has over 1 million rows per sheet!",
+            tag: "Numbers \u2192 1 to 1,048,576",
           },
-          {
-            title: "1 \u00f7 2 = 0 remainder 1 \u23f9\ufe0f",
-            description: "1 divided by 2 is 0 with remainder 1. Write it down: 1. Quotient is 0, so STOP here!",
-          },
-          {
-            title: "Read BOTTOM to TOP: 1101 \u2705",
-            description: "Reading remainders from bottom to top gives us 1101. So 13 in decimal = 1101 in binary!",
-          },
+        ],
+      },
+      {
+        type: "table",
+        headers: ["Excel Term", "What It Is", "Real-World Analogy"],
+        rows: [
+          { cells: ["Cell", "One single box (e.g., A1)", "One square on graph paper"] },
+          { cells: ["Worksheet (Sheet)", "One full grid of cells \u2014 one tab at the bottom", "One page of graph paper"] },
+          { cells: ["Workbook", "The entire Excel file containing multiple sheets", "The whole notebook"] },
+          { cells: ["Cell Reference", "The cell's address like B5 or D12", "The seat number in a movie hall"] },
+          { cells: ["Range", "A group of cells like A1:A10 or B2:D5", "A block of seats together"] },
+          { cells: ["Active Cell", "The cell currently selected (blue border)", "The seat you're sitting in right now"] },
         ],
       },
       {
         type: "callout",
-        variant: "amber",
-        html: `<strong>\ud83e\udde0 Memory trick:</strong> "Divide, Remainder, Repeat, Read Backwards." Or just remember: <strong>D.R.R.B.</strong> \u2014 "Don't Run, Read Backwards!" The last remainder you write is the FIRST digit of your binary number.`,
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcdd Another example: Convert 25 to binary</strong>`,
-      },
-      {
-        type: "table",
-        headers: ["Step", "Division", "Quotient", "Remainder"],
-        rows: [
-          { cells: ["1", "25 \u00f7 2", "12", "<strong>1</strong>"] },
-          { cells: ["2", "12 \u00f7 2", "6", "<strong>0</strong>"] },
-          { cells: ["3", "6 \u00f7 2", "3", "<strong>0</strong>"] },
-          { cells: ["4", "3 \u00f7 2", "1", "<strong>1</strong>"] },
-          { cells: ["5", "1 \u00f7 2", "0", "<strong>1</strong>"] },
-        ],
-      },
-      {
-        type: "text",
-        html: `Read remainders bottom to top: <mark>11001</mark>. So 25 in decimal = <strong>11001</strong> in binary. \u2705`,
+        variant: "dark",
+        html: `<strong>Data types in cells:</strong> A cell can hold <mark>Numbers</mark> (100, 3.14), <mark>Text/Labels</mark> ("Student Name"), <mark>Dates</mark> (09/04/2026), or <mark>Formulas</mark> (=A1+B1). Excel automatically detects the type based on what you enter.`,
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Quick check:</strong> Add up the position values where there's a 1: 11001 = 16 + 8 + 0 + 0 + 1 = <strong>25</strong> \u2705. Always verify your answer by converting back!`,
+        html: `<strong>Formatting cells:</strong> Right-click \u2192 Format Cells to change number format (currency, percentage, date), font, alignment, borders, and fill color. Use the Home tab for quick formatting like Bold, Merge & Center, and cell borders.`,
       },
     ],
   },
@@ -286,81 +292,86 @@ export const topics: Topic[] = [
   // ─── Topic 5 ───
   {
     id: 5,
-    title: "Binary to Decimal Conversion",
-    time: "~5 mins",
-    badges: [{ text: "High yield", type: "star" }, { text: "Exam favourite", type: "hot" }],
-    hook: `Now the reverse \u2014 your teacher gives you <strong>10110</strong> and says "what number is this?" Don't sweat it. You already know the position values (1, 2, 4, 8, 16...). <strong>Just multiply and add.</strong> It's even easier than the other direction.`,
+    title: "MS Excel — Formulas & Functions",
+    time: "~7 mins",
+    badges: [{ text: "High yield", type: "star" }, { text: "Most tested", type: "hot" }],
+    hook: `This is <strong>the</strong> reason Excel exists. You don't open Excel to type text — you open it to <em>calculate</em>. Formulas turn Excel from a fancy table into a supercharged calculator that updates itself automatically. <strong>Change one number and everything recalculates instantly.</strong>`,
     content: [
       {
         type: "text",
-        html: `The method is called the <mark>Positional Value Method</mark>. Write the binary number, place the position values (1, 2, 4, 8, 16, 32...) underneath from <strong>right to left</strong>, multiply each bit by its position value, then <strong>add them all up</strong>.`,
+        html: `Every formula in Excel starts with an <mark>equals sign (=)</mark>. Without it, Excel treats your entry as plain text, not a calculation. Remember: <strong>= is the magic key.</strong>`,
       },
       {
-        type: "text",
-        html: `<strong>\ud83d\udcdd Example: Convert 10110 to decimal</strong>`,
-      },
-      {
-        type: "image",
-        description: "Binary 10110 with position values 16, 8, 4, 2, 1 underneath each digit, showing multiplication and sum = 22",
+        type: "callout",
+        variant: "red",
+        html: `<strong>\u274c #1 exam mistake:</strong> Forgetting the = sign. Typing "A1+B1" gives you the text "A1+B1". Typing "<mark>=A1+B1</mark>" gives you the actual sum. The equals sign tells Excel: "This is a formula, calculate it!"`,
       },
       {
         type: "table",
-        headers: ["Binary digit", "1", "0", "1", "1", "0"],
+        headers: ["Operator", "Meaning", "Example", "Result (if A1=10, B1=3)"],
         rows: [
-          { cells: ["Position value", "16", "8", "4", "2", "1"] },
-          { cells: ["Multiply", "1\u00d716 = <strong>16</strong>", "0\u00d78 = <strong>0</strong>", "1\u00d74 = <strong>4</strong>", "1\u00d72 = <strong>2</strong>", "0\u00d71 = <strong>0</strong>"] },
+          { cells: ["+", "Addition", "=A1+B1", "13"] },
+          { cells: ["-", "Subtraction", "=A1-B1", "7"] },
+          { cells: ["*", "Multiplication", "=A1*B1", "30"] },
+          { cells: ["/", "Division", "=A1/B1", "3.33"] },
+          { cells: ["^", "Power (exponent)", "=A1^2", "100"] },
         ],
       },
       {
         type: "text",
-        html: `Add them up: 16 + 0 + 4 + 2 + 0 = <mark>22</mark>. So binary 10110 = decimal <strong>22</strong>. \u2705`,
+        html: `<strong>Built-in Functions — the power tools:</strong> Functions are pre-built formulas. Instead of typing =A1+A2+A3+A4+A5, just use <mark>=SUM(A1:A5)</mark>. Less typing, zero errors.`,
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\u2795",
+            title: "SUM",
+            description: "Adds all numbers in a range. =SUM(A1:A10) adds cells A1 through A10. The most used function in Excel.",
+            tag: "=SUM(range)",
+          },
+          {
+            icon: "\ud83d\udcca",
+            title: "AVERAGE",
+            description: "Calculates the mean. =AVERAGE(B1:B20) gives the average of 20 values. Perfect for marks and scores.",
+            tag: "=AVERAGE(range)",
+          },
+          {
+            icon: "\ud83d\udd22",
+            title: "COUNT",
+            description: "Counts how many cells contain numbers. =COUNT(A1:A50) tells you how many entries have numeric data.",
+            tag: "=COUNT(range)",
+          },
+          {
+            icon: "\u2b06\ufe0f",
+            title: "MAX",
+            description: "Returns the highest value. =MAX(C1:C100) finds the top score. Great for finding the best mark in a class.",
+            tag: "=MAX(range)",
+          },
+          {
+            icon: "\u2b07\ufe0f",
+            title: "MIN",
+            description: "Returns the lowest value. =MIN(C1:C100) finds the minimum score. Opposite of MAX.",
+            tag: "=MIN(range)",
+          },
+          {
+            icon: "\ud83e\udde0",
+            title: "IF",
+            description: "Makes a decision. =IF(A1>=40,\"Pass\",\"Fail\") checks if A1 is 40 or above. If yes \u2192 \"Pass\". If no \u2192 \"Fail\".",
+            tag: "=IF(test, yes, no)",
+          },
+        ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>\ud83d\ude80 Shortcut:</strong> You can skip all the zeros! Only add the position values where the bit is <strong>1</strong>. For 10110: the 1s are at positions 16, 4, and 2. So just do 16 + 4 + 2 = 22. Faster! \u26a1`,
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcdd Another example: Convert 11001011 to decimal</strong>`,
-      },
-      {
-        type: "table",
-        headers: ["Binary digit", "1", "1", "0", "0", "1", "0", "1", "1"],
-        rows: [
-          { cells: ["Position value", "128", "64", "32", "16", "8", "4", "2", "1"] },
-          { cells: ["Multiply", "128", "64", "0", "0", "8", "0", "2", "1"] },
-        ],
-      },
-      {
-        type: "text",
-        html: `Add: 128 + 64 + 8 + 2 + 1 = <mark>203</mark>. Binary 11001011 = decimal <strong>203</strong>. \u2705`,
-      },
-      {
-        type: "steps",
-        items: [
-          {
-            title: "Step 1: Write the binary number \u270d\ufe0f",
-            description: "Write each binary digit in its own box, left to right.",
-          },
-          {
-            title: "Step 2: Write position values below \ud83d\udccd",
-            description: "Starting from the RIGHT, write: 1, 2, 4, 8, 16, 32, 64, 128... Each doubles!",
-          },
-          {
-            title: "Step 3: Multiply each pair \u2716\ufe0f",
-            description: "Multiply each binary digit by the value below it. If the bit is 0, the result is 0. If it's 1, the result is the position value.",
-          },
-          {
-            title: "Step 4: Add all products \u2795",
-            description: "Sum every result together. That's your decimal answer!",
-          },
-        ],
+        html: `<strong>IF function structure:</strong> =IF(<em>condition</em>, <em>value_if_true</em>, <em>value_if_false</em>)<br/>Example: =IF(B2>90, "Distinction", "Regular")<br/>Read it as: "If B2 is greater than 90, show Distinction. Otherwise, show Regular."`,
       },
       {
         type: "callout",
-        variant: "dark",
-        html: `<strong>\ud83e\udde0 Memorise this row:</strong> 128 \u00b7 64 \u00b7 32 \u00b7 16 \u00b7 8 \u00b7 4 \u00b7 2 \u00b7 1 \u2014 these are the powers of 2 for an 8-bit binary number. Write them on your exam paper first thing. They're the key to every binary question!`,
+        variant: "purple",
+        html: `<strong>Cell References in formulas are dynamic!</strong> If you write =A1+B1 and then change the number in A1, the result updates <em>automatically</em>. This is the whole point. Build the formula once, change data anytime \u2014 Excel recalculates instantly.`,
       },
     ],
   },
@@ -368,66 +379,75 @@ export const topics: Topic[] = [
   // ─── Topic 6 ───
   {
     id: 6,
-    title: "Octal & Hexadecimal \u2014 Binary's Best Friends",
+    title: "MS Excel — Data Management",
     time: "~5 mins",
     badges: [],
-    hook: `Binary works perfectly for computers. But for humans? Reading <strong>11111111001011010000</strong> without making a mistake is torture. \ud83d\ude35 That's why we invented <strong>octal (base 8)</strong> and <strong>hexadecimal (base 16)</strong> \u2014 shortcut systems that compress long binary into something humans can actually read.`,
+    hook: `You have a spreadsheet with 500 student records. Your principal asks: "Show me only the students who scored above 80, arranged from highest to lowest." Without sorting and filtering, you'd spend hours. <strong>With Excel? Three clicks.</strong>`,
     content: [
       {
-        type: "text",
-        html: `<mark>Octal (Base 8)</mark> uses digits <strong>0\u20137</strong>. Each octal digit represents exactly <strong>3 binary digits</strong>. <mark>Hexadecimal (Base 16)</mark> uses digits <strong>0\u20139 and A\u2013F</strong>. Each hex digit represents exactly <strong>4 binary digits</strong>. They're not new number values \u2014 they're just shorter ways to write binary!`,
-      },
-      {
         type: "cards",
-        columns: 2,
+        columns: 3,
         items: [
           {
-            icon: "\ud83d\udc19",
-            title: "Octal \u2014 Base 8",
-            description: "Uses 8 digits: 0, 1, 2, 3, 4, 5, 6, 7. Each octal digit = 3 binary digits. Used in file permissions (Linux/Unix).",
-            tag: "3 binary bits = 1 octal digit",
+            icon: "\ud83d\udd3d",
+            title: "Sorting",
+            description: "Arranges data in a specific order. A\u2192Z (ascending) or Z\u2192A (descending). Sort numbers low-to-high or high-to-low. Sort names alphabetically.",
+            tag: "Data tab \u2192 Sort",
           },
           {
-            icon: "\ud83d\udd36",
-            title: "Hexadecimal \u2014 Base 16",
-            description: "Uses 16 symbols: 0\u20139 then A=10, B=11, C=12, D=13, E=14, F=15. Each hex digit = 4 binary bits. Used in colors, memory addresses.",
-            tag: "4 binary bits = 1 hex digit",
+            icon: "\ud83d\udd0d",
+            title: "Filtering",
+            description: "Hides rows that don't match your criteria. Shows ONLY the data you want to see. The hidden data isn't deleted \u2014 just temporarily invisible.",
+            tag: "Data tab \u2192 Filter",
+          },
+          {
+            icon: "\ud83d\udd17",
+            title: "Linking Worksheets",
+            description: "Pull data from one sheet into another using formulas like =Sheet2!A1. One workbook, multiple connected sheets sharing data.",
+            tag: "=SheetName!Cell",
           },
         ],
+      },
+      {
+        type: "text",
+        html: `<strong>Sorting vs Filtering — they're different:</strong>`,
       },
       {
         type: "table",
-        headers: ["Decimal", "Binary", "Octal", "Hexadecimal"],
+        headers: ["Feature", "Sorting", "Filtering"],
         rows: [
-          { cells: ["0", "0000", "0", "0"] },
-          { cells: ["1", "0001", "1", "1"] },
-          { cells: ["5", "0101", "5", "5"] },
-          { cells: ["7", "0111", "7", "7"] },
-          { cells: ["8", "1000", "10", "8"] },
-          { cells: ["9", "1001", "11", "9"] },
-          { cells: ["10", "1010", "12", "A"] },
-          { cells: ["11", "1011", "13", "B"] },
-          { cells: ["12", "1100", "14", "C"] },
-          { cells: ["13", "1101", "15", "D"] },
-          { cells: ["14", "1110", "16", "E"] },
-          { cells: ["15", "1111", "17", "F"] },
-          { cells: ["255", "11111111", "377", "FF"] },
+          { cells: ["What it does", "Rearranges the order of rows", "Hides rows that don't match"] },
+          { cells: ["Data affected", "ALL rows are still visible, just reordered", "Non-matching rows are HIDDEN"] },
+          { cells: ["Example", "Sort marks from highest to lowest", "Show only students who scored > 80"] },
+          { cells: ["Reversible?", "Sort again in different order", "Remove filter to show all data again"] },
         ],
       },
       {
-        type: "callout",
-        variant: "purple",
-        html: `<strong>\ud83c\udfa8 Where you've seen hex before:</strong> Color codes! White = <strong>#FFFFFF</strong>. Red = <strong>#FF0000</strong>. Black = <strong>#000000</strong>. Those are hexadecimal numbers representing how much Red, Green, and Blue light to mix. Every website and app uses hex colors!`,
-      },
-      {
-        type: "analogy",
-        label: "\ud83d\udce6 Packaging Analogy",
-        html: `Imagine you have 12 individual apples (binary digits). You could: count them one by one (binary \u2014 tedious), group them into bags of 3 (octal \u2014 4 bags), or group them into bags of 4 (hex \u2014 3 bags). Same apples, just packaged differently for easier counting! Hex is the most popular packaging because 4 bits fits perfectly into modern computer architecture.`,
+        type: "steps",
+        items: [
+          {
+            title: "Sort Data \ud83d\udd3d",
+            description: "Click any cell in the column you want to sort \u2192 Data tab \u2192 Sort A\u2192Z (ascending) or Z\u2192A (descending). For multi-level sorting, use Data \u2192 Sort and add levels.",
+          },
+          {
+            title: "Filter Data \ud83d\udd0d",
+            description: "Click any cell in your data \u2192 Data tab \u2192 Filter. Dropdown arrows appear on headers. Click an arrow and choose which values to show. Uncheck the rest.",
+          },
+          {
+            title: "Link Worksheets \ud83d\udd17",
+            description: "In the destination cell, type = then click on the source sheet tab and select the cell you want. Excel writes =Sheet2!B5 automatically. Changes in Sheet2 reflect instantly.",
+          },
+        ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>\ud83e\udde0 Hex memory trick:</strong> After 9, the alphabet takes over: <strong>A=10, B=11, C=12, D=13, E=14, F=15</strong>. Think: "All Bad Children Deserve Extra Fun" \u2014 silly, but you'll never forget A\u2013F = 10\u201315!`,
+        html: `<strong>Linking formula syntax:</strong> <mark>=SheetName!CellReference</mark><br/>Example: =Sheet2!A1 pulls the value from cell A1 on Sheet2 into your current sheet.<br/>Example: =Summary!B5 pulls cell B5 from a sheet named "Summary".<br/>If the sheet name has spaces, use single quotes: ='My Data'!C3`,
+      },
+      {
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Why link worksheets?</strong> Imagine one sheet tracks "January Sales" and another tracks "February Sales." A third "Summary" sheet can pull totals from both using linking formulas. Change January data \u2192 Summary updates automatically. No manual copying!`,
       },
     ],
   },
@@ -435,97 +455,80 @@ export const topics: Topic[] = [
   // ─── Topic 7 ───
   {
     id: 7,
-    title: "Logic Gates \u2014 AND, OR, NOT",
-    time: "~6 mins",
-    badges: [{ text: "High yield", type: "star" }],
-    hook: `Every decision your computer makes \u2014 from "should this pixel be red?" to "did the user click the button?" \u2014 comes down to <strong>tiny yes/no questions.</strong> Logic gates are the microscopic decision-makers inside every chip. They take 1s and 0s as input and spit out a 1 or 0 as output. <strong>Three gates rule them all: AND, OR, and NOT.</strong>`,
+    title: "MS PowerPoint — Creating Presentations",
+    time: "~5 mins",
+    badges: [],
+    hook: `Word is for reading. Excel is for calculating. <strong>PowerPoint is for presenting.</strong> Every class project, business pitch, and conference talk uses slides. The difference between a boring presentation and a great one? Knowing how to use layouts, themes, and content the right way.`,
     content: [
       {
-        type: "text",
-        html: `Logic gates implement <mark>Boolean logic</mark> \u2014 named after mathematician George Boole. In Boolean logic, everything is either <strong>TRUE (1)</strong> or <strong>FALSE (0)</strong>. No maybes. No "sort of." Just yes or no. Logic gates take one or two inputs and produce one output based on simple rules.`,
+        type: "analogy",
+        label: "\ud83c\udfa5 Movie Analogy",
+        html: `A PowerPoint presentation is like a short movie. Each <strong>slide is a scene</strong>. The <strong>theme is the visual style</strong> — colors, fonts, background (like a movie's color grading). <strong>Slide layouts</strong> are templates for each scene \u2014 where the title goes, where images go. You're the director.`,
       },
       {
         type: "image",
-        description: "Three gate symbols: AND gate (flat back, curved front) \u00b7 OR gate (curved back and front) \u00b7 NOT gate (triangle with bubble) \u2014 each labeled with inputs A, B and output Q",
+        description: "PowerPoint interface showing Slide panel (left), Main editing area (center), Notes section (bottom), and Ribbon with Home/Insert/Design tabs",
       },
       {
         type: "cards",
         columns: 3,
         items: [
           {
-            icon: "\ud83e\udd1d",
-            title: "AND Gate",
-            description: "Output is 1 ONLY when ALL inputs are 1. Both must be true. Like needing BOTH a key AND a password to unlock a safe.",
-            tag: "Both must be ON",
+            icon: "\ud83d\udcbb",
+            title: "Slides",
+            description: "Individual pages of your presentation. Each slide holds text, images, charts, or videos. Add new slides with Ctrl+M or Home \u2192 New Slide.",
+            tag: "Building blocks",
           },
           {
-            icon: "\ud83e\udd37",
-            title: "OR Gate",
-            description: "Output is 1 when ANY input is 1. At least one must be true. Like a door that opens if you push OR pull.",
-            tag: "At least one ON",
+            icon: "\ud83c\udfa8",
+            title: "Themes",
+            description: "Pre-designed visual styles. One click changes ALL slides' colors, fonts, and backgrounds. Design tab \u2192 Themes.",
+            tag: "Design tab \u2192 Themes",
           },
           {
-            icon: "\ud83d\udd04",
-            title: "NOT Gate",
-            description: "Flips the input. 1 becomes 0. 0 becomes 1. Only one input. Like a light switch \u2014 whatever it is, make it the opposite!",
-            tag: "Flips the value",
+            icon: "\ud83d\udccf",
+            title: "Slide Layouts",
+            description: "Pre-arranged content placeholders. Title Slide, Title + Content, Two Content, Blank, etc. Home \u2192 Layout to change.",
+            tag: "Home \u2192 Layout",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>\ud83d\udcca Truth Tables \u2014 AND Gate:</strong> Output is 1 <em>only</em> when <strong>both</strong> A AND B are 1.`,
+        html: `<strong>Common Slide Layouts you need to know:</strong>`,
       },
       {
         type: "table",
-        headers: ["Input A", "Input B", "Output (A AND B)"],
+        headers: ["Layout Name", "What It Contains", "Best Used For"],
         rows: [
-          { cells: ["0", "0", "<strong>0</strong>"] },
-          { cells: ["0", "1", "<strong>0</strong>"] },
-          { cells: ["1", "0", "<strong>0</strong>"] },
-          { cells: ["1", "1", "<strong>1</strong> \u2705"] },
+          { cells: ["Title Slide", "Large title + subtitle centered", "First slide of any presentation"] },
+          { cells: ["Title and Content", "Title at top + one content area below", "Most slides \u2014 text, bullets, images"] },
+          { cells: ["Two Content", "Title + two side-by-side content areas", "Comparisons, before/after"] },
+          { cells: ["Section Header", "Large text centered on slide", "Dividing sections of a long presentation"] },
+          { cells: ["Blank", "Nothing \u2014 completely empty canvas", "Custom layouts, full-screen images"] },
         ],
       },
       {
-        type: "analogy",
-        label: "\ud83d\udd10 AND = Security Door",
-        html: `An AND gate is like a security system that needs <strong>both</strong> your keycard AND your fingerprint. Miss either one? Door stays locked (0). Both correct? Door opens (1). <strong>Both must be true.</strong>`,
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcca Truth Table \u2014 OR Gate:</strong> Output is 1 when <strong>at least one</strong> input is 1.`,
-      },
-      {
-        type: "table",
-        headers: ["Input A", "Input B", "Output (A OR B)"],
-        rows: [
-          { cells: ["0", "0", "<strong>0</strong>"] },
-          { cells: ["0", "1", "<strong>1</strong> \u2705"] },
-          { cells: ["1", "0", "<strong>1</strong> \u2705"] },
-          { cells: ["1", "1", "<strong>1</strong> \u2705"] },
-        ],
-      },
-      {
-        type: "analogy",
-        label: "\ud83d\udeaa OR = Automatic Door",
-        html: `An OR gate is like an automatic door at a mall \u2014 it opens if <strong>anyone</strong> walks up. Person A walks up? Opens. Person B walks up? Opens. Both walk up? Still opens. The ONLY time it stays closed is when <strong>nobody</strong> is there (both 0).`,
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcca Truth Table \u2014 NOT Gate (Inverter):</strong> Only 1 input. Flips it.`,
-      },
-      {
-        type: "table",
-        headers: ["Input A", "Output (NOT A)"],
-        rows: [
-          { cells: ["0", "<strong>1</strong>"] },
-          { cells: ["1", "<strong>0</strong>"] },
+        type: "steps",
+        items: [
+          {
+            title: "Choose a Theme \ud83c\udfa8",
+            description: "Design tab \u2192 pick a Theme. This sets your visual style. You can also choose Variants for color tweaks.",
+          },
+          {
+            title: "Add Slides with Layouts \ud83d\udcbb",
+            description: "Home \u2192 New Slide dropdown \u2192 pick a layout. Use Title Slide for slide 1, then Title and Content for most others.",
+          },
+          {
+            title: "Add Content \u270d\ufe0f",
+            description: "Click placeholders to type text. Use Insert tab for images, shapes, charts, and videos. Keep text minimal \u2014 slides are visual aids, not documents.",
+          },
         ],
       },
       {
         type: "callout",
-        variant: "dark",
-        html: `<strong>Real-world example:</strong> Your phone's "Do Not Disturb" is a NOT gate. Notifications ON (1) \u2192 DND flips it to OFF (0). Notifications OFF (0) \u2192 DND flips it to ON (1). It simply inverts whatever the current state is.`,
+        variant: "red",
+        html: `<strong>The #1 PowerPoint mistake:</strong> Putting entire paragraphs on slides. Slides are for <mark>key points and visuals only</mark>. If your audience is reading your slides, they're not listening to you. Rule of thumb: maximum 6 lines per slide, maximum 6 words per line.`,
       },
     ],
   },
@@ -533,99 +536,141 @@ export const topics: Topic[] = [
   // ─── Topic 8 ───
   {
     id: 8,
-    title: "Logic Gates \u2014 NAND, NOR, XOR",
-    time: "~6 mins",
-    badges: [{ text: "Most confused", type: "hot" }],
-    hook: `You know AND, OR, and NOT. Now meet their remix versions. <strong>NAND = NOT + AND. NOR = NOT + OR. XOR = eXclusive OR.</strong> These "compound gates" are built by combining the basic three. NAND is so important that you can build an <em>entire computer</em> using nothing but NAND gates. Seriously. \ud83e\udd2f`,
+    title: "MS PowerPoint — Master Slides & Slide Shows",
+    time: "~5 mins",
+    badges: [{ text: "High yield", type: "star" }],
+    hook: `You have a 30-slide presentation and your boss says "Change the logo on every slide." Without Master Slides, that's 30 manual edits. With Master Slides? <strong>One change. All 30 slides update instantly.</strong> That's the power of the Slide Master.`,
     content: [
       {
-        type: "text",
-        html: `Compound gates are created by combining basic gates. The trick is simple: <mark>NAND = AND + NOT</mark> (flip the AND output). <mark>NOR = OR + NOT</mark> (flip the OR output). <mark>XOR = exclusive OR</mark> (output is 1 only when inputs are <strong>different</strong>).`,
+        type: "analogy",
+        label: "\ud83c\udfe0 Blueprint Analogy",
+        html: `A <strong>Slide Master is the blueprint</strong> for every room (slide) in a building (presentation). If you change the blueprint — say, add a company logo to the corner — every room built from that blueprint gets the logo automatically. You don't go room by room. One change at the master level = every slide changes.`,
       },
       {
-        type: "image",
-        description: "Three compound gate symbols: NAND (AND with bubble) \u00b7 NOR (OR with bubble) \u00b7 XOR (OR with extra curved line) \u2014 each labeled",
+        type: "cards",
+        columns: 2,
+        items: [
+          {
+            icon: "\ud83d\udcdc",
+            title: "Slide Master",
+            description: "The master template that controls the look of ALL slides. Change fonts, backgrounds, logos, or footers here once — it applies everywhere. View tab \u2192 Slide Master.",
+            tag: "View \u2192 Slide Master",
+            tagColor: "blue",
+          },
+          {
+            icon: "\ud83d\udccf",
+            title: "Layout Masters",
+            description: "Each Slide Master has multiple layout masters under it (Title, Content, Two Content, etc.). You can customize each layout individually while keeping the master's global style.",
+            tag: "Under the Slide Master",
+            tagColor: "green",
+          },
+        ],
+      },
+      {
+        type: "steps",
+        items: [
+          {
+            title: "Open Slide Master View \ud83d\udcdc",
+            description: "View tab \u2192 Slide Master. The top slide in the left panel is the Master. Slides below it are Layout Masters.",
+          },
+          {
+            title: "Make Global Changes \ud83c\udf0d",
+            description: "Edit the top Master Slide to change fonts, add a logo, change background color, or add footer text that appears on EVERY slide.",
+          },
+          {
+            title: "Close Master View \u2705",
+            description: "Click 'Close Master View' on the Ribbon. All your slides now reflect the changes instantly.",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>Presenting your slides — Slide Show features:</strong>`,
+      },
+      {
+        type: "table",
+        headers: ["Feature", "What It Does", "Where to Find It"],
+        rows: [
+          { cells: ["Transitions", "Animations BETWEEN slides (fade, wipe, push)", "Transitions tab"] },
+          { cells: ["Animations", "Animations of OBJECTS on a slide (appear, fly in, bounce)", "Animations tab"] },
+          { cells: ["Slide Show \u2014 From Beginning", "Starts the presentation from slide 1", "F5 or Slide Show tab"] },
+          { cells: ["Slide Show \u2014 From Current", "Starts from the slide you're on right now", "Shift+F5"] },
+          { cells: ["Presenter View", "Shows notes and next slide to YOU while audience sees only the current slide", "Slide Show tab \u2192 Presenter View"] },
+        ],
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Transitions vs Animations — don't confuse them!</strong><br/><mark>Transitions</mark> = how one slide changes to the next (fade, dissolve, wipe).<br/><mark>Animations</mark> = how objects (text boxes, images) appear/move WITHIN a single slide (fly in, bounce, fade in).`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>Presenter View is a secret weapon.</strong> You see your notes, upcoming slides, and a timer. The audience only sees the current slide. Perfect for remembering key points without reading from the slide. Enable it from Slide Show tab before presenting.`,
+      },
+    ],
+  },
+
+  // ─── Topic 9 ───
+  {
+    id: 9,
+    title: "Putting It All Together — Which Tool When?",
+    time: "~4 mins",
+    badges: [{ text: "Exam scenarios", type: "hot" }],
+    hook: `You now know Word, Excel, and PowerPoint. But the real exam question is: <strong>"Which application would you use for ___?"</strong> Getting this wrong is the easiest way to lose marks. Let's make sure you never pick the wrong tool.`,
+    content: [
+      {
+        type: "analogy",
+        label: "\ud83e\uddf0 Toolbox Analogy",
+        html: `A carpenter doesn't use a hammer for everything. Nails need a hammer, screws need a screwdriver, measurements need a tape. Same idea: <strong>Word = documents</strong> (writing), <strong>Excel = data & calculations</strong> (numbers), <strong>PowerPoint = presentations</strong> (presenting to an audience). Using the wrong tool = messy results and lost marks.`,
+      },
+      {
+        type: "table",
+        headers: ["Scenario", "Best Tool", "Why"],
+        rows: [
+          { cells: ["Writing a college assignment", "MS Word", "Rich text formatting, headings, images, page layout"] },
+          { cells: ["Creating a monthly budget", "MS Excel", "Numbers, formulas, auto-calculations, charts"] },
+          { cells: ["Presenting a project to the class", "MS PowerPoint", "Visual slides, animations, speaker notes"] },
+          { cells: ["Maintaining student attendance records", "MS Excel", "Tabular data, sorting, filtering, formulas"] },
+          { cells: ["Writing a formal letter to a company", "MS Word", "Formatted text, letterhead layout, print-ready"] },
+          { cells: ["Analyzing exam results for 200 students", "MS Excel", "SUM, AVERAGE, IF, sorting, filtering, charts"] },
+          { cells: ["Company product pitch to investors", "MS PowerPoint", "Visual impact, slides, animations, presenting live"] },
+          { cells: ["Creating a resume / CV", "MS Word", "Formatted document, layout, fonts, print/PDF export"] },
+        ],
       },
       {
         type: "cards",
         columns: 3,
         items: [
           {
-            icon: "\ud83d\udeab",
-            title: "NAND Gate",
-            description: "AND gate with output flipped by NOT. Output is 0 ONLY when both inputs are 1. Otherwise always 1. The 'universal gate.'",
-            tag: "NOT + AND",
+            icon: "\ud83d\udcdd",
+            title: "Use MS Word When...",
+            description: "You need to WRITE something: essays, letters, reports, resumes, assignments. Anything that will be read as a document.",
+            tag: "Writing \u00b7 Documents \u00b7 Print",
           },
           {
-            icon: "\u26d4",
-            title: "NOR Gate",
-            description: "OR gate with output flipped by NOT. Output is 1 ONLY when both inputs are 0. Otherwise always 0.",
-            tag: "NOT + OR",
+            icon: "\ud83d\udcca",
+            title: "Use MS Excel When...",
+            description: "You need to CALCULATE or ORGANIZE data: budgets, marks, invoices, attendance, any data with numbers, sorting, or formulas.",
+            tag: "Numbers \u00b7 Formulas \u00b7 Data",
           },
           {
-            icon: "\u2194\ufe0f",
-            title: "XOR Gate",
-            description: "Exclusive OR. Output is 1 ONLY when inputs are DIFFERENT. Same inputs = 0. Different inputs = 1.",
-            tag: "Different = 1",
+            icon: "\ud83d\udcfd\ufe0f",
+            title: "Use MS PowerPoint When...",
+            description: "You need to PRESENT to an audience: class projects, business pitches, training sessions. Visual slides, not documents.",
+            tag: "Presenting \u00b7 Slides \u00b7 Visual",
           },
         ],
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcca Truth Table \u2014 NAND Gate:</strong> The exact <strong>opposite</strong> of AND. Flip every AND output.`,
-      },
-      {
-        type: "table",
-        headers: ["Input A", "Input B", "AND Output", "NAND Output (flipped)"],
-        rows: [
-          { cells: ["0", "0", "0", "<strong>1</strong>"] },
-          { cells: ["0", "1", "0", "<strong>1</strong>"] },
-          { cells: ["1", "0", "0", "<strong>1</strong>"] },
-          { cells: ["1", "1", "1", "<strong>0</strong>"] },
-        ],
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcca Truth Table \u2014 NOR Gate:</strong> The exact <strong>opposite</strong> of OR. Flip every OR output.`,
-      },
-      {
-        type: "table",
-        headers: ["Input A", "Input B", "OR Output", "NOR Output (flipped)"],
-        rows: [
-          { cells: ["0", "0", "0", "<strong>1</strong>"] },
-          { cells: ["0", "1", "1", "<strong>0</strong>"] },
-          { cells: ["1", "0", "1", "<strong>0</strong>"] },
-          { cells: ["1", "1", "1", "<strong>0</strong>"] },
-        ],
-      },
-      {
-        type: "text",
-        html: `<strong>\ud83d\udcca Truth Table \u2014 XOR Gate (Exclusive OR):</strong> Output is 1 when inputs are <strong>different</strong>.`,
-      },
-      {
-        type: "table",
-        headers: ["Input A", "Input B", "XOR Output"],
-        rows: [
-          { cells: ["0", "0", "<strong>0</strong> (same)"] },
-          { cells: ["0", "1", "<strong>1</strong> (different) \u2705"] },
-          { cells: ["1", "0", "<strong>1</strong> (different) \u2705"] },
-          { cells: ["1", "1", "<strong>0</strong> (same)"] },
-        ],
-      },
-      {
-        type: "analogy",
-        label: "\ud83d\udca1 XOR = Light Switch Analogy",
-        html: `Imagine a room with <strong>two light switches</strong> controlling one light (a two-way switch). If both switches are in the same position (both up or both down), the light is OFF. If they're in <strong>different positions</strong>, the light is ON. That's exactly how XOR works \u2014 different inputs = 1, same inputs = 0!`,
       },
       {
         type: "callout",
-        variant: "purple",
-        html: `<strong>\ud83c\udfc6 NAND is special:</strong> It's called a <mark>Universal Gate</mark> because you can build ANY other gate (AND, OR, NOT, XOR) using ONLY NAND gates. Engineers love it because they only need one type of gate to build an entire processor!`,
+        variant: "dark",
+        html: `<strong>The golden decision rule:</strong><br/>\ud83d\udcdd Writing a document to be read? \u2192 <strong>Word</strong><br/>\ud83d\udcca Working with numbers, data, or formulas? \u2192 <strong>Excel</strong><br/>\ud83d\udcfd\ufe0f Presenting to an audience live? \u2192 <strong>PowerPoint</strong><br/>Ask yourself: "Is this for reading, calculating, or presenting?" and you'll never pick wrong.`,
       },
       {
         type: "callout",
-        variant: "amber",
-        html: `<strong>\ud83e\udde0 Summary trick:</strong> AND = "both ON" \u00b7 OR = "at least one ON" \u00b7 NOT = "flip it" \u00b7 NAND = "NOT both ON" \u00b7 NOR = "NOT any ON" \u00b7 XOR = "one but not both." Write this on your exam paper before you start!`,
+        variant: "blue",
+        html: `<strong>They work together!</strong> You can embed an Excel chart into a Word report. You can paste a Word outline into PowerPoint slides. You can link Excel data to PowerPoint charts. These tools are a team — each handles what it does best.`,
       },
     ],
   },

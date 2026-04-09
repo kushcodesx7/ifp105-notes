@@ -16,21 +16,21 @@ const modules = [
   },
   {
     number: "02",
-    title: "Number Systems & Logic Gates",
-    description: "Binary, decimal, octal, hexadecimal conversions. AND, OR, NOT gates. The math behind the machine.",
-    icon: "🔢",
+    title: "Office Automation",
+    description: "MS Word, Excel, and PowerPoint — editing, formatting, formulas, charts, presentations, and slide shows.",
+    icon: "📊",
     href: "/module/2",
     accent: "#10B981",
-    tags: ["8 Topics", "~40 min", "80 Qs"],
+    tags: ["9 Topics", "~45 min", "90 Qs"],
   },
   {
     number: "03",
-    title: "MS Office & Productivity",
-    description: "Word processing, spreadsheets, presentations — the tools you'll use in every job and assignment.",
-    icon: "📝",
+    title: "Social Media Foundation",
+    description: "Social media platforms, management tools, measurement & reporting, advertising, Facebook & Twitter marketing.",
+    icon: "📱",
     href: "/module/3",
     accent: "#3B82F6",
-    tags: ["9 Topics", "~45 min", "90 Qs"],
+    tags: ["7 Topics", "~35 min", "70 Qs"],
   },
   {
     number: "04",
@@ -54,8 +54,8 @@ const modules = [
 
 const stats = [
   { label: "Modules", value: "5" },
-  { label: "Topics", value: "43" },
-  { label: "Questions", value: "310" },
+  { label: "Topics", value: "47" },
+  { label: "Questions", value: "480" },
   { label: "Hours", value: "~4" },
 ];
 
