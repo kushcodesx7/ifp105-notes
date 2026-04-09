@@ -78,6 +78,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m2/office-automation.webp",
         description: "MS Word Ribbon interface showing Home tab with Font group, Paragraph group, and Styles group highlighted",
       },
       {
