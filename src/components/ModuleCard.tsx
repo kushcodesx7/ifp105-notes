@@ -30,15 +30,9 @@ export default function ModuleCard({
     <motion.div
       whileHover={locked ? {} : { y: -4 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className={`group relative overflow-hidden rounded-2xl transition-all duration-300 ${
+      className={`group relative overflow-hidden rounded-2xl card-glass ${
         locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       }`}
-      style={{
-        background: locked ? '#131318' : '#1a1a22',
-        border: `1px solid ${locked ? '#2a2a33' : '#333340'}`,
-      }}
-      onMouseEnter={(e) => { if (!locked) { e.currentTarget.style.background = '#222230'; e.currentTarget.style.borderColor = '#44445a'; }}}
-      onMouseLeave={(e) => { if (!locked) { e.currentTarget.style.background = '#1a1a22'; e.currentTarget.style.borderColor = '#333340'; }}}
     >
       {/* Gradient top line */}
       <div

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
 import Confetti from "@/components/module/Confetti";
@@ -92,6 +93,17 @@ export default function ModulePage({
     setScrollProgress(0);
   }, [activeTab]);
 
+  // Keyboard navigation: left/right arrows to switch tabs
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+      if (e.key === "ArrowRight" && activeTab < TOTAL_TOPICS) switchTab(activeTab + 1);
+      if (e.key === "ArrowLeft" && activeTab > 1) switchTab(activeTab - 1);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, TOTAL_TOPICS]);
+
   function markDone(topicId: number) {
     setDone((prev) => new Set([...prev, topicId]));
     setConfettiTrigger((prev) => prev + 1);
@@ -106,6 +118,14 @@ export default function ModulePage({
     setDirection(n > activeTab ? 1 : -1);
     setIsCheatSheet(false);
     setActiveTab(n);
+    // Scroll to top of content area (just below the tab bar)
+    setTimeout(() => {
+      const tabBar = document.querySelector('[role="tablist"]');
+      if (tabBar) {
+        const top = tabBar.getBoundingClientRect().bottom + window.scrollY - 56;
+        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+      }
+    }, 50);
   }
 
   const progressPct = (done.size / TOTAL_TOPICS) * 100;
@@ -148,7 +168,7 @@ export default function ModulePage({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="relative z-10 text-center px-6 py-16 max-w-2xl mx-auto"
+          className="relative z-10 text-center px-6 py-10 sm:py-14 max-w-2xl mx-auto"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5 text-[11px] font-medium text-zinc-400"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -176,11 +196,14 @@ export default function ModulePage({
 
       {/* Tab Bar */}
       <div className="sticky top-14 z-40" style={{ background: 'rgba(9,9,15,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1e1e28' }}>
-        <div className="max-w-5xl mx-auto flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+        <div role="tablist" aria-label="Topic navigation" className="max-w-5xl mx-auto flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
           {topics.map((t) => (
             <button
               key={t.id}
+              role="tab"
+              aria-selected={activeTab === t.id && !isCheatSheet}
               onClick={() => switchTab(t.id)}
+              title={t.title}
               className={`relative flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
                 activeTab === t.id && !isCheatSheet
                   ? "text-indigo-400 bg-indigo-500/5"
@@ -205,7 +228,7 @@ export default function ModulePage({
               }}>
                 {done.has(t.id) ? "✓" : t.id}
               </span>
-              {t.title.substring(0, 20)}
+              {t.title.substring(0, 20)}{t.title.length > 20 ? '...' : ''}
             </button>
           ))}
           <button
@@ -279,11 +302,17 @@ export default function ModulePage({
                 <span className="[&_strong]:text-indigo-300" dangerouslySetInnerHTML={{ __html: activeTopic.hook }} />
               </motion.div>
 
-              <TopicRenderer content={activeTopic.content} />
+              <ErrorBoundary>
+                <TopicRenderer content={activeTopic.content} />
+              </ErrorBoundary>
 
               {renderAfterContent && renderAfterContent(activeTab)}
 
-              {mcqData[activeTab] && <McqQuiz topicId={activeTab} questions={mcqData[activeTab]} />}
+              {mcqData[activeTab] && (
+                <ErrorBoundary>
+                  <McqQuiz topicId={activeTab} questions={mcqData[activeTab]} />
+                </ErrorBoundary>
+              )}
 
               {!done.has(activeTab) ? (
                 <motion.button whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }} onClick={() => markDone(activeTab)}
