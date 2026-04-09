@@ -15,6 +15,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/social-media.webp",
         description: "Social media ecosystem: person at centre connected to Facebook, Instagram, Twitter/X, YouTube, TikTok, LinkedIn — arrows showing two-way communication",
       },
       {
@@ -83,6 +84,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/platforms.webp",
         description: "6 platform categories in a grid: Social Networking (Facebook, LinkedIn) · Media Sharing (Instagram, YouTube, TikTok) · Microblogging (Twitter/X) · Messaging (WhatsApp, Telegram) · Discussion Forums (Reddit) · Professional (LinkedIn)",
       },
       {
@@ -168,6 +170,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/management-tools.webp",
         description: "Single dashboard connected to Facebook, Instagram, Twitter, LinkedIn, TikTok — showing scheduling calendar, analytics charts, and message inbox",
       },
       {
@@ -255,6 +258,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/analytics.webp",
         description: "Analytics dashboard showing: Reach, Impressions, Engagement Rate, CTR, Conversions — each with sample numbers and trend arrows",
       },
       {
@@ -366,6 +370,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/advertising.webp",
         description: "Funnel diagram: Paid ad shown to targeted audience \u2192 Users click \u2192 Land on website \u2192 Some convert to customers — with $ amount at each stage",
       },
       {
@@ -440,6 +445,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/facebook-marketing.webp",
         description: "Facebook marketing ecosystem: Business Page at centre \u2192 connected to Ads Manager, Groups, Marketplace, Events, Messenger, Insights — all labeled",
       },
       {
@@ -530,6 +536,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/twitter-marketing.webp",
         description: "Twitter marketing toolkit: Tweet at centre \u2192 connected to Hashtags, Threads, Polls, Twitter Ads, Trending Topics, Retweets — all labeled",
       },
       {

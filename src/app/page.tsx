@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
+import XpBar from "@/components/XpBar";
 
 const modules = [
   {
@@ -234,6 +235,28 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ─── BATCHES ─── */}
+      <section className="relative py-24 px-6 border-t border-white/[0.04]">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+            Student <span className="gradient-text-animated">Batches</span>
+          </h2>
+          <p className="text-zinc-400 max-w-md mx-auto mb-8">
+            Connect with your batchmates on LinkedIn. Find your batch and add your profile.
+          </p>
+          <a
+            href="/batches"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)]"
+            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
+          >
+            View Batches
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </a>
+        </div>
+      </section>
+
+      <XpBar />
 
       {/* ─── FOOTER ─── */}
       <footer className="py-12 px-6 border-t border-white/[0.04] text-center">

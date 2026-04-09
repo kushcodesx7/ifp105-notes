@@ -38,6 +38,15 @@ export default function Navbar({ showBack = false, title }: NavbarProps) {
           </span>
         )}
       </div>
+
+      <div className="flex items-center gap-4">
+        <Link
+          href="/batches"
+          className="text-xs font-medium text-zinc-500 hover:text-white transition-colors"
+        >
+          Batches
+        </Link>
+      </div>
     </motion.nav>
   );
 }
