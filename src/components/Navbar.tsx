@@ -14,6 +14,7 @@ export default function Navbar({ showBack = false, title }: NavbarProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      aria-label="Main navigation"
       className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-6 bg-[#09090F]/70 backdrop-blur-xl border-b border-white/[0.06]"
     >
       <div className="flex items-center gap-3">
