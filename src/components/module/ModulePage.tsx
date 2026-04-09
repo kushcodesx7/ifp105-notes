@@ -7,6 +7,12 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
 import Confetti from "@/components/module/Confetti";
+import XpBar from "@/components/XpBar";
+import CheatSheet from "@/components/module/CheatSheet";
+import Flashcards from "@/components/module/Flashcards";
+import { addXP, XP_REWARDS, earnBadge, updateStreak } from "@/lib/gamification";
+import { cheatsheets } from "@/data/cheatsheets";
+import { flashcardData } from "@/data/flashcards";
 
 interface Topic {
   id: number;
@@ -105,7 +111,17 @@ export default function ModulePage({
   }, [activeTab, TOTAL_TOPICS]);
 
   function markDone(topicId: number) {
-    setDone((prev) => new Set([...prev, topicId]));
+    setDone((prev) => {
+      const next = new Set([...prev, topicId]);
+      // XP rewards
+      addXP(XP_REWARDS.TOPIC_DONE);
+      updateStreak();
+      // Badges
+      if (next.size === 1) earnBadge("first_topic");
+      if (next.size === TOTAL_TOPICS) earnBadge("module_done");
+      if (next.size >= 25) earnBadge("halfway");
+      return next;
+    });
     setConfettiTrigger((prev) => prev + 1);
     if (topicId < TOTAL_TOPICS) {
       setTimeout(() => { switchTab(topicId + 1); }, 400);
@@ -134,6 +150,7 @@ export default function ModulePage({
   return (
     <main className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
+      <XpBar />
       <Navbar showBack title={`Module ${moduleNumber} — ${moduleTitle}`} />
 
       {/* Reading progress bar */}
@@ -261,10 +278,16 @@ export default function ModulePage({
       <div className="max-w-3xl mx-auto px-5 py-8">
         <AnimatePresence mode="wait">
           {isCheatSheet ? (
-            <motion.div key="cheatsheet" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="text-center py-16">
-              <div className="text-4xl mb-4">📋</div>
-              <h2 className="text-2xl font-bold mb-2">Cheat Sheet</h2>
-              <p className="text-zinc-500">Complete all topics to unlock the cheat sheet!</p>
+            <motion.div key="cheatsheet" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
+              {cheatsheets.find(c => c.moduleId === moduleNumber) ? (
+                <CheatSheet data={cheatsheets.find(c => c.moduleId === moduleNumber)!} accentFrom={accentFrom} accentTo={accentTo} />
+              ) : (
+                <div className="text-center py-16">
+                  <div className="text-4xl mb-4">📋</div>
+                  <h2 className="text-2xl font-bold mb-2">Cheat Sheet</h2>
+                  <p className="text-zinc-500">Coming soon!</p>
+                </div>
+              )}
             </motion.div>
           ) : activeTopic ? (
             <motion.div
@@ -305,6 +328,11 @@ export default function ModulePage({
               <ErrorBoundary>
                 <TopicRenderer content={activeTopic.content} />
               </ErrorBoundary>
+
+              {/* Flashcards */}
+              {flashcardData[moduleNumber]?.[activeTab] && (
+                <Flashcards cards={flashcardData[moduleNumber][activeTab]} title={`Quick Review — ${activeTopic.title.substring(0, 30)}`} />
+              )}
 
               {renderAfterContent && renderAfterContent(activeTab)}
 

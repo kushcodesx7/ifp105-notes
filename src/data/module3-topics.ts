@@ -15,6 +15,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m3/social-media.webp",
         description: "Social media ecosystem: person at centre connected to Facebook, Instagram, Twitter/X, YouTube, TikTok, LinkedIn — arrows showing two-way communication",
       },
       {
