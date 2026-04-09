@@ -81,6 +81,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m2/word-ribbon.webp",
         description: "MS Word Ribbon showing Home tab with Font group (B, I, U buttons), Paragraph group (alignment buttons), and Styles group highlighted",
       },
       {
@@ -269,6 +270,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m2/excel-grid.webp",
         description: "Excel spreadsheet showing Column letters (A, B, C), Row numbers (1, 2, 3), a Cell highlighted at B3, and the Name Box showing 'B3'",
       },
       {
@@ -555,6 +557,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m2/powerpoint-slides.webp",
         description: "PowerPoint interface showing Slide panel (left), Main editing area (centre), Notes section (bottom), and Ribbon with Home/Insert/Design tabs",
       },
       {
