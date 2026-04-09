@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import TopicRenderer from "@/components/module/TopicRenderer";
@@ -56,9 +56,11 @@ export default function ModulePage({
   const LS_KEY = `ifp105_m${moduleNumber}_progress`;
 
   const [activeTab, setActiveTab] = useState(1);
+  const [direction, setDirection] = useState(1);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [isCheatSheet, setIsCheatSheet] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
     try {
@@ -71,17 +73,37 @@ export default function ModulePage({
     if (done.size > 0) localStorage.setItem(LS_KEY, JSON.stringify([...done]));
   }, [done, LS_KEY]);
 
+  // Reading progress bar
+  const handleScroll = useCallback(() => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    if (docHeight > 0) {
+      setScrollProgress(Math.min(scrollTop / docHeight, 1));
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  // Reset scroll progress when switching topics
+  useEffect(() => {
+    setScrollProgress(0);
+  }, [activeTab]);
+
   function markDone(topicId: number) {
     setDone((prev) => new Set([...prev, topicId]));
     setConfettiTrigger((prev) => prev + 1);
     if (topicId < TOTAL_TOPICS) {
-      setTimeout(() => { setActiveTab(topicId + 1); setIsCheatSheet(false); }, 400);
+      setTimeout(() => { switchTab(topicId + 1); }, 400);
     } else {
       setTimeout(() => setIsCheatSheet(true), 400);
     }
   }
 
   function switchTab(n: number) {
+    setDirection(n > activeTab ? 1 : -1);
     setIsCheatSheet(false);
     setActiveTab(n);
   }
@@ -93,6 +115,16 @@ export default function ModulePage({
     <main className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
       <Navbar showBack title={`Module ${moduleNumber} — ${moduleTitle}`} />
+
+      {/* Reading progress bar */}
+      <motion.div
+        className="fixed top-14 left-0 h-[2px] z-50 pointer-events-none"
+        style={{
+          width: `${scrollProgress * 100}%`,
+          background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})`,
+          boxShadow: `0 0 8px ${accentFrom}60`,
+        }}
+      />
 
       {/* Hero */}
       <section className="relative pt-14 overflow-hidden" style={{ background: '#08080F' }}>
@@ -130,7 +162,7 @@ export default function ModulePage({
             <span className="text-zinc-400 text-3xl sm:text-4xl">{moduleSubtitle}</span>
           </h1>
           <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed mb-6">{moduleDescription}</p>
-          <div className="inline-flex items-center gap-0 rounded-xl overflow-hidden"
+          <div className="inline-flex items-center gap-0 rounded-xl overflow-hidden inner-glow"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {stats.map((s, i) => (
               <div key={s.l} className={`flex flex-col items-center px-6 py-3 ${i > 0 ? 'border-l border-white/[0.06]' : ''}`}>
@@ -149,12 +181,21 @@ export default function ModulePage({
             <button
               key={t.id}
               onClick={() => switchTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap transition-all border-b-2 shrink-0 ${
+              className={`relative flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
                 activeTab === t.id && !isCheatSheet
-                  ? "text-indigo-400 border-indigo-500 bg-indigo-500/5"
-                  : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-white/[0.02]"
+                  ? "text-indigo-400 bg-indigo-500/5"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.02]"
               }`}
             >
+              {/* Sliding tab indicator */}
+              {activeTab === t.id && !isCheatSheet && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-[2px]"
+                  style={{ background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})` }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
               <span className="flex items-center justify-center shrink-0" style={{
                 width: '18px', height: '18px', fontSize: '9px', fontWeight: 700,
                 background: done.has(t.id) ? '#22c55e' : (activeTab === t.id && !isCheatSheet ? `linear-gradient(135deg, ${accentFrom}, ${accentTo})` : '#1e1e28'),
@@ -169,10 +210,18 @@ export default function ModulePage({
           ))}
           <button
             onClick={() => setIsCheatSheet(true)}
-            className={`px-3 py-3 text-xs font-semibold whitespace-nowrap border-b-2 shrink-0 ml-auto ${
-              isCheatSheet ? "text-violet-400 border-violet-500" : "text-zinc-500 border-transparent hover:text-violet-300"
+            className={`relative px-3 py-3 text-xs font-semibold whitespace-nowrap shrink-0 ml-auto ${
+              isCheatSheet ? "text-violet-400" : "text-zinc-500 hover:text-violet-300"
             }`}
           >
+            {isCheatSheet && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-[2px]"
+                style={{ background: 'linear-gradient(90deg, #8B5CF6, #7C3AED)' }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
             ★ Cheat Sheet
           </button>
           <div className="flex items-center gap-2 px-4 shrink-0" style={{ borderLeft: '1px solid #1e1e28' }}>
@@ -195,7 +244,13 @@ export default function ModulePage({
               <p className="text-zinc-500">Complete all topics to unlock the cheat sheet!</p>
             </motion.div>
           ) : activeTopic ? (
-            <motion.div key={activeTab} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: direction * 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: direction * -60 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            >
               {/* Topic Header */}
               <div className="flex items-start gap-4 mb-6 pb-5" style={{ borderBottom: '1px solid #1e1e28' }}>
                 <div className="w-11 h-11 rounded-[14px] text-base font-bold flex items-center justify-center shrink-0"

@@ -31,7 +31,7 @@ export type ContentBlock =
   | { type: "analogy"; label: string; html: string }
   | { type: "table"; headers: string[]; rows: TableRow[] }
   | { type: "steps"; items: Step[] }
-  | { type: "image"; description: string };
+  | { type: "image"; src?: string; description: string };
 
 export interface Topic {
   id: number;
@@ -57,6 +57,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/image%205.png",
         description: "Artificial Intelligence overview",
       },
       {
@@ -144,6 +145,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/machine-learning.png",
         description: "Machine Learning overview",
       },
       {
@@ -231,6 +233,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/data-analytics.png",
         description: "Data Analytics overview",
       },
       {
@@ -298,6 +301,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/image%2020.png",
         description: "Cloud Computing overview",
       },
       {
@@ -383,6 +387,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/blockchain.png",
         description: "Blockchain overview",
       },
       {
@@ -446,6 +451,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/image%2030.png",
         description: "Virtual Reality overview",
       },
       {
@@ -530,6 +536,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/augmented-reality.png",
         description: "Augmented Reality overview",
       },
       {
@@ -599,6 +606,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/iot.png",
         description: "Internet of Things overview",
       },
       {
@@ -662,6 +670,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/generative-ai.png",
         description: "Generative AI overview",
       },
       {
@@ -729,6 +738,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m5/ethical-ai.png",
         description: "Ethical AI overview",
       },
       {

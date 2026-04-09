@@ -116,7 +116,7 @@ export default function Home() {
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
             Your Complete
             <br />
-            <span className="gradient-text">ICT Study Notes</span>
+            <span className="gradient-text-animated">ICT Study Notes</span>
           </h1>
 
           {/* Subtitle */}
@@ -201,7 +201,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Built for <span className="gradient-text">real learning</span>
+              Built for <span className="gradient-text-animated">real learning</span>
             </h2>
             <p className="text-zinc-400 max-w-md mx-auto">
               Not just notes — an interactive experience designed to make concepts stick.
