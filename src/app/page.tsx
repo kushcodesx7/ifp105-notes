@@ -140,8 +140,20 @@ export default function Home() {
             </a>
           </div>
 
+          {/* CTA Button */}
+          <div className="mb-8">
+            <a
+              href="/module/1"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus-glow"
+              style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
+            >
+              Start Learning
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </a>
+          </div>
+
           {/* Stats */}
-          <div className="inline-flex items-center gap-0 rounded-2xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-sm overflow-hidden">
+          <div className="inline-flex items-center gap-0 rounded-2xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-sm overflow-hidden inner-glow">
             {stats.map((stat, i) => (
               <div
                 key={stat.label}
@@ -212,10 +224,7 @@ export default function Home() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group p-6 rounded-xl transition-all duration-300"
-                style={{ background: '#1a1a22', border: '1px solid #333340' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#222230'; e.currentTarget.style.borderColor = '#44445a'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#1a1a22'; e.currentTarget.style.borderColor = '#333340'; }}
+                className="group p-6 rounded-xl card-glass"
               >
                 <div className="text-2xl mb-3">{feature.icon}</div>
                 <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>

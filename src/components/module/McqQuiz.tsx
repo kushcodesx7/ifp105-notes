@@ -19,50 +19,62 @@ interface McqQuizProps {
 const letters = ["A", "B", "C", "D"];
 
 export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps) {
+  const [currentQ, setCurrentQ] = useState(0);
   const [answered, setAnswered] = useState<(number | null)[]>(new Array(questions.length).fill(null));
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const total = questions.length;
-  const answeredCount = answered.filter((a) => a !== null).length;
+  const q = questions[currentQ];
+  const picked = answered[currentQ];
+  const isAnswered = picked !== null;
+  const isCorrect = picked === q.ans;
 
-  function handlePick(qi: number, oi: number) {
-    if (answered[qi] !== null) return;
+  function handlePick(oi: number) {
+    if (isAnswered) return;
     const newAnswered = [...answered];
-    newAnswered[qi] = oi;
+    newAnswered[currentQ] = oi;
     setAnswered(newAnswered);
+    setShowFeedback(true);
 
-    const correct = questions[qi].ans === oi;
-    const newScore = correct ? score + 1 : score;
-    if (correct) setScore(newScore);
+    if (questions[currentQ].ans === oi) {
+      setScore((s) => s + 1);
+    }
+  }
 
-    if (newAnswered.every((a) => a !== null)) {
-      setTimeout(() => {
-        setShowResult(true);
-        onComplete?.(newScore, total);
-      }, 800);
+  function handleNext() {
+    setShowFeedback(false);
+    if (currentQ < total - 1) {
+      setTimeout(() => setCurrentQ((c) => c + 1), 50);
+    } else {
+      setShowResult(true);
+      onComplete?.(score, total);
     }
   }
 
   function retry() {
+    setCurrentQ(0);
     setAnswered(new Array(questions.length).fill(null));
     setScore(0);
     setShowResult(false);
+    setShowFeedback(false);
   }
 
   const pct = (score / total) * 100;
+  const progressWidth = ((currentQ + (isAnswered ? 1 : 0)) / total) * 100;
 
   return (
-    <div className="mt-6 rounded-2xl overflow-hidden" style={{ background: '#151518', border: '1px solid #2a2a33' }}>
+    <div className="mt-6 rounded-2xl overflow-hidden card-glass">
       {/* Header */}
       <div className="relative px-5 py-4 overflow-hidden" style={{ background: 'linear-gradient(135deg, #4F46E5, #4338CA)' }}>
         <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.15), transparent 60%)' }} />
         <div className="relative flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 className="text-[15px] font-semibold text-white">Test Yourself — Topic {topicId}</h3>
-            <p className="text-[11px] text-white/50">{total} questions · instant feedback</p>
+            <p className="text-[11px] text-white/50">{total} questions · one at a time</p>
           </div>
-          <div className={`text-xs font-semibold px-3 py-1 rounded-full border ${
+          <div className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all ${
             score >= Math.ceil(total * 0.8)
               ? 'bg-green-500/20 text-green-300 border-green-500/30'
               : 'bg-white/10 text-white/80 border-white/15'
@@ -70,73 +82,74 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
             {score} / {total}
           </div>
         </div>
+        {/* Progress bar */}
+        <div className="relative mt-3 h-1 rounded-full overflow-hidden bg-white/10">
+          <motion.div
+            animate={{ width: `${progressWidth}%` }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full rounded-full bg-white/40"
+          />
+        </div>
       </div>
 
-      {/* Questions */}
-      <div className="p-4 space-y-3">
-        {questions.map((q, qi) => {
-          const picked = answered[qi];
-          const isCorrect = picked === q.ans;
-          const isAnswered = picked !== null;
-
-          return (
+      {/* Single question view */}
+      {!showResult && (
+        <div className="p-5">
+          <AnimatePresence mode="wait">
             <motion.div
-              key={qi}
-              animate={
-                isAnswered
-                  ? isCorrect
-                    ? { borderColor: '#22c55e' }
-                    : { x: [0, -4, 4, -3, 2, 0], borderColor: '#ef4444' }
-                  : {}
-              }
-              transition={{ duration: 0.3 }}
-              className="rounded-xl p-4"
-              style={{
-                background: isAnswered ? (isCorrect ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)') : '#1a1a22',
-                border: `1px solid ${isAnswered ? (isCorrect ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)') : '#2a2a33'}`,
-              }}
+              key={currentQ}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase mb-1.5">
-                Question {qi + 1} of {total}
-              </div>
-              <div className="text-sm font-semibold text-zinc-200 mb-3 leading-relaxed">
-                Q{qi + 1}. {q.q}
+              {/* Question counter */}
+              <div className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase mb-2">
+                Question {currentQ + 1} of {total}
               </div>
 
-              <div className="space-y-1.5">
+              {/* Question text */}
+              <div className="text-[15px] font-semibold text-zinc-200 mb-5 leading-relaxed">
+                {q.q}
+              </div>
+
+              {/* Options */}
+              <div className="space-y-2">
                 {q.opts.map((opt, oi) => {
                   const isPicked = picked === oi;
                   const isCorrectOpt = q.ans === oi;
-                  let optStyle = { bg: '#111116', border: '#2a2a33', color: '#a1a1aa' };
+
+                  let bg = '#111116';
+                  let border = '#2a2a33';
+                  let color = '#a1a1aa';
+                  let icon = '';
 
                   if (isAnswered) {
-                    if (isPicked && isCorrect) optStyle = { bg: 'rgba(34,197,94,0.1)', border: '#22c55e', color: '#4ade80' };
-                    else if (isPicked && !isCorrect) optStyle = { bg: 'rgba(239,68,68,0.1)', border: '#ef4444', color: '#f87171' };
-                    else if (isCorrectOpt) optStyle = { bg: 'rgba(34,197,94,0.06)', border: '#22c55e', color: '#4ade80' };
+                    if (isPicked && isCorrect) { bg = 'rgba(34,197,94,0.1)'; border = '#22c55e'; color = '#4ade80'; icon = '✓'; }
+                    else if (isPicked && !isCorrect) { bg = 'rgba(239,68,68,0.1)'; border = '#ef4444'; color = '#f87171'; icon = '✗'; }
+                    else if (isCorrectOpt) { bg = 'rgba(34,197,94,0.06)'; border = '#22c55e'; color = '#4ade80'; icon = '✓'; }
                   }
 
                   return (
                     <motion.button
                       key={oi}
-                      whileHover={!isAnswered ? { x: 4, background: '#1c1c26', borderColor: '#4F46E5' } : {}}
+                      whileHover={!isAnswered ? { x: 4 } : {}}
                       whileTap={!isAnswered ? { scale: 0.98 } : {}}
-                      onClick={() => handlePick(qi, oi)}
+                      onClick={() => handlePick(oi)}
                       disabled={isAnswered}
-                      className="w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-left text-[13px] font-medium transition-colors disabled:cursor-default"
-                      style={{ background: optStyle.bg, border: `1px solid ${optStyle.border}`, color: optStyle.color }}
+                      className="w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left text-[13px] font-medium transition-all disabled:cursor-default focus-glow"
+                      style={{ background: bg, border: `1px solid ${border}`, color }}
                     >
                       <span
-                        className="w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5"
+                        className="w-6 h-6 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5 transition-all"
                         style={{
-                          background: isAnswered && (isPicked || isCorrectOpt)
-                            ? (isCorrectOpt ? '#22c55e' : '#ef4444')
-                            : '#222230',
+                          background: isAnswered && (isPicked || isCorrectOpt) ? (isCorrectOpt ? '#22c55e' : '#ef4444') : '#222230',
                           color: isAnswered && (isPicked || isCorrectOpt) ? 'white' : '#71717a',
                         }}
                       >
-                        {letters[oi]}
+                        {isAnswered && icon ? icon : letters[oi]}
                       </span>
-                      <span className="leading-relaxed">{opt}</span>
+                      <span className="leading-relaxed pt-0.5">{opt}</span>
                     </motion.button>
                   );
                 })}
@@ -144,41 +157,57 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
 
               {/* Feedback */}
               <AnimatePresence>
-                {isAnswered && (
+                {showFeedback && isAnswered && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className={`mt-2.5 px-3 py-2.5 rounded-lg text-[12px] leading-relaxed ${
-                      isCorrect
-                        ? 'bg-green-500/10 text-green-300 border border-green-500/20'
-                        : 'bg-red-500/10 text-red-300 border border-red-500/20'
-                    }`}
                   >
-                    <strong>{isCorrect ? '✅ Correct!' : '❌ Not quite.'}</strong> {q.why}
+                    <div
+                      className={`mt-4 px-4 py-3 rounded-xl text-[13px] leading-relaxed ${
+                        isCorrect
+                          ? 'bg-green-500/10 text-green-300 border border-green-500/20'
+                          : 'bg-red-500/10 text-red-300 border border-red-500/20'
+                      }`}
+                      role="alert"
+                    >
+                      <strong>{isCorrect ? '✅ Correct!' : '❌ Not quite.'}</strong> {q.why}
+                    </div>
+
+                    {/* Next button */}
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      onClick={handleNext}
+                      className="w-full mt-4 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 focus-glow"
+                      style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
+                    >
+                      {currentQ < total - 1 ? `Next Question →` : `See Results →`}
+                    </motion.button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
-          );
-        })}
-      </div>
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Result */}
       <AnimatePresence>
         {showResult && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="text-center py-8 px-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-10 px-6"
             style={{ background: 'linear-gradient(135deg, #08080F, #0D0D1F)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <div className={`text-5xl font-bold mb-2 ${
+            <div className={`text-6xl font-bold mb-3 ${
               pct >= 80 ? 'text-green-400' : pct >= 60 ? 'text-yellow-400' : 'text-red-400'
-            }`} style={{ textShadow: `0 0 24px ${pct >= 80 ? 'rgba(74,222,128,0.3)' : pct >= 60 ? 'rgba(250,204,21,0.3)' : 'rgba(248,113,113,0.3)'}` }}>
+            }`} style={{ textShadow: `0 0 30px ${pct >= 80 ? 'rgba(74,222,128,0.3)' : pct >= 60 ? 'rgba(250,204,21,0.3)' : 'rgba(248,113,113,0.3)'}` }}>
               {score}/{total}
             </div>
-            <p className="text-sm text-zinc-500 mb-5">
+            <p className="text-sm text-zinc-500 mb-6">
               {pct === 100 ? 'Perfect score! Outstanding! 🎉' :
                pct >= 80 ? 'Excellent — almost perfect 👏' :
                pct >= 60 ? 'Good effort! Re-read the bits you missed 📖' :
@@ -188,8 +217,8 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={retry}
-              className="px-6 py-2.5 rounded-full text-sm font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 12px rgba(79,70,229,0.3)' }}
+              className="px-8 py-3 rounded-full text-sm font-semibold text-white focus-glow"
+              style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
             >
               Try Again →
             </motion.button>
