@@ -25,9 +25,13 @@ interface Batch {
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
 function decodeJwt(token: string) {
-  const base64 = token.split(".")[1];
-  const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-  return JSON.parse(json);
+  try {
+    const base64 = token.split(".")[1];
+    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 }
 
 // Generate a consistent color from a name
@@ -63,10 +67,17 @@ export default function BatchDetailPage() {
 
   function fetchBatch() {
     fetch("/api/batches")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load batch");
+        return r.json();
+      })
       .then((d) => {
         const found = d.batches.find((b: Batch) => b.id === batchId);
         setBatch(found || null);
+        setLoading(false);
+      })
+      .catch(() => {
+        setBatch(null);
         setLoading(false);
       });
   }
@@ -79,7 +90,11 @@ export default function BatchDetailPage() {
   function handleGoogleSuccess(credentialResponse: { credential?: string }) {
     if (credentialResponse.credential) {
       const decoded = decodeJwt(credentialResponse.credential);
-      setGoogleUser({ name: decoded.name, email: decoded.email });
+      if (decoded?.name && decoded?.email) {
+        setGoogleUser({ name: decoded.name, email: decoded.email });
+      } else {
+        setError("Could not read Google account info. Please try again.");
+      }
     }
   }
 
@@ -87,7 +102,10 @@ export default function BatchDetailPage() {
     setError("");
     if (!enrollmentNo.trim()) { setError("Please enter your enrollment number."); return; }
     if (!linkedinUrl.trim()) { setError("Please enter your LinkedIn URL."); return; }
-    if (!linkedinUrl.includes("linkedin.com/")) { setError("Please enter a valid LinkedIn URL."); return; }
+    if (!/^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/.test(linkedinUrl.trim())) {
+      setError("Please enter a valid LinkedIn URL (e.g. https://linkedin.com/in/yourname).");
+      return;
+    }
 
     setSubmitting(true);
     const res = await fetch("/api/batches", {

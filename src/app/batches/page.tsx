@@ -15,12 +15,20 @@ interface Batch {
 export default function BatchesPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/batches")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load batches");
+        return r.json();
+      })
       .then((d) => {
         setBatches(d.batches);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
         setLoading(false);
       });
   }, []);
@@ -68,6 +76,16 @@ export default function BatchesPage() {
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => { setLoading(true); setError(""); location.reload(); }}
+              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              Try again
+            </button>
           </div>
         ) : batches.length === 0 ? (
           <div className="text-center py-20 text-zinc-500">
