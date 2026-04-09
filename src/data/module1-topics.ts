@@ -31,7 +31,7 @@ export type ContentBlock =
   | { type: "analogy"; label: string; html: string }
   | { type: "table"; headers: string[]; rows: TableRow[] }
   | { type: "steps"; items: Step[] }
-  | { type: "image"; description: string };
+  | { type: "image"; src?: string; description: string };
 
 export interface Topic {
   id: number;
@@ -57,6 +57,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m1/unnamed_(2).jpg",
         description: "4 reasons for computers (Speed \u00b7 Accuracy \u00b7 Storage \u00b7 Connectivity)",
       },
       {
@@ -111,6 +112,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m1/evolution-timeline.png",
         description: "Evolution timeline: Abacus \u2192 ENIAC \u2192 Desktop \u2192 Smartphone",
       },
       {
@@ -170,6 +172,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m1/ipo-cycle.png",
         description: "IPO Cycle: Keyboard/Mouse \u2192 CPU \u2192 Screen/Printer \u00b7 Storage below",
       },
       {
@@ -206,6 +209,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
+        src: "/images/m1/cpu-components.png",
         description: "Inside the CPU: Control Unit (boss) \u00b7 ALU (calculator) \u00b7 Registers (notepad) \u2014 labeled",
       },
       {
@@ -269,6 +273,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m1/ram-vs-rom.png",
         description: `RAM chip (left, "Temporary/Volatile") vs ROM chip (right, "Permanent/Non-volatile")`,
       },
       {
@@ -315,6 +320,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
+        src: "/images/m1/d129a95d-c599-4aee-ab80-d6586aa795c9.png",
         description: "Input devices (Keyboard, Mouse, Mic, Webcam, Scanner, Touchscreen) with arrows pointing INTO computer \u2014 each labeled",
       },
       {
@@ -375,6 +381,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
+        src: "/images/m1/image%204.png",
         description: "Output devices (Monitor, Speakers, Printer, Projector, Headphones) with arrows pointing AWAY from computer \u2014 each labeled",
       },
       {
@@ -434,6 +441,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
+        src: "/images/m1/image%205.png",
         description: "4 storage types: HDD (spinning disk) \u00b7 SSD (chip) \u00b7 USB Drive (plug) \u00b7 Cloud (server) \u2014 labeled with speed & size",
       },
       {
@@ -502,6 +510,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m1/image%207.png",
         description: "Software pyramid: System Software (base) \u2192 Application Software (middle) \u2192 Utility Software (maintenance) \u2014 all labeled with examples",
       },
       {
@@ -575,6 +584,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
+        src: "/images/m1/image%2011.png",
         description: "4-step journey: Type URL \u2192 DNS converts \u2192 Server prepares \u2192 Page arrives \u2014 labeled flow diagram",
       },
       {
@@ -619,6 +629,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
+        src: "/images/m1/internet-apps.png",
         description: "Three panels: Email (formal letter) \u00b7 Instant Messaging (chat bubble) \u00b7 Video Conferencing (camera + faces) \u2014 each labeled with examples",
       },
       {

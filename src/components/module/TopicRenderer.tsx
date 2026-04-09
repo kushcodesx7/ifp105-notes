@@ -16,7 +16,7 @@ type ContentBlock =
   | { type: "analogy"; label: string; html: string }
   | { type: "table"; headers: string[]; rows: TableRow[] }
   | { type: "steps"; items: Step[] }
-  | { type: "image"; description: string };
+  | { type: "image"; src?: string; description: string };
 
 const calloutColors: Record<string, { bg: string; border: string; text: string }> = {
   default: { bg: 'rgba(99,102,241,0.08)', border: '#4F46E5', text: '#818CF8' },
@@ -202,9 +202,26 @@ function RenderBlock({ block, index }: { block: ContentBlock; index: number }) {
 
     case "image":
       return (
-        <div className="my-4 p-4 rounded-xl text-center text-xs text-zinc-500" style={{ background: '#111116', border: '1px dashed #2a2a33' }}>
-          📸 {block.description}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay }}
+          className="my-4 rounded-xl overflow-hidden"
+          style={{ background: '#111116', border: '1px solid #2a2a33' }}
+        >
+          {block.src ? (
+            <img
+              src={block.src}
+              alt={block.description}
+              className="w-full h-auto rounded-xl"
+              loading="lazy"
+            />
+          ) : (
+            <div className="p-4 text-center text-xs text-zinc-500">
+              📸 {block.description}
+            </div>
+          )}
+        </motion.div>
       );
 
     default:
