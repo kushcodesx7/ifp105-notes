@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -11,7 +11,9 @@ import Confetti from "@/components/module/Confetti";
 import XpBar from "@/components/XpBar";
 import CheatSheet from "@/components/module/CheatSheet";
 import Flashcards from "@/components/module/Flashcards";
+import LoginPrompt from "@/components/module/LoginPrompt";
 import { addXP, XP_REWARDS, earnBadge, updateStreak } from "@/lib/gamification";
+import { useAuth } from "@/lib/auth-context";
 import { cheatsheets } from "@/data/cheatsheets";
 import { flashcardData } from "@/data/flashcards";
 
@@ -63,6 +65,8 @@ export default function ModulePage({
   const TOTAL_TOPICS = topics.length;
   const LS_KEY = `ifp105_m${moduleNumber}_progress`;
 
+  const { user, isLoggedIn } = useAuth();
+
   const [activeTab, setActiveTab] = useState(1);
   const [direction, setDirection] = useState(1);
   const [done, setDone] = useState<Set<number>>(new Set());
@@ -70,7 +74,12 @@ export default function ModulePage({
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [useAccordion, setUseAccordion] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [mcqScores, setMcqScores] = useState<Record<number, { score: number; total: number }>>({});
+  const hasShownLoginPrompt = useRef(false);
+  const supabaseLoaded = useRef(false);
 
+  // Load localStorage progress
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LS_KEY);
@@ -78,9 +87,52 @@ export default function ModulePage({
     } catch {}
   }, [LS_KEY]);
 
+  // Save to localStorage
   useEffect(() => {
     if (done.size > 0) localStorage.setItem(LS_KEY, JSON.stringify([...done]));
   }, [done, LS_KEY]);
+
+  // Load Supabase progress on mount when logged in (merge with localStorage, Supabase wins)
+  useEffect(() => {
+    if (!isLoggedIn || !user || supabaseLoaded.current) return;
+    supabaseLoaded.current = true;
+
+    async function loadProgress() {
+      try {
+        const res = await fetch(
+          `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const remoteProgress = data.progress as Record<
+          number,
+          { completed: boolean; mcqScore: number | null; mcqTotal: number | null }
+        >;
+
+        if (!remoteProgress || Object.keys(remoteProgress).length === 0) return;
+
+        // Merge: Supabase wins on conflict
+        setDone((prev) => {
+          const merged = new Set(prev);
+          for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
+            if (tp.completed) merged.add(Number(topicIdStr));
+          }
+          return merged;
+        });
+
+        // Merge MCQ scores
+        const scores: Record<number, { score: number; total: number }> = {};
+        for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
+          if (tp.mcqScore !== null && tp.mcqTotal !== null) {
+            scores[Number(topicIdStr)] = { score: tp.mcqScore, total: tp.mcqTotal };
+          }
+        }
+        setMcqScores((prev) => ({ ...prev, ...scores }));
+      } catch {}
+    }
+
+    loadProgress();
+  }, [isLoggedIn, user, moduleNumber]);
 
   // Reading progress bar
   const handleScroll = useCallback(() => {
@@ -112,6 +164,42 @@ export default function ModulePage({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeTab, TOTAL_TOPICS]);
 
+  // Save progress to Supabase
+  function saveToSupabase(data: {
+    topicId: number;
+    completed?: boolean;
+    mcqScore?: number;
+    mcqTotal?: number;
+    challengeAttempted?: boolean;
+  }) {
+    if (!isLoggedIn || !user) return;
+    fetch("/api/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        name: user.name,
+        batchId: user.batchId,
+        enrollmentNo: user.enrollmentNo,
+        moduleNumber,
+        ...data,
+      }),
+    }).catch(() => {});
+  }
+
+  // Handle quiz completion
+  function handleQuizComplete(topicId: number, score: number, total: number) {
+    setMcqScores((prev) => ({ ...prev, [topicId]: { score, total } }));
+
+    if (isLoggedIn) {
+      saveToSupabase({ topicId, mcqScore: score, mcqTotal: total });
+    } else if (!hasShownLoginPrompt.current) {
+      // Show login prompt on first quiz completion when not logged in
+      hasShownLoginPrompt.current = true;
+      setShowLoginPrompt(true);
+    }
+  }
+
   function markDone(topicId: number) {
     setDone((prev) => {
       const next = new Set([...prev, topicId]);
@@ -125,6 +213,12 @@ export default function ModulePage({
       return next;
     });
     setConfettiTrigger((prev) => prev + 1);
+
+    // Save to Supabase if logged in
+    if (isLoggedIn) {
+      saveToSupabase({ topicId, completed: true });
+    }
+
     if (topicId < TOTAL_TOPICS) {
       setTimeout(() => { switchTab(topicId + 1); }, 400);
     } else {
@@ -354,7 +448,11 @@ export default function ModulePage({
 
               {mcqData[activeTab] && (
                 <ErrorBoundary>
-                  <McqQuiz topicId={activeTab} questions={mcqData[activeTab]} />
+                  <McqQuiz
+                    topicId={activeTab}
+                    questions={mcqData[activeTab]}
+                    onComplete={(score, total) => handleQuizComplete(activeTab, score, total)}
+                  />
                 </ErrorBoundary>
               )}
 
@@ -374,6 +472,11 @@ export default function ModulePage({
           ) : null}
         </AnimatePresence>
       </div>
+
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && (
+        <LoginPrompt onClose={() => setShowLoginPrompt(false)} />
+      )}
     </main>
   );
 }
