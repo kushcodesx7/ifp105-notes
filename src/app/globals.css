@@ -3,7 +3,7 @@
 @theme inline {
   --color-background: #09090F;
   --color-foreground: #FAFAFA;
-  --color-muted: #71717A;
+  --color-muted: #8C8C99; /* bumped from #71717A for WCAG AA on dark bg */
   --color-border: rgba(255,255,255,0.08);
   --color-accent: #6366F1;
   --color-accent-light: #818CF8;
@@ -38,6 +38,32 @@ body {
 ::selection {
   background: rgba(99,102,241,0.3);
   color: white;
+}
+
+/* Global focus-visible for ALL interactive elements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(99,102,241,0.7);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 /* Gradient text utility */
