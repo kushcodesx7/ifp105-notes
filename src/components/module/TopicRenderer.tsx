@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 // Content block types
@@ -226,11 +227,15 @@ function RenderBlock({ block }: { block: ContentBlock }) {
           style={{ background: '#111116', border: '1px solid #2a2a33' }}
         >
           {block.src ? (
-            <img
+            <Image
               src={block.src}
               alt={block.description}
+              width={800}
+              height={400}
               className="w-full h-auto rounded-xl"
               loading="lazy"
+              quality={80}
+              sizes="(max-width: 768px) 100vw, 800px"
             />
           ) : (
             <div className="p-4 text-center text-xs text-zinc-500">
