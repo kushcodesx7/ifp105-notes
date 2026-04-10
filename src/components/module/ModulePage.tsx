@@ -193,6 +193,8 @@ export default function ModulePage({
     challengeAttempted?: boolean;
   }) {
     if (!isLoggedIn || !user) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     fetch("/api/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -202,7 +204,8 @@ export default function ModulePage({
         moduleNumber,
         ...data,
       }),
-    }).catch(() => {});
+      signal: controller.signal,
+    }).catch(() => {}).finally(() => clearTimeout(timeout));
   }
 
   // Handle quiz completion
