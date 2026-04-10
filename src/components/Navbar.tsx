@@ -9,7 +9,16 @@ import { useAuth } from "@/lib/auth-context";
 interface NavbarProps {
   showBack?: boolean;
   title?: string;
+  moduleNumber?: number;
 }
+
+const MODULES = [
+  { number: 1, title: "Hardware & Software", href: "/module/1", accent: "#6366F1" },
+  { number: 2, title: "Office Automation", href: "/module/2", accent: "#10B981" },
+  { number: 3, title: "Social Media", href: null, accent: "#3B82F6" },
+  { number: 4, title: "HTML & Web Dev", href: "/module/4", accent: "#06B6D4" },
+  { number: 5, title: "Tech Trends", href: "/module/5", accent: "#8B5CF6" },
+];
 
 function decodeJwt(token: string): Record<string, string> | null {
   try {
@@ -21,9 +30,10 @@ function decodeJwt(token: string): Record<string, string> | null {
   }
 }
 
-export default function Navbar({ showBack = false, title }: NavbarProps) {
+export default function Navbar({ showBack = false, title, moduleNumber }: NavbarProps) {
   const { user, isLoggedIn, login, logout } = useAuth();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [showModules, setShowModules] = useState(false);
 
   function handleGoogleSuccess(response: { credential?: string }) {
     if (!response.credential) return;
@@ -58,11 +68,71 @@ export default function Navbar({ showBack = false, title }: NavbarProps) {
           <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
             IFP105
           </span>
-          {title && (
+          {title && moduleNumber ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowModules(!showModules)}
+                className="flex items-center gap-1 text-xs sm:text-sm font-medium text-zinc-400 hover:text-white transition-colors truncate max-w-[140px] sm:max-w-none"
+              >
+                {title}
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className={`shrink-0 transition-transform ${showModules ? "rotate-180" : ""}`}>
+                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+
+              {showModules && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowModules(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 mt-2 w-56 rounded-xl z-50 overflow-hidden"
+                    style={{ background: "rgba(15,15,25,0.95)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", boxShadow: "0 16px 48px rgba(0,0,0,0.5)" }}
+                  >
+                    {MODULES.map((mod) => (
+                      mod.href ? (
+                        <Link
+                          key={mod.number}
+                          href={mod.href}
+                          onClick={() => setShowModules(false)}
+                          className={`flex items-center gap-3 px-4 py-3 text-xs font-medium transition-colors ${
+                            mod.number === moduleNumber
+                              ? "text-white bg-white/[0.06]"
+                              : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                          }`}
+                        >
+                          <span className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+                            style={{ background: mod.accent }}>
+                            {mod.number}
+                          </span>
+                          <span className="truncate">{mod.title}</span>
+                          {mod.number === moduleNumber && (
+                            <span className="ml-auto text-[10px] text-zinc-500">Current</span>
+                          )}
+                        </Link>
+                      ) : (
+                        <div key={mod.number} className="flex items-center gap-3 px-4 py-3 text-xs font-medium text-zinc-600 cursor-not-allowed">
+                          <span className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-zinc-600 shrink-0"
+                            style={{ background: "rgba(255,255,255,0.05)" }}>
+                            {mod.number}
+                          </span>
+                          <span className="truncate">{mod.title}</span>
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="ml-auto shrink-0">
+                            <path d="M4 7V5a4 4 0 118 0v2m-9 0h10a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                      )
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </div>
+          ) : title ? (
             <span className="text-xs sm:text-sm font-medium text-zinc-400 truncate max-w-[100px] sm:max-w-none">
               {title}
             </span>
-          )}
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
