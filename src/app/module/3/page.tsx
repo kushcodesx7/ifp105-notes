@@ -9,7 +9,7 @@ export default function Module3() {
       moduleNumber={3}
       moduleTitle="Social Media"
       moduleSubtitle="Foundation"
-      moduleDescription="Social media platforms, management tools, metrics, advertising, Facebook and Twitter marketing strategies."
+      moduleDescription="Social media platforms, modern tools & automation, metrics, advertising, LinkedIn, and personal branding."
       accentFrom="#3B82F6"
       accentTo="#2563EB"
       orbColor1="rgba(59,130,246,0.15)"
@@ -18,7 +18,7 @@ export default function Module3() {
       mcqData={mcqData}
       stats={[
         { n: "7", l: "Topics" },
-        { n: "~35", l: "Minutes" },
+        { n: "~40", l: "Minutes" },
         { n: "70", l: "Practice Qs" },
       ]}
     />

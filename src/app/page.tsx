@@ -35,11 +35,12 @@ const modules = [
   {
     number: "03",
     title: "Social Media Foundation",
-    description: "Social media platforms, management tools, measurement & reporting, advertising, Facebook & Twitter marketing.",
+    description: "Social media platforms, modern tools & automation, measurement, advertising, LinkedIn, and personal branding.",
     icon: "\u{1F4F1}",
+    href: "/module/3",
     accent: "#3B82F6",
-    tags: ["7 Topics", "~35 min", "70 Qs"],
-    locked: true,
+    tags: ["7 Topics", "~40 min", "70 Qs"],
+    lsKey: "ifp105_m3_progress",
     totalTopics: 7,
   },
   {
@@ -78,6 +79,7 @@ const features = [
 // Topic titles for continue learning
 const MODULE_TOPICS: Record<number, string[]> = {
   1: ["Why Did We Even Invent Computers?", "How Computers Grew Up", "How Every Computer Works (IPO)", "The CPU", "Memory (RAM & ROM)", "Input Devices", "Output Devices", "Storage Devices", "Types of Software", "Internet Basics", "Internet Applications"],
+  3: ["Introduction to Social Media", "Types of Social Media Platforms", "Social Media Tools & Automation", "Social Media Measurement & Reporting", "Social Advertising (Organic vs Paid)", "LinkedIn \u2014 Build Your Professional Profile", "Personal Branding on Social Media"],
   4: ["World Wide Web", "HTML & Basic Tags", "HTML Elements", "HTML Attributes", "HTML Comments", "HTML Formatting", "HTML Tables", "HTML Lists", "Hyperlinks", "Images & Image Links", "Build a Full Page"],
   5: ["Artificial Intelligence", "Machine Learning", "Data Analytics", "Cloud Computing", "Blockchain", "Virtual Reality", "Augmented Reality", "Internet of Things", "Generative AI", "Ethical Use of GPTs"],
 };
@@ -139,7 +141,7 @@ export default function Home() {
     const progressEntries: ContinueData[] = [];
 
     for (const mod of modules) {
-      if (mod.locked || !mod.lsKey) continue;
+      if (!mod.lsKey) continue;
       try {
         const saved = localStorage.getItem(mod.lsKey);
         if (saved) {
@@ -455,7 +457,7 @@ export default function Home() {
               Pick a Module
             </h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
-              4 modules available now. Each is self-contained with theory, analogies, and quizzes.
+              5 modules available now. Each is self-contained with theory, analogies, and quizzes.
             </p>
           </div>
 
