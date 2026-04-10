@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -13,6 +14,8 @@ interface ModuleCardProps {
   tags: string[];
   locked?: boolean;
   delay?: number;
+  lsKey?: string;
+  totalTopics?: number;
 }
 
 export default function ModuleCard({
@@ -25,7 +28,24 @@ export default function ModuleCard({
   tags,
   locked = false,
   delay = 0,
+  lsKey,
+  totalTopics,
 }: ModuleCardProps) {
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!lsKey || !totalTopics) return;
+    try {
+      const saved = localStorage.getItem(lsKey);
+      if (saved) {
+        const completed = new Set(JSON.parse(saved));
+        if (completed.size > 0) {
+          setProgress({ done: completed.size, total: totalTopics });
+        }
+      }
+    } catch {}
+  }, [lsKey, totalTopics]);
+
   const content = (
     <motion.div
       whileHover={locked ? {} : { y: -4 }}
@@ -108,6 +128,26 @@ export default function ModuleCard({
           </div>
         )}
       </div>
+
+      {/* Progress bar at bottom */}
+      {progress && progress.done > 0 && (
+        <div className="px-7 pb-5 -mt-1">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(progress.done / progress.total) * 100}%` }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+                className="h-full rounded-full"
+                style={{ background: accent }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold shrink-0" style={{ color: accent }}>
+              {progress.done}/{progress.total} done
+            </span>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 
