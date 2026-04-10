@@ -310,7 +310,7 @@ export default function ModulePage({
 
       {/* Tab Bar */}
       <div className="sticky top-14 z-40" style={{ background: 'rgba(9,9,15,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1e1e28' }}>
-        <div role="tablist" aria-label="Topic navigation" className="max-w-5xl mx-auto flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+        <div role="tablist" aria-label="Topic navigation" className="max-w-5xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', maskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)' }}>
           {topics.map((t) => (
             <button
               key={t.id}

@@ -24,17 +24,24 @@ export default function Flashcards({ cards, title = "Quick Review Flashcards" }:
   function flip() { setFlipped(!flipped); }
 
   function next(didKnow: boolean) {
-    if (didKnow) setKnown((prev) => new Set([...prev, current]));
+    const newKnown = didKnow ? new Set([...known, current]) : known;
+    if (didKnow) setKnown(newKnown);
     setFlipped(false);
+
+    // If all cards known, show completion
+    if (newKnown.size >= cards.length) {
+      return;
+    }
+
     setTimeout(() => {
       // Find next unreviewed card
-      let next = (current + 1) % cards.length;
+      let nextIdx = (current + 1) % cards.length;
       let attempts = 0;
-      while (known.has(next) && !didKnow && attempts < cards.length) {
-        next = (next + 1) % cards.length;
+      while (newKnown.has(nextIdx) && attempts < cards.length) {
+        nextIdx = (nextIdx + 1) % cards.length;
         attempts++;
       }
-      setCurrent(next);
+      setCurrent(nextIdx);
     }, 150);
   }
 
