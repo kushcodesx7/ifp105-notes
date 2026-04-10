@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
+import OnboardingTour from "@/components/OnboardingTour";
 
 const modules = [
   {
@@ -213,7 +214,7 @@ export default function Home() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 text-center px-6 max-w-3xl mx-auto"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm mb-6">
+          <div data-tour="badge" className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-xs font-medium text-zinc-400 tracking-wide">
               IFP105 &middot; Information &amp; Communication Technology
@@ -264,6 +265,7 @@ export default function Home() {
 
           <a
             href="#modules"
+            data-tour="cta"
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus-glow"
             style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
           >
@@ -459,7 +461,9 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {modules.map((mod, i) => (
-              <ModuleCard key={mod.number} {...mod} delay={i * 0.08} />
+              <div key={mod.number} data-tour={i === 0 ? "module-1" : undefined}>
+                <ModuleCard {...mod} delay={i * 0.08} />
+              </div>
             ))}
           </div>
         </div>
@@ -515,6 +519,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Onboarding Tour for first-time visitors */}
+      <OnboardingTour page="landing" />
     </main>
   );
 }

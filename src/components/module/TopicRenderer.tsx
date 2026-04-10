@@ -223,8 +223,8 @@ function RenderBlock({ block }: { block: ContentBlock }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={vp}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="my-4 rounded-xl overflow-hidden"
-          style={{ background: '#111116', border: '1px solid #2a2a33' }}
+          className="my-5 rounded-2xl overflow-hidden group/img cursor-pointer transition-all duration-300 hover:shadow-[0_8px_40px_rgba(99,102,241,0.12)] hover:border-[rgba(99,102,241,0.2)]"
+          style={{ background: '#111116', border: '1px solid #2a2a33', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}
         >
           {block.src ? (
             <Image
@@ -232,10 +232,11 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               alt={block.description}
               width={800}
               height={400}
-              className="w-full h-auto rounded-xl"
+              className="w-full h-auto rounded-2xl transition-transform duration-500 group-hover/img:scale-[1.02]"
               loading="lazy"
               quality={80}
               sizes="(max-width: 768px) 100vw, 800px"
+              placeholder="empty"
             />
           ) : (
             <div className="p-4 text-center text-xs text-zinc-500">

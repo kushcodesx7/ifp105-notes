@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { cheatsheets } from "@/data/cheatsheets";
 import { flashcardData } from "@/data/flashcards";
+import OnboardingTour from "@/components/OnboardingTour";
 
 interface Topic {
   id: number;
@@ -285,6 +286,7 @@ export default function ModulePage({
     <main className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
       <XpBar />
+      <OnboardingTour page="module" />
       <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
       {/* Reading progress bar */}
@@ -347,7 +349,7 @@ export default function ModulePage({
 
       {/* Tab Bar */}
       <div className="sticky top-14 z-40" style={{ background: 'rgba(9,9,15,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1e1e28' }}>
-        <div role="tablist" aria-label="Topic navigation" className="max-w-5xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', maskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)' }}>
+        <div data-tour="tab-bar" role="tablist" aria-label="Topic navigation" className="max-w-5xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', maskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)' }}>
           {topics.map((t) => (
             <button
               key={t.id}
@@ -398,7 +400,7 @@ export default function ModulePage({
             )}
             ★ Cheat Sheet
           </button>
-          <div className="flex items-center gap-2 px-4 shrink-0" style={{ borderLeft: '1px solid #1e1e28' }}>
+          <div data-tour="progress" className="flex items-center gap-2 px-4 shrink-0" style={{ borderLeft: '1px solid #1e1e28' }}>
             <span className="text-[11px] font-bold" style={{ color: accentFrom }}>{done.size}/{TOTAL_TOPICS}</span>
             <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: '#1e1e28' }}>
               <motion.div animate={{ width: `${progressPct}%` }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -482,13 +484,15 @@ export default function ModulePage({
                 </button>
               </div>
 
-              <ErrorBoundary>
-                {useAccordion ? (
-                  <AccordionRenderer content={activeTopic.content} />
-                ) : (
-                  <TopicRenderer content={activeTopic.content} />
-                )}
-              </ErrorBoundary>
+              <div data-tour="topic-content">
+                <ErrorBoundary>
+                  {useAccordion ? (
+                    <AccordionRenderer content={activeTopic.content} />
+                  ) : (
+                    <TopicRenderer content={activeTopic.content} />
+                  )}
+                </ErrorBoundary>
+              </div>
 
               {/* Flashcards */}
               {flashcardData[moduleNumber]?.[activeTab] && (
@@ -498,6 +502,7 @@ export default function ModulePage({
               {renderAfterContent && renderAfterContent(activeTab)}
 
               {mcqData[activeTab] && (
+                <div data-tour="quiz-section">
                 <ErrorBoundary>
                   <McqQuiz
                     topicId={activeTab}
@@ -505,10 +510,11 @@ export default function ModulePage({
                     onComplete={(score, total) => handleQuizComplete(activeTab, score, total)}
                   />
                 </ErrorBoundary>
+                </div>
               )}
 
               {!done.has(activeTab) ? (
-                <motion.button whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }} onClick={() => markDone(activeTab)}
+                <motion.button data-tour="done-btn" whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }} onClick={() => markDone(activeTab)}
                   className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-white relative overflow-hidden"
                   style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})`, boxShadow: `0 4px 16px ${accentFrom}40` }}>
                   ✓ Mark as Done — next topic
