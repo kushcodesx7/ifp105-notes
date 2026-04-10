@@ -40,10 +40,10 @@ const SESSION_KEY = "ifp105_user";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  // Restore from sessionStorage on mount
+  // Restore from localStorage on mount
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem(SESSION_KEY);
+      const saved = localStorage.getItem(SESSION_KEY);
       if (saved) {
         setUser(JSON.parse(saved));
       }
@@ -53,14 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback((u: User) => {
     setUser(u);
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(u));
     } catch {}
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     try {
-      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_KEY);
     } catch {}
   }, []);
 
