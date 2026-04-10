@@ -513,7 +513,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
-        src: "/images/m4/html-web.webp",
+        src: "/images/m4/html-images.webp",
         description: "The img tag concept: picture frame with src arrow and alt tooltip",
       },
       {
