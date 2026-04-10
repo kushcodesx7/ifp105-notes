@@ -285,7 +285,7 @@ export default function ModulePage({
     <main className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
       <XpBar />
-      <Navbar showBack title={`Module ${moduleNumber} — ${moduleTitle}`} moduleNumber={moduleNumber} />
+      <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
       {/* Reading progress bar */}
       <motion.div
