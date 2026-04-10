@@ -5,6 +5,7 @@ import YourTurnChallenge from "@/components/module/YourTurnChallenge";
 import { topics } from "@/data/module4-topics";
 import { mcqData } from "@/data/module4-mcq";
 import { module4Challenges } from "@/data/module4-challenges";
+import TagMatchGame from "@/components/module/TagMatchGame";
 
 const editorDefaults: Record<number, string> = {
   1: '<!-- Topic 1: Try creating a basic HTML page -->\n<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Welcome to the Web!</h1>\n  <p>This is my first web page.</p>\n</body>\n</html>',
@@ -59,6 +60,9 @@ export default function Module4() {
               accentTo="#0891B2"
             />
           )}
+
+          {/* Tag Match Game after the final topic */}
+          {topicId === 11 && <TagMatchGame />}
         </div>
       )}
     />
