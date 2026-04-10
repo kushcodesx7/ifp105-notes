@@ -10,6 +10,11 @@ export const topics: Topic[] = [
     hook: `You open Chrome, type a website, and it appears. But what exactly IS the web? Is it the same as the internet? <strong>Spoiler: they are NOT the same thing.</strong> Let's clear this up once and for all.`,
     content: [
       {
+        type: "image",
+        src: "/images/m4/www-globe.webp",
+        description: "The World Wide Web: a glowing globe connected to browser windows by network lines",
+      },
+      {
         type: "text",
         html: `The <strong>World Wide Web (WWW)</strong> is a huge collection of web pages stored on computers all over the world — connected through the internet.`,
       },
@@ -49,6 +54,11 @@ export const topics: Topic[] = [
     badges: [{ text: "High yield", type: "star" }],
     hook: `Every website you've ever visited — Google, YouTube, Instagram — is built with HTML under the hood. <strong>HTML is the skeleton of every web page.</strong> It tells the browser what to show and how to structure it. Time to write your first code.`,
     content: [
+      {
+        type: "image",
+        src: "/images/m4/html-tags.webp",
+        description: "HTML code structure showing nested tags in a tree-like hierarchy",
+      },
       {
         type: "text",
         html: `<strong>HTML (HyperText Markup Language)</strong> is the language used to build web pages. It uses <strong>tags</strong> to tell the browser what to display.`,
@@ -118,6 +128,11 @@ export const topics: Topic[] = [
     hook: `People confuse "tags" and "elements" all the time. They are NOT the same thing. <strong>An element is the whole package — opening tag + content + closing tag.</strong> Getting this difference right is worth easy marks.`,
     content: [
       {
+        type: "image",
+        src: "/images/m4/html-element.webp",
+        description: "Anatomy of an HTML element: opening tag, content, closing tag",
+      },
+      {
         type: "text",
         html: `An <strong>HTML Element</strong> = Opening tag + Content + Closing tag. It's the complete package!`,
       },
@@ -170,6 +185,11 @@ export const topics: Topic[] = [
     hook: `Tags tell the browser WHAT to show. But <strong>attributes tell it HOW</strong> — what size, what colour, where to link. They're the customisation options that make HTML flexible and powerful.`,
     content: [
       {
+        type: "image",
+        src: "/images/m4/html-attributes.webp",
+        description: "HTML tag with attributes highlighted in different colors",
+      },
+      {
         type: "text",
         html: `<strong>Attributes</strong> give extra information about an element. They always go inside the <strong>opening tag</strong> as <strong>name="value"</strong> pairs.`,
       },
@@ -217,6 +237,11 @@ export const topics: Topic[] = [
     hook: `What if you could write secret notes in your code that only YOU can see — completely invisible to anyone visiting the website? <strong>That's exactly what HTML comments do.</strong> The browser ignores them completely.`,
     content: [
       {
+        type: "image",
+        src: "/images/m4/html-comments.webp",
+        description: "HTML comments shown as ghosted/invisible code compared to visible code",
+      },
+      {
         type: "text",
         html: `A <strong>comment</strong> is a note you write in your HTML code — but the browser <strong>completely ignores it</strong>. It won't show on the webpage at all!`,
       },
@@ -259,6 +284,11 @@ export const topics: Topic[] = [
     badges: [{ text: "High yield", type: "star" }],
     hook: `Plain text is boring. You want <strong>bold</strong>, <em>italic</em>, and underlined text — just like in MS Word. <strong>HTML has tags for all of this.</strong> And yes, you can combine them.`,
     content: [
+      {
+        type: "image",
+        src: "/images/m4/html-formatting.webp",
+        description: "Text formatting showcase: bold, italic, underline, subscript, superscript",
+      },
       {
         type: "text",
         html: `HTML has tags to style your text — just like the bold/italic/underline buttons in MS Word!`,
@@ -305,6 +335,11 @@ export const topics: Topic[] = [
     badges: [{ text: "High yield", type: "star" }, { text: "Exam favourite", type: "hot" }],
     hook: `Tables are one of the <strong>most commonly tested HTML topics</strong> in the exam. They're worth 8 marks and they show up in almost every paper. <strong>Master the table structure and it's free marks.</strong>`,
     content: [
+      {
+        type: "image",
+        src: "/images/m4/html-table.webp",
+        description: "HTML table with colored header row, grid cells, and merged cell arrows",
+      },
       {
         type: "text",
         html: `A <strong>table</strong> organises data into rows and columns — like a spreadsheet on a webpage.`,
@@ -374,6 +409,11 @@ export const topics: Topic[] = [
     hook: `Lists appear in almost every exam paper. There are two types: <strong>numbered (ordered) and bulleted (unordered)</strong>. Know when to use each one and how to code them — it's guaranteed marks.`,
     content: [
       {
+        type: "image",
+        src: "/images/m4/html-lists.webp",
+        description: "Unordered and ordered lists side by side with nested sub-items",
+      },
+      {
         type: "callout",
         variant: "dark",
         html: `<pre><code>&lt;!-- ORDERED LIST -- numbered 1, 2, 3 --&gt;
@@ -426,6 +466,11 @@ export const topics: Topic[] = [
     hook: `The entire web is built on links — click one thing and you're somewhere else. <strong>Without hyperlinks, every website would be a dead end.</strong> The anchor tag <code>&lt;a&gt;</code> is how you create them.`,
     content: [
       {
+        type: "image",
+        src: "/images/m4/html-links.webp",
+        description: "Two web pages connected by a glowing link with click cursor",
+      },
+      {
         type: "text",
         html: `A <strong>hyperlink</strong> lets users click text and jump to another page or website. The tag is <code>&lt;a&gt;</code> — called the <strong>anchor tag</strong>.`,
       },
@@ -466,6 +511,11 @@ export const topics: Topic[] = [
     badges: [{ text: "High yield", type: "star" }],
     hook: `A page with just text is boring. Images make websites come alive. And when you combine images with links, <strong>you get clickable images — one of the most powerful patterns in web design.</strong>`,
     content: [
+      {
+        type: "image",
+        src: "/images/m4/html-images.webp",
+        description: "The img tag concept: picture frame with src arrow and alt tooltip",
+      },
       {
         type: "text",
         html: `Use <code>&lt;img&gt;</code> to show an image. To make an image <strong>clickable</strong>, wrap it inside an <code>&lt;a&gt;</code> tag!`,
@@ -511,6 +561,11 @@ export const topics: Topic[] = [
     badges: [{ text: "Exam favourite", type: "hot" }],
     hook: `This is where everything comes together. In the exam, you'll be asked to <strong>write a complete HTML page from scratch</strong> — using headings, paragraphs, formatting, tables, lists, links, and comments. This topic is your rehearsal.`,
     content: [
+      {
+        type: "image",
+        src: "/images/m4/html-full-page.webp",
+        description: "Complete HTML page structure as a layered building blueprint",
+      },
       {
         type: "text",
         html: `Your final challenge — build a <strong>complete HTML page</strong> using everything from Module 4. This is exactly the type of question worth big marks in the exam!`,

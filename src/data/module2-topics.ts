@@ -11,7 +11,7 @@ export const topics: Topic[] = [
     content: [
       {
         type: "image",
-        src: "/images/m2/office-automation.webp",
+        src: "/images/m2/word-formatting.webp",
         description: "Text Editor (plain text) vs Word Processor (formatted document) side-by-side comparison",
       },
       {
@@ -81,7 +81,7 @@ export const topics: Topic[] = [
       },
       {
         type: "image",
-        src: "/images/m2/office-automation.webp",
+        src: "/images/m2/word-ribbon.webp",
         description: "MS Word Ribbon interface showing Home tab with Font group, Paragraph group, and Styles group highlighted",
       },
       {
