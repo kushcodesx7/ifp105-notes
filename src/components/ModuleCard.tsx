@@ -71,7 +71,8 @@ export default function ModuleCard({
         {/* Tags */}
         <div className="flex flex-wrap gap-2">
           {locked ? (
-            <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-white/5 text-zinc-500 uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1 rounded-full bg-white/5 text-zinc-500 uppercase tracking-wider">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 7V5a4 4 0 118 0v2m-9 0h10a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Coming Soon
             </span>
           ) : (

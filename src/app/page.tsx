@@ -1,9 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
-import XpBar from "@/components/XpBar";
 
 const modules = [
   {
@@ -14,6 +14,8 @@ const modules = [
     href: "/module/1",
     accent: "#6366F1",
     tags: ["11 Topics", "~55 min", "110 Qs"],
+    lsKey: "ifp105_m1_progress",
+    totalTopics: 11,
   },
   {
     number: "02",
@@ -23,6 +25,7 @@ const modules = [
     accent: "#10B981",
     tags: ["9 Topics", "~45 min", "90 Qs"],
     locked: true,
+    totalTopics: 9,
   },
   {
     number: "03",
@@ -32,6 +35,7 @@ const modules = [
     accent: "#3B82F6",
     tags: ["7 Topics", "~35 min", "70 Qs"],
     locked: true,
+    totalTopics: 7,
   },
   {
     number: "04",
@@ -41,6 +45,8 @@ const modules = [
     href: "/module/4",
     accent: "#06B6D4",
     tags: ["11 Topics", "Interactive"],
+    lsKey: "ifp105_m4_progress",
+    totalTopics: 11,
   },
   {
     number: "05",
@@ -50,14 +56,9 @@ const modules = [
     href: "/module/5",
     accent: "#8B5CF6",
     tags: ["10 Topics", "~50 min", "100 Qs"],
+    lsKey: "ifp105_m5_progress",
+    totalTopics: 10,
   },
-];
-
-const stats = [
-  { label: "Modules", value: "5" },
-  { label: "Topics", value: "47" },
-  { label: "Questions", value: "480" },
-  { label: "Hours", value: "~4" },
 ];
 
 const features = [
@@ -69,135 +70,181 @@ const features = [
   { icon: "🔓", title: "100% Free", desc: "No ads, no paywalls, no sign-ups. Just open the link and start studying." },
 ];
 
+// Topic titles for continue learning
+const MODULE_TOPICS: Record<number, string[]> = {
+  1: ["Why Did We Even Invent Computers?", "How Computers Grew Up", "How Every Computer Works (IPO)", "The CPU", "Memory (RAM & ROM)", "Input Devices", "Output Devices", "Storage Devices", "Types of Software", "Internet Basics", "Internet Applications"],
+  4: ["World Wide Web", "HTML & Basic Tags", "HTML Elements", "HTML Attributes", "HTML Comments", "HTML Formatting", "HTML Tables", "HTML Lists", "Hyperlinks", "Images & Image Links", "Build a Full Page"],
+  5: ["Artificial Intelligence", "Machine Learning", "Data Analytics", "Cloud Computing", "Blockchain", "Virtual Reality", "Augmented Reality", "Internet of Things", "Generative AI", "Ethical Use of GPTs"],
+};
+
+interface ContinueData {
+  moduleNumber: number;
+  moduleTitle: string;
+  topicTitle: string;
+  topicId: number;
+  done: number;
+  total: number;
+  href: string;
+  accent: string;
+}
+
 export default function Home() {
+  const [continueData, setContinueData] = useState<ContinueData | null>(null);
+
+  useEffect(() => {
+    // Find the most recent module with partial progress
+    const progressEntries: ContinueData[] = [];
+
+    for (const mod of modules) {
+      if (mod.locked || !mod.lsKey) continue;
+      try {
+        const saved = localStorage.getItem(mod.lsKey);
+        if (saved) {
+          const done = new Set(JSON.parse(saved));
+          const moduleNum = parseInt(mod.number);
+          if (done.size > 0 && done.size < mod.totalTopics) {
+            // Find next incomplete topic
+            const topics = MODULE_TOPICS[moduleNum] || [];
+            let nextTopicId = 1;
+            for (let i = 1; i <= mod.totalTopics; i++) {
+              if (!done.has(i)) { nextTopicId = i; break; }
+            }
+            progressEntries.push({
+              moduleNumber: moduleNum,
+              moduleTitle: mod.title,
+              topicTitle: topics[nextTopicId - 1] || `Topic ${nextTopicId}`,
+              topicId: nextTopicId,
+              done: done.size,
+              total: mod.totalTopics,
+              href: mod.href!,
+              accent: mod.accent,
+            });
+          }
+        }
+      } catch {}
+    }
+
+    if (progressEntries.length > 0) {
+      // Pick the one with most progress
+      progressEntries.sort((a, b) => b.done - a.done);
+      setContinueData(progressEntries[0]);
+    }
+  }, []);
+
   return (
     <main className="relative">
       <Navbar />
 
-      {/* ─── HERO ─── */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-14">
-        {/* Animated gradient orbs */}
+      {/* ─── HERO (compact) ─── */}
+      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden pt-14">
         <div className="absolute inset-0 pointer-events-none">
           <motion.div
             animate={{ x: [0, 30, -20, 0], y: [0, -40, 20, 0], scale: [1, 1.1, 0.95, 1] }}
             transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[10%] right-[15%] w-[500px] h-[500px] rounded-full bg-indigo-500/20 blur-[120px]"
+            className="absolute top-[10%] right-[15%] w-[400px] h-[400px] rounded-full bg-indigo-500/20 blur-[120px]"
           />
           <motion.div
-            animate={{ x: [0, -20, 30, 0], y: [0, 30, -20, 0], scale: [1, 0.95, 1.1, 1] }}
+            animate={{ x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
             transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[15%] left-[10%] w-[400px] h-[400px] rounded-full bg-violet-500/15 blur-[120px]"
-          />
-          <motion.div
-            animate={{ x: [0, 15, -15, 0], y: [0, -15, 15, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[40%] left-[40%] w-[300px] h-[300px] rounded-full bg-cyan-500/10 blur-[100px]"
+            className="absolute bottom-[15%] left-[10%] w-[300px] h-[300px] rounded-full bg-violet-500/15 blur-[120px]"
           />
         </div>
+        <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
 
-        {/* Grid overlay */}
-        <div className="absolute inset-0 grid-bg opacity-50 pointer-events-none" />
-
-        {/* Hero content — animated entrance */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 text-center px-6 max-w-3xl mx-auto"
         >
-          {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-xs font-medium text-zinc-400 tracking-wide">
               IFP105 · Information &amp; Communication Technology
             </span>
           </div>
 
-          {/* Title */}
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4">
             Your Complete
             <br />
             <span className="gradient-text-animated">ICT Study Notes</span>
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-base sm:text-lg text-zinc-400 max-w-lg mx-auto leading-relaxed mb-10">
-            Interactive modules with quizzes, analogies, cheat sheets, and
-            progress tracking. Built for IFS students at Amity Tashkent.
+          <p className="text-base text-zinc-400 max-w-lg mx-auto leading-relaxed mb-6">
+            Interactive modules with quizzes, analogies, and progress tracking.
+            <br className="hidden sm:block" />
+            Built for IFS students at Amity Tashkent.
           </p>
 
-          {/* Author */}
-          <div className="text-sm text-zinc-500 mb-12">
+          <div className="text-xs text-zinc-500 mb-8">
             by{" "}
             <span className="text-zinc-300 font-medium">Kushagra Tripathi</span>
-            {" · "}
-            <a
-              href="https://www.linkedin.com/in/kushagra-x7/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-400/80 hover:text-indigo-300 transition-colors"
-            >
-              LinkedIn →
-            </a>
           </div>
 
-          {/* CTA Button */}
-          <div className="mb-8">
-            <a
-              href="/module/1"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus-glow"
-              style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
-            >
-              Start Learning
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </a>
-          </div>
-
-          {/* Stats */}
-          <div className="inline-flex items-center gap-0 rounded-2xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-sm overflow-hidden inner-glow">
-            {stats.map((stat, i) => (
-              <div
-                key={stat.label}
-                className={`flex flex-col items-center px-5 sm:px-8 py-4 ${
-                  i > 0 ? "border-l border-white/[0.06]" : ""
-                }`}
-              >
-                <span className="text-xl sm:text-2xl font-bold text-white">{stat.value}</span>
-                <span className="text-[10px] sm:text-[11px] font-medium text-zinc-500 uppercase tracking-wider mt-0.5">
-                  {stat.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="w-5 h-8 rounded-full border-2 border-white/10 flex justify-center pt-1.5"
+          <a
+            href="#modules"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus-glow"
+            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
           >
-            <div className="w-1 h-2 rounded-full bg-white/20" />
-          </motion.div>
+            Start Learning
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </a>
         </motion.div>
       </section>
 
+      {/* ─── CONTINUE LEARNING ─── */}
+      {continueData && (
+        <section className="relative px-6 -mt-8 mb-8 z-10">
+          <div className="max-w-3xl mx-auto">
+            <motion.a
+              href={continueData.href}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ y: -2 }}
+              className="block p-5 rounded-2xl backdrop-blur-xl transition-all"
+              style={{
+                background: `linear-gradient(135deg, ${continueData.accent}15, ${continueData.accent}08)`,
+                border: `1px solid ${continueData.accent}30`,
+              }}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
+                    Continue Learning
+                  </div>
+                  <div className="text-sm font-semibold text-white truncate">
+                    Module {continueData.moduleNumber}: {continueData.topicTitle}
+                  </div>
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex-1 max-w-[120px] h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${(continueData.done / continueData.total) * 100}%`, background: continueData.accent }} />
+                    </div>
+                    <span className="text-[11px] font-medium" style={{ color: continueData.accent }}>
+                      {continueData.done}/{continueData.total}
+                    </span>
+                  </div>
+                </div>
+                <div className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${continueData.accent}20` }}>
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10m0 0L9 4m4 4L9 12" stroke={continueData.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </motion.a>
+          </div>
+        </section>
+      )}
+
       {/* ─── MODULES ─── */}
-      <section className="relative py-24 px-6">
+      <section id="modules" className="relative py-16 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              5 Modules. One Goal.
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
+              Pick a Module
             </h2>
-            <p className="text-zinc-400 max-w-md mx-auto">
-              Each module is self-contained with theory, analogies, and practice
-              quizzes. Study at your own pace.
+            <p className="text-sm text-zinc-400 max-w-md mx-auto">
+              3 modules available now. Each is self-contained with theory, analogies, and quizzes.
             </p>
           </div>
 
@@ -210,77 +257,49 @@ export default function Home() {
       </section>
 
       {/* ─── FEATURES ─── */}
-      <section className="relative py-24 px-6 border-t border-white/[0.04]">
+      <section className="relative py-20 px-6 border-t border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
               Built for <span className="gradient-text-animated">real learning</span>
             </h2>
-            <p className="text-zinc-400 max-w-md mx-auto">
+            <p className="text-sm text-zinc-400 max-w-md mx-auto">
               Not just notes — an interactive experience designed to make concepts stick.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="group p-6 rounded-xl card-glass"
-              >
-                <div className="text-2xl mb-3">{feature.icon}</div>
-                <h3 className="text-sm font-semibold mb-1.5">{feature.title}</h3>
-                <p className="text-sm text-zinc-500 leading-relaxed">{feature.desc}</p>
+              <div key={feature.title} className="group p-5 rounded-xl card-glass">
+                <div className="text-xl mb-2">{feature.icon}</div>
+                <h3 className="text-sm font-semibold mb-1">{feature.title}</h3>
+                <p className="text-xs text-zinc-500 leading-relaxed">{feature.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── BATCHES ─── */}
-      <section className="relative py-24 px-6 border-t border-white/[0.04]">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-            Student <span className="gradient-text-animated">Batches</span>
-          </h2>
-          <p className="text-zinc-400 max-w-md mx-auto mb-8">
-            Connect with your batchmates on LinkedIn. Find your batch and add your profile.
-          </p>
-          <a
-            href="/batches"
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)]"
-            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
-          >
-            View Batches
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </a>
-        </div>
-      </section>
-
-      <XpBar />
-
       {/* ─── FOOTER ─── */}
-      <footer className="py-16 px-6 border-t border-white/[0.04]">
+      <footer className="py-12 px-6 border-t border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
                 IFP105
               </span>
               <span className="text-sm text-zinc-500">ICT Study Notes</span>
             </div>
-            <div className="flex items-center gap-6">
-              <a href="/batches" className="text-xs text-zinc-500 hover:text-white transition-colors">Batches</a>
-              <a
-                href="https://www.linkedin.com/in/kushagra-x7/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-zinc-500 hover:text-white transition-colors"
-              >
-                LinkedIn
-              </a>
-            </div>
+            <a
+              href="https://www.linkedin.com/in/kushagra-x7/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-zinc-500 hover:text-white transition-colors"
+            >
+              LinkedIn
+            </a>
           </div>
-          <div className="text-center pt-6 border-t border-white/[0.04]">
+          <div className="text-center pt-4 border-t border-white/[0.04]">
             <p className="text-xs text-zinc-600">
               Amity University Tashkent · Made with care by Kushagra Tripathi
             </p>

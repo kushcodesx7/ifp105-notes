@@ -42,14 +42,7 @@ export default function Navbar({ showBack = false, title }: NavbarProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <Link
-          href="/batches"
-          className="text-xs font-medium text-zinc-500 hover:text-white transition-colors"
-        >
-          Batches
-        </Link>
-
+      <div className="flex items-center gap-3">
         {isLoggedIn && user && (
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-zinc-500 hidden sm:block">
