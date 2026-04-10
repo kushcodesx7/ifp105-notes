@@ -86,6 +86,23 @@ export const topics: Topic[] = [
       },
       {
         type: "callout",
+        variant: "dark",
+        html: `<strong>📐 Visual: HTML Page Structure</strong><pre><code>  &lt;!DOCTYPE html&gt;  ← tells browser: this is HTML5
+  ┌─── &lt;html&gt; ────────────────────┐
+  │                                 │
+  │  ┌─── &lt;head&gt; ──────────────┐   │
+  │  │  &lt;title&gt;My Page&lt;/title&gt; │   │  ← Not visible on page
+  │  └─────────────────────────┘   │     (shown in browser tab)
+  │                                 │
+  │  ┌─── &lt;body&gt; ──────────────┐   │
+  │  │  &lt;h1&gt;Hello!&lt;/h1&gt;       │   │  ← Everything visible
+  │  │  &lt;p&gt;Welcome.&lt;/p&gt;       │   │     goes here
+  │  └─────────────────────────┘   │
+  │                                 │
+  └─────────────────────────────────┘</code></pre>`,
+      },
+      {
+        type: "callout",
         variant: "blue",
         html: `<strong>Structure rule:</strong> Every HTML page needs this skeleton: <code>&lt;!DOCTYPE html&gt;</code> at the top, then <code>&lt;html&gt;</code> wrapping <code>&lt;head&gt;</code> and <code>&lt;body&gt;</code>. The head holds metadata; the body holds everything visible.`,
       },
@@ -183,6 +200,11 @@ export const topics: Topic[] = [
         variant: "amber",
         html: `<strong>Rules to remember:</strong> Attributes go in the <strong>opening tag only</strong> — never the closing tag. Values must always be in <strong>quotes</strong>. Example: <code>width="200"</code>`,
       },
+      {
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Boolean attributes:</strong> Some attributes don't need a value — just being present makes them active. Example: <code>&lt;input disabled&gt;</code> makes the input disabled. Common booleans: <code>disabled</code>, <code>readonly</code>, <code>checked</code>.`,
+      },
     ],
   },
 
@@ -261,6 +283,10 @@ export const topics: Topic[] = [
           { cells: ["<code>&lt;strong&gt;</code>", "Bold + importance", "Important content (browsers also bold it)"] },
           { cells: ["<code>&lt;mark&gt;</code>", "Yellow highlight", "Key terms"] },
           { cells: ["<code>&lt;small&gt;</code>", "Smaller text", "Fine print, disclaimers"] },
+          { cells: ["<code>&lt;em&gt;</code>", "Italic + emphasis", "Words you'd stress when speaking (like &lt;strong&gt; but for italic)"] },
+          { cells: ["<code>&lt;del&gt;</code>", "Strikethrough", "Deleted or outdated text (shows a line through it)"] },
+          { cells: ["<code>&lt;sub&gt;</code>", "Subscript", "Chemical formulas: H<sub>2</sub>O"] },
+          { cells: ["<code>&lt;sup&gt;</code>", "Superscript", "Math powers: x<sup>2</sup>"] },
         ],
       },
       {
@@ -309,6 +335,20 @@ export const topics: Topic[] = [
       },
       {
         type: "callout",
+        variant: "dark",
+        html: `<strong>📐 Visual: Table Structure</strong><pre><code>┌──────── &lt;table&gt; ────────┐
+│                          │
+│  ┌──── &lt;tr&gt; ──────────┐  │
+│  │ &lt;th&gt;Name&lt;/th&gt; │ &lt;th&gt;Age&lt;/th&gt; │  │
+│  └─────────────────────┘  │
+│  ┌──── &lt;tr&gt; ──────────┐  │
+│  │ &lt;td&gt;Alex&lt;/td&gt; │ &lt;td&gt;20&lt;/td&gt;  │  │
+│  └─────────────────────┘  │
+│                          │
+└──────────────────────────┘</code></pre>`,
+      },
+      {
+        type: "callout",
         variant: "amber",
         html: `<strong>Nesting rule:</strong> <code>table</code> contains <code>tr</code>, and <code>tr</code> contains <code>th</code> or <code>td</code>. Never put <code>&lt;td&gt;</code> directly inside <code>&lt;table&gt;</code> — it MUST be inside a <code>&lt;tr&gt;</code>!`,
       },
@@ -316,6 +356,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>The border attribute:</strong> <code>&lt;table border="1"&gt;</code> adds visible lines around cells. Without it, the table is invisible — the data is there but you can't see the grid.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Table caption:</strong> Use <code>&lt;caption&gt;</code> right after the opening <code>&lt;table&gt;</code> tag to give your table a title. Example: <code>&lt;caption&gt;Student Grades&lt;/caption&gt;</code>. It appears above the table and helps describe what the table shows.`,
       },
     ],
   },
@@ -363,6 +408,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>Structure:</strong> The <code>&lt;li&gt;</code> tag is the same for BOTH list types. The outer wrapper (<code>&lt;ol&gt;</code> or <code>&lt;ul&gt;</code>) decides whether you get numbers or bullets.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Customising lists:</strong> Use <code>type</code> to change numbering style: <code>&lt;ol type="A"&gt;</code> for A, B, C. <code>type="I"</code> for Roman numerals. <code>type="a"</code> for lowercase. Use <code>start="5"</code> to begin counting from 5 instead of 1.`,
       },
     ],
   },
@@ -519,6 +569,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>Exam strategy:</strong> Use comments above each section to show the examiner you understand the structure. Label each part: <code>&lt;!-- heading --&gt;</code>, <code>&lt;!-- table --&gt;</code>, <code>&lt;!-- list --&gt;</code>. This earns extra marks for clarity.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Semantic HTML (bonus marks):</strong> Modern HTML uses tags that <strong>describe meaning</strong>, not just appearance. <code>&lt;nav&gt;</code> for navigation menus. <code>&lt;header&gt;</code> and <code>&lt;footer&gt;</code> for page top/bottom sections. <code>&lt;section&gt;</code> for grouped content. <code>&lt;article&gt;</code> for standalone content like blog posts. Using these shows the examiner you know modern web standards!`,
       },
       {
         type: "callout",
