@@ -4,19 +4,17 @@ import { supabase } from "@/lib/supabase";
 // GET — load profiles for a batch
 export async function GET(req: NextRequest) {
   const batchId = req.nextUrl.searchParams.get("batchId");
+  const email = req.nextUrl.searchParams.get("email");
 
-  if (!batchId) {
-    return Response.json(
-      { error: "batchId query parameter is required" },
-      { status: 400 }
-    );
+  let query = supabase.from("student_profiles").select("*").order("updated_at", { ascending: false });
+
+  if (email) {
+    query = query.eq("student_email", email);
+  } else if (batchId && batchId !== "all") {
+    query = query.eq("batch_id", batchId);
   }
 
-  const { data: profiles, error } = await supabase
-    .from("student_profiles")
-    .select("*")
-    .eq("batch_id", batchId)
-    .order("updated_at", { ascending: false });
+  const { data: profiles, error } = await query;
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
