@@ -176,9 +176,18 @@ export default function Home() {
             Built for IFS students at Amity Tashkent.
           </p>
 
-          <div className="text-xs text-zinc-500 mb-8">
+          <div className="text-sm text-zinc-500 mb-8">
             by{" "}
             <span className="text-zinc-300 font-medium">Kushagra Tripathi</span>
+            {" · "}
+            <a
+              href="https://www.linkedin.com/in/kushagra-x7/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-400/80 hover:text-indigo-300 transition-colors"
+            >
+              LinkedIn →
+            </a>
           </div>
 
           <a
