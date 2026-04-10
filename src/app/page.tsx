@@ -221,7 +221,7 @@ export default function Home() {
             </span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4">
+          <h1 data-tour="hero" className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4">
             Your Complete
             <br />
             <span className="gradient-text-animated">ICT Study Notes</span>
@@ -516,6 +516,13 @@ export default function Home() {
             <p className="text-xs text-zinc-600">
               Amity University Tashkent &middot; Made with care by Kushagra Tripathi
             </p>
+            <button
+              onClick={() => { localStorage.removeItem("ifp105_tour_done_landing"); window.location.reload(); }}
+              className="text-[10px] text-zinc-700 hover:text-indigo-400 transition-colors mt-2 inline-flex items-center gap-1"
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 1111.96.8M2 8V4m0 4h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Show tour again
+            </button>
           </div>
         </div>
       </footer>
