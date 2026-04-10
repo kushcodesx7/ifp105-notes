@@ -14,6 +14,7 @@ import Flashcards from "@/components/module/Flashcards";
 import LoginPrompt from "@/components/module/LoginPrompt";
 import { addXP, XP_REWARDS, earnBadge, updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
+import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { cheatsheets } from "@/data/cheatsheets";
 import { flashcardData } from "@/data/flashcards";
 
@@ -76,6 +77,9 @@ export default function ModulePage({
   const [useAccordion, setUseAccordion] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [mcqScores, setMcqScores] = useState<Record<number, { score: number; total: number }>>({});
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [bookmarkedTopics, setBookmarkedTopics] = useState<Set<number>>(new Set());
+  const [toast, setToast] = useState<string | null>(null);
   const hasShownLoginPrompt = useRef(false);
   const supabaseLoaded = useRef(false);
 
@@ -87,10 +91,26 @@ export default function ModulePage({
     } catch {}
   }, [LS_KEY]);
 
+  // Load bookmarks on mount
+  useEffect(() => {
+    const bm = new Set<number>();
+    for (let i = 1; i <= TOTAL_TOPICS; i++) {
+      if (isBookmarked(moduleNumber, i)) bm.add(i);
+    }
+    setBookmarkedTopics(bm);
+  }, [moduleNumber, TOTAL_TOPICS]);
+
   // Save to localStorage
   useEffect(() => {
     if (done.size > 0) localStorage.setItem(LS_KEY, JSON.stringify([...done]));
   }, [done, LS_KEY]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Load Supabase progress on mount when logged in (merge with localStorage, Supabase wins)
   useEffect(() => {
@@ -223,7 +243,23 @@ export default function ModulePage({
     if (topicId < TOTAL_TOPICS) {
       setTimeout(() => { switchTab(topicId + 1); }, 400);
     } else {
-      setTimeout(() => setIsCheatSheet(true), 400);
+      // Last topic done — show certificate!
+      setTimeout(() => {
+        setShowCertificate(true);
+        setConfettiTrigger((prev) => prev + 1);
+      }, 600);
+    }
+  }
+
+  function toggleBookmark(topicId: number, topicTitle: string) {
+    if (bookmarkedTopics.has(topicId)) {
+      removeBookmark(moduleNumber, topicId);
+      setBookmarkedTopics((prev) => { const n = new Set(prev); n.delete(topicId); return n; });
+      setToast("Bookmark removed");
+    } else {
+      addBookmark(moduleNumber, topicId, topicTitle);
+      setBookmarkedTopics((prev) => new Set([...prev, topicId]));
+      setToast("Topic saved!");
     }
   }
 
@@ -400,8 +436,21 @@ export default function ModulePage({
                   style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})`, boxShadow: `0 4px 12px ${accentFrom}40` }}>
                   {activeTopic.id}
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight mb-1.5">{activeTopic.title}</h2>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="text-xl font-bold tracking-tight mb-1.5">{activeTopic.title}</h2>
+                    <button
+                      onClick={() => toggleBookmark(activeTopic.id, activeTopic.title)}
+                      className="shrink-0 mt-0.5 text-lg transition-all hover:scale-110 active:scale-95"
+                      title={bookmarkedTopics.has(activeTopic.id) ? "Remove bookmark" : "Save topic"}
+                    >
+                      {bookmarkedTopics.has(activeTopic.id) ? (
+                        <span className="text-amber-400">{"\uD83D\uDD16"}</span>
+                      ) : (
+                        <span className="text-zinc-600 hover:text-zinc-400">{"\uD83D\uDD16"}</span>
+                      )}
+                    </button>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full" style={{ background: '#1e1e28', color: '#71717a' }}>⏱ {activeTopic.time}</span>
                     {activeTopic.badges.map((b) => (
@@ -478,6 +527,119 @@ export default function ModulePage({
       {showLoginPrompt && (
         <LoginPrompt onClose={() => setShowLoginPrompt(false)} />
       )}
+
+      {/* Toast notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-xl text-sm font-medium backdrop-blur-xl"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#e4e4e7' }}
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Completion Certificate Modal */}
+      <AnimatePresence>
+        {showCertificate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
+            onClick={() => setShowCertificate(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-2xl overflow-hidden"
+              style={{ background: '#0f0f17', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {/* Celebration header */}
+              <div className="text-center pt-8 pb-4">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.2 }}
+                  className="text-6xl mb-3"
+                >
+                  {"\uD83C\uDF89"}
+                </motion.div>
+                <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
+                <p className="text-zinc-400 text-sm">
+                  You completed Module {moduleNumber}: {moduleTitle}
+                </p>
+              </div>
+
+              {/* Certificate card */}
+              <div className="mx-6 mb-6 p-6 rounded-xl relative overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08))',
+                  border: '1px solid rgba(99,102,241,0.2)',
+                }}
+              >
+                <div className="absolute inset-0 opacity-5"
+                  style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px)' }}
+                />
+                <div className="relative text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-3">
+                    Certificate of Completion
+                  </div>
+                  <div className="text-lg font-bold mb-1" style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    Module {moduleNumber}: {moduleTitle}
+                  </div>
+                  <div className="text-sm text-zinc-300 mb-3">
+                    Awarded to <span className="font-semibold text-white">{isLoggedIn && user ? user.name : "Student"}</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-500 mb-1">
+                    {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  </div>
+                  <div className="text-[10px] text-zinc-600 font-medium">
+                    IFP105 &middot; Amity University Tashkent
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="px-6 pb-6 space-y-3">
+                <a
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`I just completed Module ${moduleNumber}: ${moduleTitle} on IFP105 Study Notes!`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01]"
+                  style={{ background: '#0A66C2' }}
+                >
+                  Share on LinkedIn
+                </a>
+                {moduleNumber < 5 && (
+                  <a
+                    href={`/module/${moduleNumber + 1}`}
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01]"
+                    style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})` }}
+                  >
+                    Continue to Next Module &rarr;
+                  </a>
+                )}
+                <button
+                  onClick={() => setShowCertificate(false)}
+                  className="w-full py-3 rounded-xl text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
