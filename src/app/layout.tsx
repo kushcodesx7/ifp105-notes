@@ -16,10 +16,10 @@ const dmSerif = DM_Serif_Display({
 
 export const metadata: Metadata = {
   title: "IFP105 — ICT Study Notes",
-  description: "Interactive study notes for Information & Communication Technology. Built for IFP students at Amity Tashkent.",
+  description: "Interactive study notes for Information & Communication Technology. Built for IFS students at Amity Tashkent.",
   openGraph: {
     title: "IFP105 — ICT Study Notes",
-    description: "Interactive modules with quizzes, analogies, cheat sheets, and progress tracking. Built for IFP students at Amity Tashkent.",
+    description: "Interactive modules with quizzes, analogies, cheat sheets, and progress tracking. Built for IFS students at Amity Tashkent.",
     type: "website",
     siteName: "IFP105",
   },

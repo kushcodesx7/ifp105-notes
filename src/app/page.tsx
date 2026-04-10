@@ -123,7 +123,7 @@ export default function Home() {
           {/* Subtitle */}
           <p className="text-base sm:text-lg text-zinc-400 max-w-lg mx-auto leading-relaxed mb-10">
             Interactive modules with quizzes, analogies, cheat sheets, and
-            progress tracking. Built for IFP students at Amity Tashkent.
+            progress tracking. Built for IFS students at Amity Tashkent.
           </p>
 
           {/* Author */}
