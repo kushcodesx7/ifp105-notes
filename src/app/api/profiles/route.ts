@@ -93,12 +93,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // If batchId is empty string, treat as null
+  const safeBatchId = batchId && batchId.trim() ? batchId.trim() : null;
+
   const { error } = await supabase.from("student_profiles").upsert(
     {
       student_email: studentEmail,
       name,
       enrollment_no: enrollmentNo,
-      batch_id: batchId || null,
+      batch_id: safeBatchId,
       photo_url: photoUrl || null,
       status: status || null,
       company: company || null,
@@ -120,6 +123,7 @@ export async function POST(req: NextRequest) {
   );
 
   if (error) {
+    console.error("[profiles] upsert error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 

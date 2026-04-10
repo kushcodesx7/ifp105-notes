@@ -227,11 +227,13 @@ export default function EditProfilePage() {
 
       const data = await res.json();
       if (!res.ok) {
-        showToast("error", data.error || "Failed to save");
+        console.error("[profile save] error:", data);
+        showToast("error", data.error || "Failed to save profile");
         return;
       }
-      showToast("success", "Profile saved successfully!");
-    } catch {
+      showToast("success", "Profile saved successfully! View it on your batch page.");
+    } catch (err) {
+      console.error("[profile save] network error:", err);
       showToast("error", "Failed to save. Please try again.");
     } finally {
       setSaving(false);
