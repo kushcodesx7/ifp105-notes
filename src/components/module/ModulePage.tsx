@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import TopicRenderer from "@/components/module/TopicRenderer";
+import AccordionRenderer from "@/components/module/AccordionRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
 import Confetti from "@/components/module/Confetti";
 import XpBar from "@/components/XpBar";
@@ -68,6 +69,7 @@ export default function ModulePage({
   const [isCheatSheet, setIsCheatSheet] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [useAccordion, setUseAccordion] = useState(false);
 
   useEffect(() => {
     try {
@@ -325,8 +327,22 @@ export default function ModulePage({
                 <span className="[&_strong]:text-indigo-300" dangerouslySetInnerHTML={{ __html: activeTopic.hook }} />
               </motion.div>
 
+              {/* View mode toggle */}
+              <div className="flex items-center justify-end mb-2">
+                <button
+                  onClick={() => setUseAccordion(!useAccordion)}
+                  className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12]"
+                >
+                  {useAccordion ? "📖 Full View" : "📋 Section View"}
+                </button>
+              </div>
+
               <ErrorBoundary>
-                <TopicRenderer content={activeTopic.content} />
+                {useAccordion ? (
+                  <AccordionRenderer content={activeTopic.content} />
+                ) : (
+                  <TopicRenderer content={activeTopic.content} />
+                )}
               </ErrorBoundary>
 
               {/* Flashcards */}

@@ -1,8 +1,10 @@
 "use client";
 import ModulePage from "@/components/module/ModulePage";
 import HtmlEditor from "@/components/module/HtmlEditor";
+import YourTurnChallenge from "@/components/module/YourTurnChallenge";
 import { topics } from "@/data/module4-topics";
 import { mcqData } from "@/data/module4-mcq";
+import { module4Challenges } from "@/data/module4-challenges";
 
 const editorDefaults: Record<number, string> = {
   1: '<!-- Topic 1: Try creating a basic HTML page -->\n<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Welcome to the Web!</h1>\n  <p>This is my first web page.</p>\n</body>\n</html>',
@@ -48,6 +50,15 @@ export default function Module4() {
           <HtmlEditor
             initialCode={editorDefaults[topicId] || editorDefaults[1]}
           />
+
+          {/* Guided challenge */}
+          {module4Challenges[topicId] && (
+            <YourTurnChallenge
+              challenge={module4Challenges[topicId]}
+              accentFrom="#06B6D4"
+              accentTo="#0891B2"
+            />
+          )}
         </div>
       )}
     />
