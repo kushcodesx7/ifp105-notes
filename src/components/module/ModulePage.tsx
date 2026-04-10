@@ -199,8 +199,6 @@ export default function ModulePage({
       body: JSON.stringify({
         email: user.email,
         name: user.name,
-        batchId: user.batchId,
-        enrollmentNo: user.enrollmentNo,
         moduleNumber,
         ...data,
       }),
