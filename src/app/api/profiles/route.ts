@@ -121,7 +121,6 @@ export async function POST(req: NextRequest) {
   );
 
   if (error) {
-    console.error("[profiles] upsert error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 

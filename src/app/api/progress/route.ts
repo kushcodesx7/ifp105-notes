@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
   );
 
   if (error) {
-    console.error("[progress] upsert error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 

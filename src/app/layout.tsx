@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { DM_Serif_Display } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,7 +45,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${dmSerif.variable} h-full antialiased`}
     >
       <body className="bg-[#09090F] text-white overflow-x-hidden">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ServiceWorkerRegister />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
