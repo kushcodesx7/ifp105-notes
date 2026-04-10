@@ -25,9 +25,10 @@ const modules = [
     title: "Office Automation",
     description: "MS Word, Excel, and PowerPoint — editing, formatting, formulas, charts, presentations, and slide shows.",
     icon: "\u{1F4CA}",
+    href: "/module/2",
     accent: "#10B981",
     tags: ["9 Topics", "~45 min", "90 Qs"],
-    locked: true,
+    lsKey: "ifp105_m2_progress",
     totalTopics: 9,
   },
   {
@@ -452,7 +453,7 @@ export default function Home() {
               Pick a Module
             </h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
-              3 modules available now. Each is self-contained with theory, analogies, and quizzes.
+              4 modules available now. Each is self-contained with theory, analogies, and quizzes.
             </p>
           </div>
 
