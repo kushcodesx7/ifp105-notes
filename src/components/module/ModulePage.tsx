@@ -193,9 +193,8 @@ export default function ModulePage({
 
     if (isLoggedIn) {
       saveToSupabase({ topicId, mcqScore: score, mcqTotal: total });
-    } else if (!hasShownLoginPrompt.current) {
-      // Show login prompt on first quiz completion when not logged in
-      hasShownLoginPrompt.current = true;
+    } else {
+      // Show login prompt every time a quiz is completed while not logged in
       setShowLoginPrompt(true);
     }
   }
