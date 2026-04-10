@@ -17,6 +17,7 @@ export default function HtmlEditor({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [lineCount, setLineCount] = useState(1);
+  const [mobileView, setMobileView] = useState<"code" | "preview">("code");
 
   const updatePreview = useCallback(() => {
     setPreviewHtml(code);
@@ -67,31 +68,54 @@ export default function HtmlEditor({
       style={{ border: "1px solid #2a2a33", background: "#0d1117" }}
     >
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#161b22", borderBottom: "1px solid #2a2a33" }}>
+      <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5" style={{ background: "#161b22", borderBottom: "1px solid #2a2a33" }}>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full" style={{ background: "#f85149" }} />
-          <div className="w-3 h-3 rounded-full" style={{ background: "#d29922" }} />
-          <div className="w-3 h-3 rounded-full" style={{ background: "#3fb950" }} />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full" style={{ background: "#f85149" }} />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full" style={{ background: "#d29922" }} />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full" style={{ background: "#3fb950" }} />
         </div>
-        <span className="text-[11px] font-bold text-zinc-500 tracking-wider ml-2">HTML EDITOR</span>
-        <div className="flex items-center gap-2 ml-auto">
+        <span className="text-[10px] sm:text-[11px] font-bold text-zinc-500 tracking-wider ml-1 sm:ml-2">HTML EDITOR</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+          {/* Mobile view toggle */}
+          <div className="flex md:hidden items-center rounded-md overflow-hidden" style={{ border: "1px solid #2a2a33" }}>
+            <button
+              onClick={() => setMobileView("code")}
+              className="px-2 py-1 text-[10px] font-bold transition-all"
+              style={{
+                background: mobileView === "code" ? "#238636" : "transparent",
+                color: mobileView === "code" ? "white" : "#8b949e",
+              }}
+            >
+              Code
+            </button>
+            <button
+              onClick={() => { setMobileView("preview"); updatePreview(); }}
+              className="px-2 py-1 text-[10px] font-bold transition-all"
+              style={{
+                background: mobileView === "preview" ? "#238636" : "transparent",
+                color: mobileView === "preview" ? "white" : "#8b949e",
+              }}
+            >
+              Preview
+            </button>
+          </div>
           <button
             onClick={updatePreview}
-            className="px-3 py-1 rounded-md text-[11px] font-bold text-white transition-all hover:opacity-80"
+            className="hidden sm:block px-3 py-1 rounded-md text-[11px] font-bold text-white transition-all hover:opacity-80"
             style={{ background: "linear-gradient(135deg, #238636, #2ea043)" }}
           >
             ▶ Run
           </button>
           <button
             onClick={handleClear}
-            className="px-3 py-1 rounded-md text-[11px] font-bold transition-all hover:border-orange-500 hover:text-orange-400"
+            className="px-2 sm:px-3 py-1 rounded-md text-[10px] sm:text-[11px] font-bold transition-all hover:border-orange-500 hover:text-orange-400"
             style={{ background: "transparent", border: "1px solid #2a2a33", color: "#8b949e" }}
           >
             Clear
           </button>
           <button
             onClick={handleReset}
-            className="px-3 py-1 rounded-md text-[11px] font-bold transition-all hover:border-cyan-500 hover:text-cyan-400"
+            className="px-2 sm:px-3 py-1 rounded-md text-[10px] sm:text-[11px] font-bold transition-all hover:border-cyan-500 hover:text-cyan-400"
             style={{ background: "transparent", border: "1px solid #2a2a33", color: "#8b949e" }}
           >
             Reset
@@ -99,10 +123,13 @@ export default function HtmlEditor({
         </div>
       </div>
 
-      {/* Split panes */}
-      <div className="flex flex-col md:flex-row" style={{ minHeight: "360px" }}>
-        {/* Editor */}
-        <div className="flex-1 flex" style={{ borderRight: "1px solid #2a2a33" }}>
+      {/* Split panes — desktop: side-by-side, mobile: tabbed */}
+      <div className="flex flex-col md:flex-row" style={{ minHeight: "300px" }}>
+        {/* Editor — always visible on desktop, toggled on mobile */}
+        <div
+          className={`flex-1 flex ${mobileView === "preview" ? "hidden md:flex" : "flex"}`}
+          style={{ borderRight: "1px solid #2a2a33" }}
+        >
           {/* Line numbers */}
           <div
             className="py-3 px-2 text-right select-none shrink-0 overflow-hidden"
@@ -130,12 +157,16 @@ export default function HtmlEditor({
               tabSize: 2,
               caretColor: "#58a6ff",
               border: "none",
+              minHeight: "250px",
             }}
           />
         </div>
 
-        {/* Preview */}
-        <div className="flex-1 flex flex-col" style={{ background: "#ffffff", minHeight: "300px" }}>
+        {/* Preview — always visible on desktop, toggled on mobile */}
+        <div
+          className={`flex-1 flex flex-col ${mobileView === "code" ? "hidden md:flex" : "flex"}`}
+          style={{ background: "#ffffff", minHeight: "250px" }}
+        >
           <div className="px-3 py-1.5 flex items-center gap-2 shrink-0" style={{ background: "#161b22", borderBottom: "1px solid #2a2a33" }}>
             <span className="text-[10px] font-bold text-zinc-500 tracking-wider">PREVIEW</span>
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse ml-1" />
@@ -146,8 +177,8 @@ export default function HtmlEditor({
             srcDoc={previewHtml}
             title="HTML Preview"
             className="flex-1 w-full"
-            style={{ border: "none", background: "white", minHeight: "280px" }}
-            sandbox="allow-scripts"
+            style={{ border: "none", background: "white", minHeight: "250px" }}
+            sandbox=""
           />
         </div>
       </div>
