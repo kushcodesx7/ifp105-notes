@@ -182,51 +182,99 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ─── Onboarding Tour (driver.js) ─── */
+/* ─── Onboarding Tour (driver.js) — Premium Dark Theme ─── */
+
+@keyframes tour-pop-in {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 .ifp-tour-popover {
-  background: linear-gradient(135deg, rgba(15,15,25,0.97), rgba(12,12,20,0.99)) !important;
-  border: 1px solid rgba(99,102,241,0.2) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(99,102,241,0.1) !important;
+  background: linear-gradient(135deg, rgba(15,15,25,0.98), rgba(10,10,18,0.99)) !important;
+  border: 1px solid rgba(99,102,241,0.25) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.7),
+    0 0 48px rgba(99,102,241,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.04) !important;
   color: white !important;
-  max-width: 340px !important;
+  max-width: 320px !important;
+  animation: tour-pop-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
 }
 .ifp-tour-popover .driver-popover-title {
-  font-size: 16px !important;
-  font-weight: 700 !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
   color: white !important;
+  letter-spacing: -0.3px !important;
+  margin-bottom: 4px !important;
 }
 .ifp-tour-popover .driver-popover-description {
   font-size: 13px !important;
-  color: rgba(255,255,255,0.6) !important;
-  line-height: 1.7 !important;
+  color: rgba(255,255,255,0.55) !important;
+  line-height: 1.65 !important;
+}
+.ifp-tour-popover .driver-popover-navigation-btns {
+  margin-top: 8px !important;
 }
 .ifp-tour-popover .driver-popover-navigation-btns button {
   font-size: 12px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   border-radius: 999px !important;
-  padding: 6px 16px !important;
+  padding: 8px 20px !important;
+  transition: all 0.2s ease !important;
 }
-.ifp-tour-popover .driver-popover-next-btn {
+.ifp-tour-popover .driver-popover-next-btn,
+.ifp-tour-popover .driver-popover-done-btn {
   background: linear-gradient(135deg, #6366F1, #8B5CF6) !important;
   color: white !important;
   border: none !important;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.35) !important;
+}
+.ifp-tour-popover .driver-popover-next-btn:hover,
+.ifp-tour-popover .driver-popover-done-btn:hover {
+  box-shadow: 0 6px 24px rgba(99,102,241,0.5) !important;
+  transform: translateY(-1px) !important;
+}
+.ifp-tour-popover .driver-popover-done-btn {
+  padding: 10px 28px !important;
+  font-size: 13px !important;
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  box-shadow: 0 4px 16px rgba(16,185,129,0.35) !important;
+}
+.ifp-tour-popover .driver-popover-done-btn:hover {
+  box-shadow: 0 6px 24px rgba(16,185,129,0.5) !important;
 }
 .ifp-tour-popover .driver-popover-prev-btn {
   background: transparent !important;
-  color: rgba(255,255,255,0.5) !important;
+  color: rgba(255,255,255,0.45) !important;
   border: 1px solid rgba(255,255,255,0.1) !important;
 }
+.ifp-tour-popover .driver-popover-prev-btn:hover {
+  color: rgba(255,255,255,0.7) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
 .ifp-tour-popover .driver-popover-close-btn {
-  color: rgba(255,255,255,0.3) !important;
+  color: rgba(255,255,255,0.25) !important;
+  transition: color 0.2s !important;
+}
+.ifp-tour-popover .driver-popover-close-btn:hover {
+  color: rgba(255,255,255,0.6) !important;
 }
 .ifp-tour-popover .driver-popover-progress-text {
-  color: rgba(255,255,255,0.3) !important;
+  color: rgba(99,102,241,0.5) !important;
   font-size: 11px !important;
+  font-weight: 600 !important;
 }
 .driver-overlay {
-  background: rgba(0,0,0,0.75) !important;
+  background: rgba(0,0,0,0.82) !important;
 }
 .driver-active-element {
-  border-radius: 12px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.3), 0 0 24px rgba(99,102,241,0.15) !important;
 }
+.ifp-tour-popover .driver-popover-arrow-side-bottom { border-bottom-color: rgba(15,15,25,0.98) !important; }
+.ifp-tour-popover .driver-popover-arrow-side-top { border-top-color: rgba(15,15,25,0.98) !important; }
+.ifp-tour-popover .driver-popover-arrow-side-left { border-left-color: rgba(15,15,25,0.98) !important; }
+.ifp-tour-popover .driver-popover-arrow-side-right { border-right-color: rgba(15,15,25,0.98) !important; }
