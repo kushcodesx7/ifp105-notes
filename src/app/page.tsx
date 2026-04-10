@@ -11,9 +11,9 @@ const modules = [
     title: "Hardware & Software",
     description: "CPU, RAM, ROM, I/O devices, storage, software types, internet basics — the foundation of everything.",
     icon: "🖥️",
+    href: "/module/1",
     accent: "#6366F1",
     tags: ["11 Topics", "~55 min", "110 Qs"],
-    locked: true,
   },
   {
     number: "02",

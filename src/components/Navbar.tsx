@@ -36,7 +36,7 @@ export default function Navbar({ showBack = false, title }: NavbarProps) {
           IFP105
         </span>
         {title && (
-          <span className="text-sm font-medium text-zinc-400 hidden sm:block">
+          <span className="text-xs sm:text-sm font-medium text-zinc-400 truncate max-w-[120px] sm:max-w-none">
             {title}
           </span>
         )}
