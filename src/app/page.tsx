@@ -47,9 +47,9 @@ const modules = [
     title: "Latest Technology Trends",
     description: "AI, Machine Learning, Cloud, Blockchain, VR/AR, IoT, Generative AI — understand the technologies shaping our future.",
     icon: "🚀",
+    href: "/module/5",
     accent: "#8B5CF6",
     tags: ["10 Topics", "~50 min", "100 Qs"],
-    locked: true,
   },
 ];
 
