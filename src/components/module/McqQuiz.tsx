@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
 
@@ -19,18 +19,40 @@ interface McqQuizProps {
 
 const letters = ["A", "B", "C", "D"];
 
+// Shuffle options for each question, returning shuffled opts and the new correct answer index
+function shuffleQuestions(questions: Question[], seed: number): { opts: string[]; ans: number }[] {
+  return questions.map((q, qi) => {
+    // Create index array [0, 1, 2, 3] and shuffle deterministically per question
+    const indices = q.opts.map((_, i) => i);
+    // Fisher-Yates shuffle with seed
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.abs(((seed + qi * 7 + i * 13) * 2654435761) % (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return {
+      opts: indices.map((i) => q.opts[i]),
+      ans: indices.indexOf(q.ans),
+    };
+  });
+}
+
 export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps) {
   const [currentQ, setCurrentQ] = useState(0);
   const [answered, setAnswered] = useState<(number | null)[]>(new Array(questions.length).fill(null));
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [shuffleSeed, setShuffleSeed] = useState(() => Date.now());
+
+  // Shuffle options on mount and on retry
+  const shuffled = useMemo(() => shuffleQuestions(questions, shuffleSeed), [questions, shuffleSeed]);
 
   const total = questions.length;
   const q = questions[currentQ];
+  const sq = shuffled[currentQ]; // shuffled version
   const picked = answered[currentQ];
   const isAnswered = picked !== null;
-  const isCorrect = picked === q.ans;
+  const isCorrect = picked === sq.ans;
 
   function handlePick(oi: number) {
     if (isAnswered) return;
@@ -39,7 +61,7 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
     setAnswered(newAnswered);
     setShowFeedback(true);
 
-    if (questions[currentQ].ans === oi) {
+    if (shuffled[currentQ].ans === oi) {
       setScore((s) => s + 1);
     }
   }
@@ -51,7 +73,7 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
     } else {
       setShowResult(true);
       // Award XP based on score
-      const finalScore = questions[currentQ].ans === answered[currentQ] ? score + 1 : score;
+      const finalScore = shuffled[currentQ].ans === answered[currentQ] ? score + 1 : score;
       const finalPct = (finalScore / total) * 100;
       if (finalPct === 100) { addXP(XP_REWARDS.QUIZ_PERFECT); earnBadge("perfect_quiz"); }
       else if (finalPct >= 80) addXP(XP_REWARDS.QUIZ_GOOD);
@@ -66,6 +88,7 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
     setScore(0);
     setShowResult(false);
     setShowFeedback(false);
+    setShuffleSeed(Date.now()); // Re-shuffle options on retry
   }
 
   const pct = (score / total) * 100;
@@ -120,11 +143,11 @@ export default function McqQuiz({ topicId, questions, onComplete }: McqQuizProps
                 {q.q}
               </div>
 
-              {/* Options */}
+              {/* Options (shuffled) */}
               <div className="space-y-2">
-                {q.opts.map((opt, oi) => {
+                {sq.opts.map((opt, oi) => {
                   const isPicked = picked === oi;
-                  const isCorrectOpt = q.ans === oi;
+                  const isCorrectOpt = sq.ans === oi;
 
                   let bg = '#111116';
                   let border = '#2a2a33';
