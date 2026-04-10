@@ -123,7 +123,7 @@ export default function Home() {
           {/* Subtitle */}
           <p className="text-base sm:text-lg text-zinc-400 max-w-lg mx-auto leading-relaxed mb-10">
             Interactive modules with quizzes, analogies, cheat sheets, and
-            progress tracking. Built for IFP students at Amity Tashkent.
+            progress tracking. Built for IFS students at Amity Tashkent.
           </p>
 
           {/* Author */}
@@ -259,13 +259,33 @@ export default function Home() {
       <XpBar />
 
       {/* ─── FOOTER ─── */}
-      <footer className="py-12 px-6 border-t border-white/[0.04] text-center">
-        <p className="text-sm text-zinc-600">
-          IFP105 Study Notes · Amity University Tashkent
-        </p>
-        <p className="text-xs text-zinc-700 mt-1">
-          Made with care by Kushagra Tripathi
-        </p>
+      <footer className="py-16 px-6 border-t border-white/[0.04]">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
+                IFP105
+              </span>
+              <span className="text-sm text-zinc-500">ICT Study Notes</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <a href="/batches" className="text-xs text-zinc-500 hover:text-white transition-colors">Batches</a>
+              <a
+                href="https://www.linkedin.com/in/kushagra-x7/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-zinc-500 hover:text-white transition-colors"
+              >
+                LinkedIn
+              </a>
+            </div>
+          </div>
+          <div className="text-center pt-6 border-t border-white/[0.04]">
+            <p className="text-xs text-zinc-600">
+              Amity University Tashkent · Made with care by Kushagra Tripathi
+            </p>
+          </div>
+        </div>
       </footer>
     </main>
   );

@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ifp105admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 function checkAuth(req: NextRequest): boolean {
+  if (!ADMIN_PASSWORD) return false;
   const pw = req.headers.get("x-admin-password");
   return pw === ADMIN_PASSWORD;
 }
