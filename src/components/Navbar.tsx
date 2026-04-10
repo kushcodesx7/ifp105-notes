@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 
 interface NavbarProps {
   showBack?: boolean;
@@ -9,6 +10,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ showBack = false, title }: NavbarProps) {
+  const { user, isLoggedIn, logout } = useAuth();
+
   return (
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
@@ -46,6 +49,20 @@ export default function Navbar({ showBack = false, title }: NavbarProps) {
         >
           Batches
         </Link>
+
+        {isLoggedIn && user && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-zinc-500 hidden sm:block">
+              {user.name}
+            </span>
+            <button
+              onClick={logout}
+              className="text-[11px] font-medium text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </motion.nav>
   );
