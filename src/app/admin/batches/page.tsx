@@ -20,6 +20,14 @@ interface Batch {
   students: Student[];
 }
 
+interface ProfileStats {
+  total: number;
+  working: number;
+  studying: number;
+  freelancing: number;
+  looking: number;
+}
+
 const ACCENT_OPTIONS = [
   { label: "Indigo", value: "#6366F1" },
   { label: "Emerald", value: "#10B981" },
@@ -36,6 +44,7 @@ export default function AdminBatchesPage() {
   const [authError, setAuthError] = useState("");
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [profileStats, setProfileStats] = useState<Record<string, ProfileStats>>({});
 
   // New batch form
   const [newBatchId, setNewBatchId] = useState("");
@@ -73,6 +82,27 @@ export default function AdminBatchesPage() {
     if (res.ok) {
       const data = await res.json();
       setBatches(data.batches);
+      // Fetch profile stats for each batch
+      const stats: Record<string, ProfileStats> = {};
+      await Promise.all(
+        data.batches.map(async (b: Batch) => {
+          try {
+            const pRes = await fetch(`/api/profiles?batchId=${b.id}`);
+            if (pRes.ok) {
+              const pData = await pRes.json();
+              const profiles = pData.profiles || [];
+              stats[b.id] = {
+                total: profiles.length,
+                working: profiles.filter((p: { status: string }) => p.status === "working").length,
+                studying: profiles.filter((p: { status: string }) => p.status === "studying").length,
+                freelancing: profiles.filter((p: { status: string }) => p.status === "freelancing").length,
+                looking: profiles.filter((p: { status: string }) => p.status === "looking").length,
+              };
+            }
+          } catch { /* ignore */ }
+        })
+      );
+      setProfileStats(stats);
     }
   }
 
@@ -88,7 +118,29 @@ export default function AdminBatchesPage() {
           if (r.ok) return r.json();
           throw new Error();
         })
-        .then((d) => setBatches(d.batches))
+        .then(async (d) => {
+          setBatches(d.batches);
+          const stats: Record<string, ProfileStats> = {};
+          await Promise.all(
+            d.batches.map(async (b: Batch) => {
+              try {
+                const pRes = await fetch(`/api/profiles?batchId=${b.id}`);
+                if (pRes.ok) {
+                  const pData = await pRes.json();
+                  const profiles = pData.profiles || [];
+                  stats[b.id] = {
+                    total: profiles.length,
+                    working: profiles.filter((p: { status: string }) => p.status === "working").length,
+                    studying: profiles.filter((p: { status: string }) => p.status === "studying").length,
+                    freelancing: profiles.filter((p: { status: string }) => p.status === "freelancing").length,
+                    looking: profiles.filter((p: { status: string }) => p.status === "looking").length,
+                  };
+                }
+              } catch { /* ignore */ }
+            })
+          );
+          setProfileStats(stats);
+        })
         .catch(() => {
           sessionStorage.removeItem("admin_pw");
           setAuthenticated(false);
@@ -288,7 +340,34 @@ export default function AdminBatchesPage() {
                 <p className="text-xs text-zinc-500">
                   {batch.rollList.length} rolls · {batch.students.length}{" "}
                   registered
+                  {profileStats[batch.id] && profileStats[batch.id].total > 0 && (
+                    <> · {profileStats[batch.id].total} profiles</>
+                  )}
                 </p>
+                {profileStats[batch.id] && profileStats[batch.id].total > 0 && (
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {profileStats[batch.id].working > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        {profileStats[batch.id].working} working
+                      </span>
+                    )}
+                    {profileStats[batch.id].studying > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        {profileStats[batch.id].studying} studying
+                      </span>
+                    )}
+                    {profileStats[batch.id].freelancing > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                        {profileStats[batch.id].freelancing} freelancing
+                      </span>
+                    )}
+                    {profileStats[batch.id].looking > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        {profileStats[batch.id].looking} looking
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => deleteBatch(batch.id)}
