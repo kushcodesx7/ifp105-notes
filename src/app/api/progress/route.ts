@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     .select(
       "topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at"
     )
-    .eq("email", email)
+    .eq("student_email", email)
     .eq("module_number", moduleNumber);
 
   if (error) {
@@ -61,8 +61,6 @@ export async function POST(req: NextRequest) {
   const {
     email,
     name,
-    batchId,
-    enrollmentNo,
     moduleNumber,
     topicId,
     completed,
@@ -80,10 +78,9 @@ export async function POST(req: NextRequest) {
 
   // Upsert progress row
   const upsertData: Record<string, unknown> = {
-    email,
-    name: name || null,
-    batch_id: batchId || null,
-    enrollment_no: enrollmentNo || null,
+    student_email: email,
+    student_name: name || "Student",
+    enrollment_no: "N/A",
     module_number: moduleNumber,
     topic_id: topicId,
     updated_at: new Date().toISOString(),
@@ -98,21 +95,24 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.from("student_progress").upsert(
     upsertData,
     {
-      onConflict: "email,module_number,topic_id",
+      onConflict: "student_email,module_number,topic_id",
     }
   );
 
   if (error) {
+    console.error("[progress] upsert error:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 
   // Update student_sessions last_active_at
   await supabase.from("student_sessions").upsert(
     {
-      email,
+      student_email: email,
+      student_name: name || "Student",
+      enrollment_no: "N/A",
       last_active_at: new Date().toISOString(),
     },
-    { onConflict: "email" }
+    { onConflict: "student_email" }
   );
 
   return Response.json({ ok: true });
