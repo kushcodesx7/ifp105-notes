@@ -6,6 +6,8 @@ import { topics } from "@/data/module4-topics";
 import { mcqData } from "@/data/module4-mcq";
 import { module4Challenges } from "@/data/module4-challenges";
 import TagMatchGame from "@/components/module/TagMatchGame";
+import BugFixChallenge from "@/components/module/BugFixChallenge";
+import { module4BugFixes } from "@/data/module4-bugfix";
 
 const editorDefaults: Record<number, string> = {
   1: '<!-- Topic 1: Try creating a basic HTML page -->\n<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Welcome to the Web!</h1>\n  <p>This is my first web page.</p>\n</body>\n</html>',
@@ -56,6 +58,15 @@ export default function Module4() {
           {module4Challenges[topicId] && (
             <YourTurnChallenge
               challenge={module4Challenges[topicId]}
+              accentFrom="#06B6D4"
+              accentTo="#0891B2"
+            />
+          )}
+
+          {/* Bug Fix Challenge */}
+          {module4BugFixes[topicId] && (
+            <BugFixChallenge
+              challenge={module4BugFixes[topicId]!}
               accentFrom="#06B6D4"
               accentTo="#0891B2"
             />
