@@ -1,7 +1,7 @@
 import type { Topic } from "./module1-topics";
 
 export const topics: Topic[] = [
-  // ─── Topic 1 ───
+  // ─── Topic 1 ─── KEEP AS-IS
   {
     id: 1,
     title: "Introduction to Social Media",
@@ -70,7 +70,7 @@ export const topics: Topic[] = [
     ],
   },
 
-  // ─── Topic 2 ───
+  // ─── Topic 2 ─── KEEP AS-IS
   {
     id: 2,
     title: "Types of Social Media Platforms",
@@ -85,7 +85,7 @@ export const topics: Topic[] = [
       {
         type: "image",
         src: "/images/m3/platforms.webp",
-        description: "6 platform categories in a grid: Social Networking (Facebook, LinkedIn) · Media Sharing (Instagram, YouTube, TikTok) · Microblogging (Twitter/X) · Messaging (WhatsApp, Telegram) · Discussion Forums (Reddit) · Professional (LinkedIn)",
+        description: "6 platform categories in a grid: Social Networking (Facebook, LinkedIn) \u00b7 Media Sharing (Instagram, YouTube, TikTok) \u00b7 Microblogging (Twitter/X) \u00b7 Messaging (WhatsApp, Telegram) \u00b7 Discussion Forums (Reddit) \u00b7 Professional (LinkedIn)",
       },
       {
         type: "cards",
@@ -155,18 +155,18 @@ export const topics: Topic[] = [
     ],
   },
 
-  // ─── Topic 3 ───
+  // ─── Topic 3 ─── REWRITTEN: Modern Tools & Automation
   {
     id: 3,
-    title: "Social Media Management Tools",
-    time: "~5 mins",
+    title: "Social Media Tools & Automation",
+    time: "~6 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `Imagine managing 5 social media accounts — Facebook, Instagram, Twitter, LinkedIn, TikTok — each with different post formats, different best posting times, and hundreds of comments daily. Doing this manually? <strong>You'd burn out in a week.</strong> That's why social media management tools exist.`,
+    hook: `Imagine running 5 social media accounts by hand — writing captions at midnight, replying to DMs at 6 AM, designing graphics between classes. <strong>Nobody does that anymore.</strong> Today's creators and marketers use a toolkit of smart apps that handle scheduling, design, chatbots, and even writing — so you focus on strategy, not busywork.`,
     content: [
       {
         type: "analogy",
-        label: "\ud83c\udfa8 The Art Studio Analogy",
-        html: `Imagine painting 5 canvases at once in 5 different rooms. Exhausting, right? A social media management tool is like <strong>putting all 5 canvases on one big desk</strong>. You paint them all from one seat — schedule posts, reply to comments, and check analytics across every platform, all from a single dashboard.`,
+        label: "\ud83c\udfad The Film Crew Analogy",
+        html: `Making a movie alone is impossible. You need a director, camera operator, editor, and sound engineer. Social media is the same: <strong>Later is your scheduler</strong> (the assistant director who plans every scene), <strong>Canva is your set designer</strong> (makes everything look amazing), <strong>ChatGPT is your scriptwriter</strong> (creates content fast), <strong>ManyChat is your front-desk receptionist</strong> (handles customer messages automatically), and <strong>Notion is your production planner</strong> (keeps everything organized). One person with these five tools = an entire marketing department.`,
       },
       {
         type: "image",
@@ -178,73 +178,98 @@ export const topics: Topic[] = [
         columns: 3,
         items: [
           {
-            icon: "\ud83e\udda5",
-            title: "Hootsuite",
-            description: "One of the oldest and most popular. Schedule posts, monitor mentions, track analytics. Supports 35+ social networks. Used by enterprises worldwide.",
-            tag: "Industry standard",
+            icon: "\ud83d\udcc5",
+            title: "Later",
+            description: "Visual scheduling tool. Drag and drop posts onto a calendar, preview how your Instagram grid will look, and auto-publish at the best times. Free plan available.",
+            tag: "Scheduling & planning",
             tagColor: "green",
           },
           {
-            icon: "\ud83d\udca1",
-            title: "Buffer",
-            description: "Simple, clean, beginner-friendly. Great for small businesses and solo creators. Schedule posts, track performance, plan content calendar.",
-            tag: "Best for beginners",
+            icon: "\ud83c\udfa8",
+            title: "Canva",
+            description: "Design tool anyone can use. Thousands of templates for Instagram posts, stories, YouTube thumbnails, TikTok covers. No Photoshop skills needed — just drag, edit, export.",
+            tag: "Design made easy",
+            tagColor: "purple",
+          },
+          {
+            icon: "\ud83e\udd16",
+            title: "ChatGPT",
+            description: "AI writing assistant. Generate captions, brainstorm content ideas, rewrite text for different platforms, create hashtag lists. Like having a copywriter on call 24/7.",
+            tag: "AI content creation",
             tagColor: "blue",
           },
           {
-            icon: "\ud83c\udf31",
-            title: "Sprout Social",
-            description: "Advanced analytics, social listening, CRM features. Best for larger teams needing detailed reporting and customer relationship management.",
-            tag: "Enterprise-grade",
-            tagColor: "purple",
+            icon: "\ud83d\udcac",
+            title: "ManyChat",
+            description: "Chatbot builder for Instagram and Facebook. Auto-replies to DMs, answers FAQs, sends links when someone comments a keyword. Works while you sleep.",
+            tag: "Chatbot automation",
+            tagColor: "amber",
+          },
+          {
+            icon: "\ud83d\uddd2\ufe0f",
+            title: "Notion",
+            description: "All-in-one planner. Build content calendars, store caption ideas, track posting schedules, and collaborate with your team. Your social media HQ.",
+            tag: "Planning & organization",
+          },
+          {
+            icon: "\ud83d\udcca",
+            title: "Built-in Analytics",
+            description: "Every platform (Instagram Insights, YouTube Studio, TikTok Analytics) gives you free data: what posts worked, when your audience is online, follower demographics.",
+            tag: "Free from every platform",
+            tagColor: "green",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>The 4 core functions every management tool provides:</strong>`,
+        html: `<strong>The 4 pillars every social media toolkit must cover:</strong>`,
       },
       {
         type: "steps",
         items: [
           {
             title: "Scheduling \ud83d\udcc5",
-            description: "Write posts in advance and set them to publish automatically at the best times. No more waking up at 6 AM to post. Set it and forget it.",
+            description: "Write posts in advance and set them to publish at the perfect time. Later, Buffer, and Meta Business Suite all do this. No more posting at 3 AM because your audience is in a different time zone.",
           },
           {
-            title: "Monitoring \ud83d\udc41\ufe0f",
-            description: "Track who mentions your brand, what people say about you, and trending conversations. Social listening — your ears across the internet.",
+            title: "Content Creation \ud83c\udfa8",
+            description: "Design graphics in Canva, write captions with ChatGPT, edit videos with CapCut. The creation process is faster than ever because AI and templates handle the heavy lifting.",
+          },
+          {
+            title: "Automation \ud83e\udd16",
+            description: "ManyChat auto-replies to DMs on Instagram. Zapier connects your tools so a new blog post automatically becomes a tweet. Automation handles repetitive tasks on autopilot.",
           },
           {
             title: "Analytics \ud83d\udcca",
-            description: "See which posts perform best, when your audience is online, follower growth, engagement rates. Data-driven decisions, not guesswork.",
-          },
-          {
-            title: "Unified Inbox \ud83d\udce5",
-            description: "All comments, messages, and mentions from every platform in ONE inbox. Reply to a Facebook comment and an Instagram DM without switching apps.",
+            description: "Track which posts perform best, when your audience is online, and how your followers grow. Use built-in analytics from each platform — they're free and surprisingly powerful.",
           },
         ],
       },
       {
         type: "table",
-        headers: ["Feature", "Hootsuite", "Buffer", "Sprout Social"],
+        headers: ["Tool", "What It Does", "Best For", "Cost"],
         rows: [
-          { cells: ["Scheduling", "\u2705 Advanced", "\u2705 Simple & clean", "\u2705 Advanced"] },
-          { cells: ["Analytics", "\u2705 Detailed", "\u2705 Basic", "\u2705 Very detailed"] },
-          { cells: ["Social Listening", "\u2705 Yes", "\u274c Limited", "\u2705 Advanced"] },
-          { cells: ["Best For", "Large teams", "Small biz / solo", "Enterprise / agencies"] },
-          { cells: ["Price Range", "$$$", "$", "$$$$"] },
+          { cells: ["Later", "Schedule posts, visual planner", "Instagram & TikTok scheduling", "Free / $25+/mo"] },
+          { cells: ["Canva", "Design graphics & videos", "Posts, stories, thumbnails", "Free / $13/mo"] },
+          { cells: ["ChatGPT", "Write captions, brainstorm ideas", "Content creation, repurposing", "Free / $20/mo"] },
+          { cells: ["ManyChat", "Automated DM replies, chatbots", "Instagram & Facebook automation", "Free / $15+/mo"] },
+          { cells: ["Notion", "Content calendar, idea database", "Planning & team collaboration", "Free / $10/mo"] },
         ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>Why does this matter?</strong> No professional social media manager posts manually. These tools save hours every week, prevent mistakes, and give you data to prove your posts are actually working. Knowing these tools = employable skill.`,
+        html: `<strong>Why does this matter?</strong> Employers don't just want someone who "knows social media." They want someone who can use tools like Later, Canva, and ChatGPT to run campaigns efficiently. <mark>Knowing these tools is what separates a social media user from a social media professional.</mark>`,
+      },
+      {
+        type: "callout",
+        variant: "dark",
+        html: `<strong>Real-world example:</strong> A solo entrepreneur in Tashkent uses Canva to design posts, ChatGPT to write captions in English and Russian, Later to schedule a week of content in 30 minutes, and ManyChat to auto-reply to every "Price?" DM on Instagram. Total time: 2 hours per week. Result: looks like a team of 5.`,
       },
     ],
   },
 
-  // ─── Topic 4 ───
+  // ─── Topic 4 ─── KEEP AS-IS
   {
     id: 4,
     title: "Social Media Measurement & Reporting",
@@ -336,18 +361,14 @@ export const topics: Topic[] = [
     ],
   },
 
-  // ─── Topic 5 ───
+  // ─── Topic 5 ─── SIMPLIFIED: Social Advertising
   {
     id: 5,
-    title: "Social Advertising",
-    time: "~6 mins",
-    badges: [{ text: "Hot topic", type: "hot" }],
-    hook: `You post something amazing on Instagram. It gets 50 likes from your followers. But you want 50,000 people to see it — including people who've never heard of you. <strong>That's where paid social advertising comes in.</strong> You pay the platform to show your content to exactly the right people. It's the difference between whispering in a room and renting a stadium loudspeaker.`,
+    title: "Social Advertising (Organic vs Paid)",
+    time: "~5 mins",
+    badges: [{ text: "Exam favourite", type: "star" }],
+    hook: `You post a great photo on Instagram. 50 of your followers see it. But you want 50,000 people to see it — including people who've never heard of you. <strong>That's paid advertising.</strong> You pay the platform to show your content to exactly the right people. Think of it as the difference between handing out flyers on campus vs putting your ad on a digital billboard that only shows to people who'd actually care.`,
     content: [
-      {
-        type: "text",
-        html: `Social advertising means <mark>paying platforms to display your content to a targeted audience beyond your existing followers</mark>. Every major platform offers advertising — and it's how they make billions.`,
-      },
       {
         type: "cards",
         columns: 2,
@@ -355,259 +376,289 @@ export const topics: Topic[] = [
           {
             icon: "\ud83c\udf31",
             title: "Organic Content",
-            description: "Free posts seen by your existing followers. Limited reach — platforms show organic posts to only 2-5% of your followers (they want you to pay!).",
-            tag: "Free but limited reach",
+            description: "Free posts seen by your existing followers. Limited reach — platforms show organic posts to only 2-5% of your followers. They want you to pay!",
+            tag: "Free but tiny reach",
             tagColor: "green",
           },
           {
             icon: "\ud83d\udcb5",
             title: "Paid Advertising",
-            description: "You pay to show content to specific audiences. Much wider reach — you choose who sees it by age, location, interests, behaviour. Scales infinitely with budget.",
-            tag: "Costs money but massive reach",
+            description: "You pay to show your content to specific people. Choose who sees it by age, location, interests, and behaviour. Much wider reach, scales with your budget.",
+            tag: "Costs money, massive reach",
             tagColor: "blue",
           },
         ],
       },
       {
-        type: "image",
-        src: "/images/m3/advertising.webp",
-        description: "Funnel diagram: Paid ad shown to targeted audience \u2192 Users click \u2192 Land on website \u2192 Some convert to customers — with $ amount at each stage",
-      },
-      {
         type: "text",
-        html: `<strong>Common ad formats across platforms:</strong>`,
+        html: `<strong>Ads you see every day (you just don't always notice):</strong>`,
       },
       {
         type: "cards",
         columns: 4,
         items: [
           {
-            icon: "\ud83d\uddbc\ufe0f",
-            title: "Image Ads",
-            description: "Single photo with text and CTA button. Simple, effective, works everywhere.",
+            icon: "\ud83d\udcf1",
+            title: "Instagram Feed Ads",
+            description: "Posts that say \"Sponsored\" at the top. They look like normal posts but they're paid. That clothing brand you keep seeing? They paid to reach you.",
+          },
+          {
+            icon: "\ud83c\udfb5",
+            title: "TikTok Promoted",
+            description: "Videos marked \"Sponsored\" in your For You page. Brands pay TikTok to push their content to your feed based on your interests.",
           },
           {
             icon: "\ud83c\udfa5",
-            title: "Video Ads",
-            description: "Short videos (15-60 seconds). Higher engagement than images. Autoplay in feeds.",
-          },
-          {
-            icon: "\ud83c\udfa0",
-            title: "Carousel Ads",
-            description: "Multiple swipeable images/videos in one ad. Great for showing product features or collections.",
+            title: "YouTube Pre-roll",
+            description: "The \"Skip Ad\" videos before your YouTube video plays. Companies pay per view. Those 5 seconds? They cost money.",
           },
           {
             icon: "\ud83d\udcf1",
             title: "Story Ads",
-            description: "Full-screen vertical ads between Stories. Immersive, disappear in 24 hours. Huge on Instagram and Facebook.",
+            description: "Full-screen vertical ads between your friends' Stories on Instagram and Facebook. Immersive and hard to ignore.",
           },
         ],
       },
       {
-        type: "text",
-        html: `<strong>Targeting options — the real power of social ads:</strong>`,
+        type: "analogy",
+        label: "\ud83c\udfaf The Fishing Analogy",
+        html: `Organic posts = fishing with a small net in your own pond. You'll catch a few fish you already know. <strong>Paid ads = choosing exactly which ocean to fish in, what type of fish to target, and using sonar to find them.</strong> You pick the age, location, interests, and behaviour of who sees your ad. That's why even small businesses spend on ads — precision beats luck.`,
       },
       {
         type: "table",
-        headers: ["Targeting Type", "What It Does", "Example"],
+        headers: ["Targeting Type", "What It Does", "Real Example"],
         rows: [
-          { cells: ["Demographics", "Target by age, gender, location, language", "Women aged 18-25 in Mumbai"] },
-          { cells: ["Interests", "Target by hobbies and interests", "People interested in fitness and yoga"] },
-          { cells: ["Behaviour", "Target by purchase behaviour and device usage", "People who recently shopped online"] },
-          { cells: ["Lookalike Audiences", "Find new people similar to your existing customers", "People who behave like your top 1,000 buyers"] },
-          { cells: ["Retargeting", "Show ads to people who already visited your website", "Someone who added to cart but didn't buy"] },
+          { cells: ["Demographics", "Target by age, gender, location", "Women aged 18-25 in Tashkent"] },
+          { cells: ["Interests", "Target by hobbies and interests", "People who follow fitness accounts"] },
+          { cells: ["Behaviour", "Target by actions and purchase habits", "People who recently shopped online"] },
+          { cells: ["Lookalike Audiences", "Find new people similar to your best customers", "People who behave like your top 100 buyers"] },
+          { cells: ["Retargeting", "Show ads to people who already visited your site", "Someone who added to cart but didn't buy"] },
         ],
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>A/B Testing (Split Testing):</strong> Run two versions of the same ad with ONE difference (different image, different headline). See which one performs better. Keep the winner, drop the loser. Never guess — test everything. This is how professionals optimise ads.`,
+        html: `<strong>A/B Testing:</strong> Run two versions of the same ad with ONE difference (different image, different headline). See which performs better. Keep the winner, drop the loser. Never guess — test everything. This is how professionals optimize every dollar.`,
       },
       {
         type: "callout",
         variant: "dark",
-        html: `<strong>Budget basics:</strong> You can start with as little as $1/day on most platforms. You set a daily or total budget, and the platform stops showing ads when the budget runs out. No surprise bills. Common pricing models: <mark>CPC (Cost Per Click)</mark> — pay only when someone clicks. <mark>CPM (Cost Per Thousand Impressions)</mark> — pay per 1,000 views.`,
+        html: `<strong>Budget basics:</strong> You can start with as little as $1/day. You set a daily or total budget, and the platform stops showing ads when the budget runs out. No surprise bills. <mark>CPC (Cost Per Click)</mark> — pay only when someone clicks. <mark>CPM (Cost Per Thousand Impressions)</mark> — pay per 1,000 views. Most students' first ad campaign costs less than a coffee.`,
       },
     ],
   },
 
-  // ─── Topic 6 ───
+  // ─── Topic 6 ─── NEW: LinkedIn
   {
     id: 6,
-    title: "Facebook Marketing",
+    title: "LinkedIn \u2014 Build Your Professional Profile",
     time: "~6 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `With nearly 3 billion monthly users, Facebook is the world's largest social network. Love it or hate it, ignoring Facebook for marketing is like ignoring a stadium full of potential customers. <strong>It's the most complete marketing platform ever built</strong> — pages, groups, ads, marketplace, events, and messenger all in one place.`,
+    hook: `Instagram shows who you are on the weekend. LinkedIn shows who you are at work. Right now, recruiters are searching LinkedIn for candidates — and if your profile is empty or doesn't exist, <strong>you're invisible to the job market.</strong> Building a strong LinkedIn profile today is like planting a tree: the best time was yesterday, the second-best time is right now.`,
     content: [
       {
-        type: "text",
-        html: `Facebook isn't just for sharing holiday photos anymore. For businesses, it's a <mark>full marketing ecosystem</mark> with tools for awareness, engagement, sales, and customer service.`,
+        type: "analogy",
+        label: "\ud83c\udfe2 The Digital CV Analogy",
+        html: `Think of LinkedIn as your <strong>living, breathing CV</strong> that works for you 24/7. A paper CV sits in a drawer until you send it. A LinkedIn profile is out there being found by recruiters, clients, and collaborators while you sleep. It's also a <strong>networking event that never ends</strong> — instead of awkward handshakes at a conference, you connect with professionals from your phone.`,
       },
       {
-        type: "image",
-        src: "/images/m3/facebook-marketing.webp",
-        description: "Facebook marketing ecosystem: Business Page at centre \u2192 connected to Ads Manager, Groups, Marketplace, Events, Messenger, Insights — all labeled",
+        type: "text",
+        html: `<strong>Why LinkedIn matters (especially for students):</strong>`,
       },
       {
         type: "cards",
         columns: 3,
         items: [
           {
-            icon: "\ud83c\udfe2",
-            title: "Business Pages",
-            description: "Your brand's official Facebook presence. Like a free website inside Facebook. Post updates, share hours, collect reviews, chat with customers via Messenger.",
-            tag: "Your digital storefront",
+            icon: "\ud83d\udcbc",
+            title: "Jobs & Internships",
+            description: "Over 90% of recruiters use LinkedIn to find candidates. Many jobs are filled through LinkedIn connections before they're even posted publicly.",
+            tag: "Your #1 career tool",
+            tagColor: "blue",
           },
           {
-            icon: "\ud83d\udcb0",
-            title: "Facebook Ads Manager",
-            description: "The command centre for all paid ads. Set budgets, choose audiences, pick ad formats, track performance — all in one dashboard. Powers ads on Facebook AND Instagram.",
-            tag: "Campaign control centre",
+            icon: "\ud83e\udd1d",
+            title: "Professional Networking",
+            description: "Connect with alumni, professors, industry leaders, and potential mentors. One connection can open doors that no CV ever could.",
+            tag: "Who you know matters",
+            tagColor: "green",
           },
           {
-            icon: "\ud83c\udfaf",
-            title: "Audience Targeting",
-            description: "Facebook knows users' age, location, interests, job, relationship status, purchase behaviour. Advertisers use this to target with surgical precision.",
-            tag: "Most detailed targeting ever",
+            icon: "\ud83c\udf1f",
+            title: "Credibility & Visibility",
+            description: "Share your projects, certifications, and achievements. When someone Googles your name, your LinkedIn profile often appears first.",
+            tag: "Your digital first impression",
+            tagColor: "purple",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Key Facebook marketing features:</strong>`,
+        html: `<strong>Build a profile that gets noticed — step by step:</strong>`,
       },
       {
         type: "steps",
         items: [
           {
-            title: "Boosted Posts \ud83d\ude80",
-            description: "Take any regular post and pay to show it to more people. Simplest form of Facebook advertising. Pick audience, budget, duration — done. Great for beginners.",
+            title: "Professional Photo \ud83d\udcf8",
+            description: "Use a clear headshot with good lighting and a plain background. No sunglasses, no group photos, no party selfies. You want to look approachable and professional. First impressions are made in 1/10th of a second.",
           },
           {
-            title: "Facebook Groups \ud83d\udc65",
-            description: "Community spaces around shared interests. Brands create groups to build loyal communities. Members discuss, share tips, and help each other. Organic engagement gold.",
+            title: "Headline (not just your job title) \ud83d\udcdd",
+            description: "Your headline appears everywhere — in search results, connection requests, comments. Don't just write \"Student.\" Write what you DO: \"Marketing Student | Content Creator | Fluent in 3 Languages.\" Make people curious enough to click.",
           },
           {
-            title: "Facebook Marketplace \ud83d\udecd\ufe0f",
-            description: "Buy and sell locally. Like a digital classifieds board. Businesses list products, users browse nearby deals. Huge for local businesses and e-commerce.",
+            title: "Summary / About Section \ud83d\udcd6",
+            description: "2-3 short paragraphs about who you are, what you're passionate about, and what you're looking for. Write in first person (\"I\" not \"He/She\"). Be human, not robotic. End with a call to action: \"Feel free to connect!\"",
           },
           {
-            title: "Facebook Insights \ud83d\udcca",
-            description: "Built-in analytics showing page performance, post reach, audience demographics, best posting times. Data-driven decisions for your Facebook strategy.",
+            title: "Skills & Endorsements \u2b50",
+            description: "Add at least 5 relevant skills (Social Media Marketing, Microsoft Excel, Content Writing, etc.). Connections can endorse you, which adds credibility. It's like getting a mini-recommendation with one click.",
+          },
+          {
+            title: "Experience & Projects \ud83d\udee0\ufe0f",
+            description: "Even if you haven't had a formal job — add volunteer work, freelance projects, university clubs, or class projects. Describe what you DID and what RESULT it had. Action verbs: managed, created, led, increased, organized.",
           },
         ],
       },
       {
+        type: "text",
+        html: `<strong>How LinkedIn differs from other platforms:</strong>`,
+      },
+      {
         type: "table",
-        headers: ["Feature", "Cost", "Best For", "Difficulty"],
+        headers: ["Feature", "Instagram", "LinkedIn"],
         rows: [
-          { cells: ["Business Page", "Free", "Brand presence, credibility", "Easy"] },
-          { cells: ["Boosted Post", "$5\u2013$100+", "Quick reach boost", "Very easy"] },
-          { cells: ["Ads Manager Campaign", "$10\u2013$10,000+", "Targeted conversions, leads, sales", "Intermediate"] },
-          { cells: ["Facebook Groups", "Free", "Community building, loyalty", "Easy"] },
-          { cells: ["Marketplace", "Free (small fee for shipping)", "Local sales, product listings", "Easy"] },
+          { cells: ["Tone", "Casual, fun, personal", "Professional, insightful, career-focused"] },
+          { cells: ["Content", "Photos, Reels, Stories", "Articles, achievements, industry insights"] },
+          { cells: ["Connections", "Friends, influencers", "Colleagues, recruiters, mentors"] },
+          { cells: ["Goal", "Entertainment, brand awareness", "Career growth, networking, B2B"] },
+          { cells: ["Profile", "Bio + grid aesthetic", "Full professional CV with skills & endorsements"] },
         ],
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Facebook Pixel:</strong> A tiny piece of code you add to your website. It tracks what visitors do after clicking your Facebook ad — did they buy? Add to cart? Sign up? This data makes your future ads smarter because Facebook learns who converts and finds more people like them.`,
+        html: `<strong>Posting on LinkedIn:</strong> You don't need to post every day. Share once or twice a week: a lesson you learned, a project you completed, an article you found interesting with your opinion on it. Posts that tell a personal story + professional lesson get the most engagement. <mark>LinkedIn rewards people who share knowledge, not people who brag.</mark>`,
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>Remember:</strong> Facebook Ads Manager controls ads for BOTH Facebook and Instagram (Meta owns both). One dashboard, two giant platforms. That's why it's the most powerful social ad tool in the world.`,
+        html: `<strong>Do this today:</strong> Create a LinkedIn profile (or update your existing one). Add a professional photo, write a headline that's more than just "Student," and connect with 10 classmates. That's it. Takes 20 minutes, and you've just started building your professional network.`,
       },
     ],
   },
 
-  // ─── Topic 7 ───
+  // ─── Topic 7 ─── NEW: Personal Branding
   {
     id: 7,
-    title: "Twitter/X Marketing",
-    time: "~5 mins",
-    badges: [],
-    hook: `Twitter (now X) is the world's town square. It's where news breaks, opinions clash, brands go viral, and one badly-worded tweet can destroy a company overnight. <strong>280 characters. That's all you get.</strong> The constraint is what makes it powerful — every word has to count.`,
+    title: "Personal Branding on Social Media",
+    time: "~6 mins",
+    badges: [{ text: "Hot topic", type: "hot" }],
+    hook: `Coca-Cola is a brand. Nike is a brand. But here's the thing — <strong>YOU are also a brand.</strong> Every time someone sees your social media, they form an opinion about you in seconds. Are you the "creative video person"? The "always-helpful tech guy"? Or just another account posting random stuff? Personal branding is deciding what people think of when they hear your name — before someone else decides for you.`,
     content: [
       {
         type: "analogy",
-        label: "\ud83d\udce3 The Town Square Analogy",
-        html: `Twitter is the internet's <strong>public town square</strong>. Everyone can hear everyone. A small shop owner can reply directly to a global CEO. A student's thread can outperform a news network. There are no walls between people — just conversations. That's terrifying AND incredible for marketing.`,
+        label: "\ud83c\udf54 The Restaurant Analogy",
+        html: `Imagine two burger shops side by side. Both sell good burgers. But one has a clean logo, consistent colours, a catchy slogan, and great reviews. The other has no sign, messy tables, and a different menu every day. <strong>Which one would you trust?</strong> Personal branding is the same thing — it's not about being fake, it's about being <strong>consistent, recognizable, and trustworthy</strong> so people choose YOU over the 1,000 other profiles doing similar things.`,
       },
       {
-        type: "image",
-        src: "/images/m3/twitter-marketing.webp",
-        description: "Twitter marketing toolkit: Tweet at centre \u2192 connected to Hashtags, Threads, Polls, Twitter Ads, Trending Topics, Retweets — all labeled",
+        type: "text",
+        html: `<strong>What is personal branding?</strong> It's <mark>the intentional effort to shape how others perceive you</mark>. Your name, your content, your profile photo, your bio, the topics you talk about — all of this creates an image in people's minds. You can either leave it to chance or take control of it.`,
       },
       {
         type: "cards",
         columns: 3,
         items: [
           {
-            icon: "\ud83d\udcdd",
-            title: "Tweets",
-            description: "Short posts up to 280 characters. Can include images, videos, GIFs, polls, and links. The atomic unit of Twitter. Brevity is the soul of engagement.",
-            tag: "280 characters max",
+            icon: "\ud83c\udfaf",
+            title: "Pick Your Niche",
+            description: "You can't be about everything. Choose 2-3 topics you're genuinely interested in: tech + AI, fitness + nutrition, design + creativity. Specialists stand out. Generalists blend in.",
+            tag: "Focus beats everything",
+            tagColor: "blue",
           },
           {
-            icon: "#\ufe0f\u20e3",
-            title: "Hashtags",
-            description: "Words prefixed with # that categorise content. #Marketing, #MondayMotivation. Makes your tweet discoverable by people searching that topic.",
-            tag: "Discovery engine",
+            icon: "\ud83d\udcf1",
+            title: "Choose Your Platforms",
+            description: "You don't need to be on all platforms. Visual work? Instagram + TikTok. Professional content? LinkedIn. Writing? Twitter/X. Pick 2 and be consistent on both.",
+            tag: "2 platforms > 5 half-done",
+            tagColor: "green",
           },
           {
-            icon: "\ud83d\udcc8",
-            title: "Trending Topics",
-            description: "Most talked-about subjects right now. Brands jump on relevant trends for massive visibility. Called 'newsjacking' — riding the wave of what's already hot.",
-            tag: "Real-time relevance",
+            icon: "\ud83d\udcc6",
+            title: "Post Consistently",
+            description: "The algorithm rewards consistency. 3 posts per week beats 20 posts in one day then silence. A content calendar (use Notion or Later) keeps you on track.",
+            tag: "Consistency > perfection",
+            tagColor: "purple",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Twitter marketing strategies that work:</strong>`,
+        html: `<strong>Content strategy — what to actually post:</strong>`,
       },
       {
         type: "cards",
         columns: 2,
         items: [
           {
-            icon: "\ud83e\uddf5",
-            title: "Threads",
-            description: "Chain of connected tweets telling a longer story. Threads get massive engagement because each tweet is a hook. Educational threads and storytelling threads go viral regularly.",
-            tag: "Long-form on short-form platform",
+            icon: "\ud83d\udca1",
+            title: "Value Content (70%)",
+            description: "Tips, tutorials, lessons learned, industry insights, how-tos. This is what builds your reputation. If people learn something from your posts, they'll follow you.",
+            tag: "Teach, share, help",
           },
           {
-            icon: "\ud83d\udcac",
-            title: "Engagement Strategy",
-            description: "Reply to followers, quote-tweet with commentary, participate in conversations. Twitter rewards brands that act like humans, not corporations. Personality wins.",
-            tag: "Be human, not corporate",
+            icon: "\ud83c\udf1f",
+            title: "Personal Content (20%)",
+            description: "Behind-the-scenes, your journey, wins and failures, opinions. This makes you human and relatable. People follow people, not just information.",
+            tag: "Be real, be human",
+          },
+          {
+            icon: "\ud83d\udce2",
+            title: "Promotional Content (10%)",
+            description: "Your services, portfolio, products, achievements. Keep this small — if every post is 'hire me' or 'buy this,' people will unfollow fast.",
+            tag: "Keep it rare",
+            tagColor: "amber",
+          },
+          {
+            icon: "\u2764\ufe0f",
+            title: "Engagement",
+            description: "Reply to every comment. Comment on others' posts. Join conversations. Social media is SOCIAL. The algorithm pushes content from people who actually engage.",
+            tag: "Talk, don't just broadcast",
+            tagColor: "blue",
           },
         ],
-      },
-      {
-        type: "text",
-        html: `<strong>Twitter Ads — paid options:</strong>`,
-      },
-      {
-        type: "table",
-        headers: ["Ad Type", "What It Does", "Best For"],
-        rows: [
-          { cells: ["Promoted Tweets", "Your tweet shown to targeted users beyond followers", "Driving engagement and website visits"] },
-          { cells: ["Promoted Accounts", "Your profile suggested to targeted users as 'Who to Follow'", "Growing your follower base"] },
-          { cells: ["Promoted Trends", "Your hashtag appears at the top of Trending Topics", "Massive brand awareness (expensive!)"] },
-          { cells: ["Twitter Cards", "Rich media preview with image, title, CTA when sharing links", "Driving clicks to your website"] },
-        ],
-      },
-      {
-        type: "callout",
-        variant: "dark",
-        html: `<strong>Real-world example:</strong> Wendy's became legendary on Twitter by roasting competitors and replying with witty comebacks. Their follower count exploded. Cost? $0 in ad spend — just a social media manager with permission to be funny. <mark>On Twitter, personality > budget.</mark>`,
       },
       {
         type: "callout",
         variant: "red",
-        html: `<strong>\u26a0\ufe0f Warning:</strong> Twitter is also where brand crises happen fastest. A tone-deaf tweet during a tragedy, a typo that changes meaning, a reply to the wrong account — all public, all permanent (even if deleted, screenshots live forever). Always think twice before posting.`,
+        html: `<strong>\u274c Common personal branding mistakes:</strong><br/>
+\u2022 Posting party photos on a professional account — keep personal and professional separate<br/>
+\u2022 Complaining publicly about jobs, professors, or colleagues — the internet never forgets<br/>
+\u2022 Inconsistent presence — posting 10 times one week, then disappearing for 2 months<br/>
+\u2022 Copying someone else's style instead of finding your own voice<br/>
+\u2022 Having an empty or outdated profile — if someone searches your name, what will they find?`,
+      },
+      {
+        type: "table",
+        headers: ["Branding Element", "Good Example", "Bad Example"],
+        rows: [
+          { cells: ["Profile Photo", "Clean headshot, good lighting, friendly", "Blurry group photo, sunglasses, cropped from party pic"] },
+          { cells: ["Bio", "\"UX Designer | Helping startups look professional\"", "\"Living my best life\""] },
+          { cells: ["Content", "Regular posts about your field + genuine personality", "Random reposts with no original thought"] },
+          { cells: ["Engagement", "Replying to comments, adding value in conversations", "Never responding, or only posting links"] },
+          { cells: ["Consistency", "Same name, photo, and style across platforms", "Different persona on every platform"] },
+        ],
+      },
+      {
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Success story:</strong> A 20-year-old design student starts posting UI design tips on LinkedIn twice a week. After 6 months: 5,000 followers, 3 freelance clients, and an internship offer from a company that found her through her posts. <mark>She didn't have years of experience — she had a consistent personal brand.</mark>`,
+      },
+      {
+        type: "callout",
+        variant: "dark",
+        html: `<strong>Start now, not later:</strong> You don't need to be an expert to start building your brand. Document your learning journey — "Today I learned about..." posts perform incredibly well. The best personal brands are built by people who start before they feel ready.`,
       },
     ],
   },

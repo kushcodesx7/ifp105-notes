@@ -15,7 +15,7 @@ interface NavbarProps {
 const MODULES = [
   { number: 1, title: "Hardware & Software", href: "/module/1", accent: "#6366F1" },
   { number: 2, title: "Office Automation", href: "/module/2", accent: "#10B981" },
-  { number: 3, title: "Social Media", href: null, accent: "#3B82F6" },
+  { number: 3, title: "Social Media", href: "/module/3", accent: "#3B82F6" },
   { number: 4, title: "HTML & Web Dev", href: "/module/4", accent: "#06B6D4" },
   { number: 5, title: "Tech Trends", href: "/module/5", accent: "#8B5CF6" },
 ];
