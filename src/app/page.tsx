@@ -67,13 +67,22 @@ const modules = [
   },
 ];
 
+const featureIcons = {
+  brain: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a5 5 0 015 5c0 1.5-.5 2.8-1.3 3.8A5.02 5.02 0 0119 15a5 5 0 01-3.2 4.7M12 2a5 5 0 00-5 5c0 1.5.5 2.8 1.3 3.8A5.02 5.02 0 005 15a5 5 0 003.2 4.7M12 2v20M8.2 19.7A5 5 0 0012 22a5 5 0 003.8-2.3"/></svg>,
+  check: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>,
+  chart: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>,
+  clipboard: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>,
+  zap: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  unlock: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0"/><circle cx="12" cy="16" r="1"/></svg>,
+};
+
 const features = [
-  { icon: "\u{1F9E0}", title: "Analogies That Stick", desc: "Every concept explained with real-world analogies. Pizza = IPO cycle. Kitchen counter = RAM." },
-  { icon: "\u2705", title: "10 Qs Per Topic", desc: "Instant feedback on every answer. Know what you got wrong and why \u2014 before the exam." },
-  { icon: "\u{1F4CA}", title: "Track Progress", desc: "Your progress is saved locally. Pick up where you left off, anytime." },
-  { icon: "\u{1F4CB}", title: "Cheat Sheets", desc: "One-page summary of every module. Perfect for last-minute revision." },
-  { icon: "\u26A1", title: "Mobile First", desc: "Study on your phone, tablet, or laptop. The layout adapts perfectly." },
-  { icon: "\u{1F513}", title: "100% Free", desc: "No ads, no paywalls, no sign-ups. Just open the link and start studying." },
+  { icon: "brain" as keyof typeof featureIcons, title: "Analogies That Stick", desc: "Every concept explained with real-world analogies. Pizza = IPO cycle. Kitchen counter = RAM." },
+  { icon: "check" as keyof typeof featureIcons, title: "10 Qs Per Topic", desc: "Instant feedback on every answer. Know what you got wrong and why — before the exam." },
+  { icon: "chart" as keyof typeof featureIcons, title: "Track Progress", desc: "Your progress is saved locally. Pick up where you left off, anytime." },
+  { icon: "clipboard" as keyof typeof featureIcons, title: "Cheat Sheets", desc: "One-page summary of every module. Perfect for last-minute revision." },
+  { icon: "zap" as keyof typeof featureIcons, title: "Mobile First", desc: "Study on your phone, tablet, or laptop. The layout adapts perfectly." },
+  { icon: "unlock" as keyof typeof featureIcons, title: "100% Free", desc: "No ads, no paywalls, no sign-ups. Just open the link and start studying." },
 ];
 
 // Topic titles for continue learning
@@ -487,7 +496,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature) => (
               <div key={feature.title} className="group p-5 rounded-xl card-glass">
-                <div className="text-xl mb-2">{feature.icon}</div>
+                <div className="mb-3 text-indigo-400">{featureIcons[feature.icon]}</div>
                 <h3 className="text-sm font-semibold mb-1">{feature.title}</h3>
                 <p className="text-xs text-zinc-500 leading-relaxed">{feature.desc}</p>
               </div>
