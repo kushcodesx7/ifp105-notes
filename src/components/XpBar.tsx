@@ -31,7 +31,7 @@ export default function XpBar() {
         transition={{ delay: 0.5, duration: 0.4 }}
         data-tour="xp-bar"
         onClick={() => setExpanded(!expanded)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3 py-2 rounded-full backdrop-blur-xl cursor-pointer hover:scale-105 transition-transform"
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3 py-2 rounded-full backdrop-blur-xl cursor-pointer hover:scale-105 transition-transform max-sm:bottom-20 max-sm:right-3 max-sm:scale-90"
         style={{
           background: "rgba(9,9,15,0.9)",
           border: "1px solid rgba(255,255,255,0.08)",

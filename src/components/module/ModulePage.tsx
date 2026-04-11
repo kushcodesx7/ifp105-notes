@@ -283,7 +283,7 @@ export default function ModulePage({
   const activeTopic = topics.find((t) => t.id === activeTab);
 
   return (
-    <main className="relative min-h-screen">
+    <main id="main-content" className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
       <XpBar />
       <OnboardingTour page="module" />

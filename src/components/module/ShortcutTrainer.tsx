@@ -21,6 +21,11 @@ export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut 
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
   const [shuffled, setShuffled] = useState<Shortcut[]>([]);
 
   // Shuffle on mount
@@ -86,6 +91,25 @@ export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut 
   }
 
   if (!shortcut) return null;
+
+  if (isMobile) {
+    return (
+      <div className="my-6 rounded-2xl p-6 text-center card-glass">
+        <div className="text-2xl mb-2">⌨️</div>
+        <h3 className="text-sm font-bold text-zinc-300 mb-1">{title}</h3>
+        <p className="text-xs text-zinc-500">This exercise needs a physical keyboard. Try it on a laptop or desktop!</p>
+        <div className="mt-4 space-y-1.5">
+          {shortcuts.slice(0, 6).map((s) => (
+            <div key={s.keys} className="flex items-center justify-between text-[11px] px-3 py-1.5 rounded-lg" style={{ background: '#111116' }}>
+              <span className="text-zinc-400">{s.action}</span>
+              <span className="font-bold text-indigo-400">{s.keys}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-zinc-600 mt-3">Memorize these — they'll appear on your exam!</p>
+      </div>
+    );
+  }
 
   const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
 

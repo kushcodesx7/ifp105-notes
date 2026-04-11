@@ -45,6 +45,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${dmSerif.variable} h-full antialiased`}
     >
       <body className="bg-[#09090F] text-white overflow-x-hidden">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[999] focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-bold">
+          Skip to content
+        </a>
         <AuthProvider>
           <ServiceWorkerRegister />
           {children}

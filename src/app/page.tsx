@@ -37,9 +37,10 @@ const modules = [
     title: "Social Media Foundation",
     description: "Social media platforms, management tools, measurement & reporting, advertising, Facebook & Twitter marketing.",
     icon: "\u{1F4F1}",
+    href: "/module/3",
     accent: "#3B82F6",
     tags: ["7 Topics", "~35 min", "70 Qs"],
-    locked: true,
+    lsKey: "ifp105_m3_progress",
     totalTopics: 7,
   },
   {
@@ -78,6 +79,8 @@ const features = [
 // Topic titles for continue learning
 const MODULE_TOPICS: Record<number, string[]> = {
   1: ["Why Did We Even Invent Computers?", "How Computers Grew Up", "How Every Computer Works (IPO)", "The CPU", "Memory (RAM & ROM)", "Input Devices", "Output Devices", "Storage Devices", "Types of Software", "Internet Basics", "Internet Applications"],
+  2: ["Editing vs Word Processing", "MS Word — Text Editing", "MS Word — Images & Tables", "MS Excel — Worksheets", "MS Excel — Formulas", "MS Excel — Data Management", "MS PowerPoint — Basics", "MS PowerPoint — Master Slides", "Putting It Together"],
+  3: ["Introduction to Social Media", "Types of Platforms", "Management Tools", "Measurement & Reporting", "Social Advertising", "Facebook Marketing", "Twitter Marketing"],
   4: ["World Wide Web", "HTML & Basic Tags", "HTML Elements", "HTML Attributes", "HTML Comments", "HTML Formatting", "HTML Tables", "HTML Lists", "Hyperlinks", "Images & Image Links", "Build a Full Page"],
   5: ["Artificial Intelligence", "Machine Learning", "Data Analytics", "Cloud Computing", "Blockchain", "Virtual Reality", "Augmented Reality", "Internet of Things", "Generative AI", "Ethical Use of GPTs"],
 };
@@ -189,7 +192,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative">
+    <main id="main-content" className="relative">
       <Navbar />
 
       {/* ─── HERO (compact) ─── */}
