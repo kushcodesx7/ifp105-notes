@@ -96,9 +96,21 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     return false;
   });
 
-  const [currentQ, setCurrentQ] = useState(0);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [showResult, setShowResult] = useState(false);
+  const [currentQ, setCurrentQ] = useState(() => {
+    // Start at the first unanswered question, or 0 if all answered
+    if (typeof window === "undefined") return 0;
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed: SavedQuizState = JSON.parse(saved);
+        if (parsed.answers.length === total) {
+          const firstUnanswered = parsed.answers.findIndex((a) => a === null);
+          return firstUnanswered >= 0 ? firstUnanswered : 0;
+        }
+      }
+    } catch {}
+    return 0;
+  });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [viewMode, setViewMode] = useState<"quiz" | "review">("quiz");
 
@@ -109,7 +121,22 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
   const answeredCount = answered.filter((a) => a !== null).length;
   const allAnswered = answeredCount === total;
 
+  // showFeedback is derived: true whenever the current question has been answered
+  const showFeedback = answered[currentQ] !== null;
+
   // If returning to a completed quiz, show review mode
+  const [showResult, setShowResult] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed: SavedQuizState = JSON.parse(saved);
+        if (parsed.completed && parsed.answers.every((a) => a !== null)) return true;
+      }
+    } catch {}
+    return false;
+  });
+
   useEffect(() => {
     if (completed && allAnswered) {
       setViewMode("review");
@@ -158,7 +185,6 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
 
     setAnswered(newAnswered);
     setScore(newScore);
-    setShowFeedback(true);
 
     // Check if all answered now
     const nowAllAnswered = newAnswered.every((a) => a !== null);
@@ -173,7 +199,6 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
   }
 
   function handleNext() {
-    setShowFeedback(false);
     if (currentQ < total - 1) {
       // Find next unanswered question, or just go to next
       let next = currentQ + 1;
@@ -196,7 +221,6 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     setAnswered(new Array(total).fill(null));
     setScore(0);
     setShowResult(false);
-    setShowFeedback(false);
     setCompleted(false);
     setShuffleSeed(newSeed);
     setViewMode("quiz");
@@ -403,7 +427,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
           {answered.map((a, i) => (
             <button
               key={i}
-              onClick={() => { setCurrentQ(i); setShowFeedback(a !== null); }}
+              onClick={() => { setCurrentQ(i); }}
               className="w-2 h-2 rounded-full transition-all cursor-pointer hover:scale-125"
               style={{
                 background: a === null
