@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
-import OnboardingTour from "@/components/OnboardingTour";
+// OnboardingTour removed
 
 const modules = [
   {
@@ -540,7 +540,7 @@ export default function Home() {
       </footer>
 
       {/* Onboarding Tour for first-time visitors */}
-      <OnboardingTour page="landing" />
+      {/* OnboardingTour removed */}
     </main>
   );
 }
