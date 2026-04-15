@@ -524,17 +524,30 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                       <strong>{isCorrect ? '✅ Correct!' : '❌ Not quite.'}</strong> {q.why}
                     </div>
 
-                    {/* Next / See Results button */}
-                    <motion.button
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                      onClick={handleNext}
-                      className="w-full mt-4 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 focus-glow"
-                      style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
-                    >
-                      {currentQ < total - 1 ? `Next Question →` : allAnswered ? `See Results →` : `Next Question →`}
-                    </motion.button>
+                    {/* Navigation: Previous / Next */}
+                    <div className="flex gap-3 mt-4">
+                      {currentQ > 0 && (
+                        <motion.button
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          onClick={() => setCurrentQ(currentQ - 1)}
+                          className="flex-1 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        >
+                          ← Previous
+                        </motion.button>
+                      )}
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        onClick={handleNext}
+                        className={`${currentQ > 0 ? 'flex-1' : 'w-full'} py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 focus-glow`}
+                        style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
+                      >
+                        {currentQ < total - 1 ? `Next Question →` : allAnswered ? `See Results →` : `Next Question →`}
+                      </motion.button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
