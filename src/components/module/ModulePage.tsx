@@ -17,7 +17,6 @@ import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { cheatsheets } from "@/data/cheatsheets";
 import { flashcardData } from "@/data/flashcards";
-// OnboardingTour removed
 
 interface Topic {
   id: number;
@@ -287,7 +286,6 @@ export default function ModulePage({
     <main id="main-content" className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
       <XpBar />
-      {/* OnboardingTour removed */}
       <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
       {/* Reading progress bar */}
@@ -412,7 +410,7 @@ export default function ModulePage({
       </div>
 
       {/* Content */}
-      <div className="max-w-3xl mx-auto px-5 py-8">
+      <div className="max-w-3xl mx-auto px-5 py-8 pb-24">
         <AnimatePresence mode="wait">
           {isCheatSheet ? (
             <motion.div key="cheatsheet" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>

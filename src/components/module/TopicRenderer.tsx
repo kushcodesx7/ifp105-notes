@@ -76,7 +76,7 @@ function RenderBlock({ block }: { block: ContentBlock }) {
             >
               <span className="text-xl mb-2 block">{card.icon}</span>
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
-              <p className="text-xs text-zinc-500 leading-relaxed">{card.description}</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">{card.description}</p>
               {card.tag && (
                 <span
                   className="inline-block mt-2 text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
@@ -112,7 +112,7 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               <span className="text-xl mb-2 block">{card.icon}</span>
               <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1">{card.period}</div>
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
-              <p className="text-xs text-zinc-500 leading-relaxed">{card.description}</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">{card.description}</p>
               <div className="text-xs font-semibold mt-2 pt-2 text-zinc-500" style={{ borderTop: '1px solid #2a2a33' }}>
                 {card.limitation}
               </div>
@@ -209,7 +209,7 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-zinc-200 mb-0.5">{step.title}</h4>
-                <p className="text-xs text-zinc-500 leading-relaxed">{step.description}</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">{step.description}</p>
               </div>
             </motion.div>
           ))}
