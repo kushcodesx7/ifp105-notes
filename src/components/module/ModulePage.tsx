@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { cheatsheets } from "@/data/cheatsheets";
 import { flashcardData } from "@/data/flashcards";
-import OnboardingTour from "@/components/OnboardingTour";
+// OnboardingTour removed
 
 interface Topic {
   id: number;
@@ -81,6 +81,7 @@ export default function ModulePage({
   const [showCertificate, setShowCertificate] = useState(false);
   const [bookmarkedTopics, setBookmarkedTopics] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
+  const [mcqAnswerCounts, setMcqAnswerCounts] = useState<Record<number, { answered: number; total: number }>>({});
   const hasShownLoginPrompt = useRef(false);
   const supabaseLoaded = useRef(false);
 
@@ -286,7 +287,7 @@ export default function ModulePage({
     <main id="main-content" className="relative min-h-screen">
       <Confetti trigger={confettiTrigger} />
       <XpBar />
-      <OnboardingTour page="module" />
+      {/* OnboardingTour removed */}
       <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
       {/* Reading progress bar */}
@@ -506,25 +507,61 @@ export default function ModulePage({
                 <ErrorBoundary>
                   <McqQuiz
                     topicId={activeTab}
+                    moduleNumber={moduleNumber}
                     questions={mcqData[activeTab]}
                     onComplete={(score, total) => handleQuizComplete(activeTab, score, total)}
+                    onAnswerCountChange={(answered, total) => {
+                      setMcqAnswerCounts(prev => ({ ...prev, [activeTab]: { answered, total } }));
+                    }}
                   />
                 </ErrorBoundary>
                 </div>
               )}
 
-              {!done.has(activeTab) ? (
-                <motion.button data-tour="done-btn" whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }} onClick={() => markDone(activeTab)}
-                  className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-white relative overflow-hidden"
-                  style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})`, boxShadow: `0 4px 16px ${accentFrom}40` }}>
-                  ✓ Mark as Done — next topic
-                </motion.button>
-              ) : (
-                <div className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-center"
-                  style={{ background: 'linear-gradient(135deg, #16a34a, #059669)', color: 'white', opacity: 0.8 }}>
-                  ✅ Completed
-                </div>
-              )}
+              {(() => {
+                const topicMcq = mcqAnswerCounts[activeTab];
+                const hasMcq = !!mcqData[activeTab];
+                const allMcqAnswered = !hasMcq || (topicMcq && topicMcq.answered === topicMcq.total);
+                const mcqRemaining = hasMcq && topicMcq ? topicMcq.total - topicMcq.answered : 0;
+
+                if (done.has(activeTab)) {
+                  return (
+                    <div className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-center"
+                      style={{ background: 'linear-gradient(135deg, #16a34a, #059669)', color: 'white', opacity: 0.8 }}>
+                      ✅ Completed
+                    </div>
+                  );
+                }
+
+                if (!allMcqAnswered) {
+                  return (
+                    <div className="w-full mt-6">
+                      <button
+                        disabled
+                        className="w-full py-4 rounded-xl text-sm font-semibold text-zinc-400 cursor-not-allowed"
+                        style={{ background: '#1a1a22', border: '1px solid #2a2a33' }}
+                      >
+                        🔒 Answer all questions to complete this topic
+                      </button>
+                      <p className="text-center text-[11px] text-zinc-500 mt-2">
+                        {topicMcq ? `${topicMcq.answered}/${topicMcq.total} questions answered` : "Answer the quiz below first"} — {mcqRemaining} remaining
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <motion.button
+                    whileHover={{ scale: 1.01, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => markDone(activeTab)}
+                    className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-white relative overflow-hidden"
+                    style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})`, boxShadow: `0 4px 16px ${accentFrom}40` }}
+                  >
+                    ✓ Mark as Done — next topic
+                  </motion.button>
+                );
+              })()}
             </motion.div>
           ) : null}
         </AnimatePresence>
