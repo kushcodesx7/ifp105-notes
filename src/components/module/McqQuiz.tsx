@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
 
@@ -117,10 +117,12 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     }
   }, []);
 
-  // Notify parent about answer count changes
+  // Notify parent about answer count changes (use ref to avoid infinite loop)
+  const onAnswerCountChangeRef = useRef(onAnswerCountChange);
+  onAnswerCountChangeRef.current = onAnswerCountChange;
   useEffect(() => {
-    onAnswerCountChange?.(answeredCount, total);
-  }, [answeredCount, total, onAnswerCountChange]);
+    onAnswerCountChangeRef.current?.(answeredCount, total);
+  }, [answeredCount, total]);
 
   // Save state to localStorage whenever answers change
   const saveState = useCallback(
