@@ -4,11 +4,14 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
 
+export type BloomLevel = "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create";
+
 interface Question {
   q: string;
   opts: string[];
   ans: number;
   why: string;
+  bloom?: BloomLevel;
 }
 
 interface McqQuizProps {
@@ -452,9 +455,24 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              {/* Question counter */}
-              <div className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase mb-2">
-                Question {currentQ + 1} of {total}
+              {/* Question counter + Bloom's badge */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">
+                  Question {currentQ + 1} of {total}
+                </div>
+                {q.bloom && !["remember", "understand"].includes(q.bloom) && (
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                    q.bloom === "apply" ? "bg-emerald-500/15 text-emerald-400" :
+                    q.bloom === "analyze" ? "bg-violet-500/15 text-violet-400" :
+                    q.bloom === "evaluate" ? "bg-amber-500/15 text-amber-400" :
+                    q.bloom === "create" ? "bg-yellow-400/15 text-yellow-300" : ""
+                  }`}>
+                    {q.bloom === "apply" && "🔧 Apply"}
+                    {q.bloom === "analyze" && "🔍 Analyze"}
+                    {q.bloom === "evaluate" && "⚖️ Evaluate"}
+                    {q.bloom === "create" && "✨ Create"}
+                  </span>
+                )}
               </div>
 
               {/* Question text */}
