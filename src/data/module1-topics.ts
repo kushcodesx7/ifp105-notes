@@ -250,6 +250,11 @@ export const topics: Topic[] = [
         type: "text",
         html: `CPU speed is measured in <mark>GHz (Gigahertz)</mark>. A 3.0 GHz CPU runs 3 billion operations per second. Modern phones have multi-core CPUs \u2014 8 or 12 "brains" all working at once.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> If a CPU has 8 cores, does that mean it\u2019s 8x faster than a single-core CPU? What might prevent a computer from using all cores at full speed simultaneously?`,
+      },
     ],
   },
 
@@ -306,6 +311,11 @@ export const topics: Topic[] = [
           { cells: ["Speed", "Very fast \u26a1", "Fast"] },
           { cells: ["Used for", "Running apps right now", "Startup instructions"] },
         ],
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> If RAM is so fast, why don\u2019t computers just use RAM for everything instead of hard drives? What would be the trade-off in cost, capacity, and what happens when you turn off the power?`,
       },
     ],
   },
@@ -492,6 +502,11 @@ export const topics: Topic[] = [
         variant: "blue",
         html: `<strong>Why does a game take time to load?</strong> Game files sit in storage (HDD/SSD). When you press Play, the computer moves them into fast RAM so the CPU can use them. That loading screen = data moving from slow storage to fast RAM. Bigger game = longer move.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>🤔 Think Deeper:</strong> A company needs to choose between HDD and SSD for 500 employee laptops. What factors should they consider beyond just speed — think about budget, durability, and the type of work employees do?`,
+      },
     ],
   },
 
@@ -541,6 +556,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "red",
         html: `<strong>\u2b50 The golden rule:</strong> You CANNOT run application software without system software first. Your phone needs Android or iOS before WhatsApp can work. System software is always the foundation \u2014 installed first, always in charge.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Imagine your phone has no operating system installed. Can you install WhatsApp on it? Why does the order of software installation matter, and what role does system software play as a \u201cfoundation\u201d?`,
       },
     ],
   },
@@ -615,6 +635,11 @@ export const topics: Topic[] = [
       {
         type: "callout",
         html: `<strong>Email address format:</strong> name<strong>@</strong>domain.com \u2014 The @ means "at". student@amity.edu = user "student" AT server "amity.edu". Don't confuse email address, URL, and IP address \u2014 three completely different things.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> What would happen if DNS servers worldwide went down for one hour? Which of your daily activities \u2014 messaging, browsing, streaming, gaming \u2014 would still work, and which would break completely?`,
       },
     ],
   },

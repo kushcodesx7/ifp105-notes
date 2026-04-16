@@ -128,6 +128,11 @@ export const topics: Topic[] = [
         variant: "purple",
         html: `<strong>Key exam point:</strong> All AI today is <mark>Narrow AI</mark> \u2014 good at one thing, cannot generalise. General AI and Super AI do NOT exist yet. If a question mentions "current AI," the answer is always Narrow/Weak AI.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Siri can answer questions but can\u2019t feel emotions. Will AI ever truly \u201cunderstand\u201d humans, or will it always be sophisticated pattern matching? What\u2019s the difference between simulating intelligence and actually having it?`,
+      },
     ],
   },
 
@@ -215,6 +220,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>AI vs ML \u2014 the relationship:</strong> AI is the big umbrella goal (make machines smart). ML is one method to achieve AI (learn from data). All ML is AI, but not all AI is ML. ML is currently the most successful approach to building AI.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Netflix recommends shows based on what you watched before. But what if your little sibling used your account for a week? How would this break the ML model\u2019s understanding of your preferences?`,
       },
     ],
   },
@@ -370,6 +380,11 @@ export const topics: Topic[] = [
         variant: "blue",
         html: `<strong>Benefits of cloud:</strong> No upfront hardware cost \u00b7 Access from anywhere \u00b7 Automatic backups \u00b7 Scales up or down instantly \u00b7 Pay only for what you use. <strong>Risks:</strong> Needs internet \u00b7 Data privacy concerns \u00b7 Vendor lock-in.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Your university stores all student data in the cloud. The internet goes down for 3 days. What happens to grades, attendance, and communication? What backup plan should institutions have?`,
+      },
     ],
   },
 
@@ -433,6 +448,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "amber",
         html: `<strong>Common misconception:</strong> Blockchain is NOT the same as Bitcoin. Bitcoin is one application that USES blockchain. Blockchain is the underlying technology \u2014 like the internet is the technology, and email is one application.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> If blockchain makes records permanent and unchangeable, what happens when someone makes a mistake in a transaction? Is immutability always a good thing, or can it become a problem?`,
       },
     ],
   },
@@ -804,6 +824,11 @@ export const topics: Topic[] = [
       {
         type: "text",
         html: `<strong>Deepfakes:</strong> AI-generated fake videos or audio that make it look like real people said or did things they never did. These pose serious threats to trust, reputation, and democracy. Always question suspicious media and verify sources.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> A student uses ChatGPT to explain a concept they don\u2019t understand, then writes the assignment in their own words using that understanding. Is this cheating or smart studying? Where exactly is the ethical line?`,
       },
     ],
   },

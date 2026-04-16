@@ -157,6 +157,11 @@ export const topics: Topic[] = [
         variant: "blue",
         html: `<strong>Exam tip \u2014 Format Painter:</strong> Want to copy formatting from one place to another? Select the formatted text \u2192 click the paintbrush icon on the Home tab \u2192 drag across the text you want to format. Done! It copies all the formatting instantly.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> When would plain text (Notepad) actually be BETTER than a word processor like MS Word? Think of real scenarios where simplicity and small file size matter more than formatting.`,
+      },
     ],
   },
 
@@ -442,6 +447,11 @@ export const topics: Topic[] = [
         variant: "blue",
         html: `<strong>Exam tip \u2014 Formulas are ALIVE:</strong> If you write =A1+B1 and later change the number in A1, the answer updates automatically. You build the formula once and it keeps working forever. That's the whole point of Excel!`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> A store owner tracks 1,000 products with prices, quantities, and suppliers. Would you use a calculator or Excel? At what point does a spreadsheet become essential rather than optional?`,
+      },
     ],
   },
 
@@ -538,6 +548,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>Exam tip \u2014 Why link sheets?</strong> Imagine one sheet has "January Sales" and another has "February Sales." A third "Summary" sheet can pull totals from both. Change January's numbers \u2192 Summary updates automatically. No copy-pasting needed!`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Sorting and filtering look similar but solve different problems. Can you think of a situation where sorting your data would be useless, but filtering would instantly give you the answer you need?`,
       },
     ],
   },
@@ -702,6 +717,11 @@ export const topics: Topic[] = [
         variant: "blue",
         html: `<strong>Exam tip \u2014 Presenter View is a secret weapon:</strong> You get to see your speaker notes, the upcoming slide, and a timer on your screen. The audience only sees the current slide. Perfect for remembering what to say without reading directly from the slide!`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> A company has a 200-slide presentation and the boss wants to change the font on every slide. Why would changing fonts slide-by-slide be a disaster, and how does Slide Master prevent this problem?`,
+      },
     ],
   },
 
@@ -769,6 +789,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>Exam tip \u2014 They work together!</strong> You can paste an Excel chart into a Word report. You can link Excel data to PowerPoint slides. You can copy a Word outline into PowerPoint. They're a team \u2014 each one handles what it does best!`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Your boss asks you to track employee attendance for the whole year AND present the results to the board. Which Office tools do you use, in what order, and why can\u2019t a single tool do both jobs well?`,
       },
     ],
   },

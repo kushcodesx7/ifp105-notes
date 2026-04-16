@@ -152,6 +152,11 @@ export const topics: Topic[] = [
         variant: "purple",
         html: `<strong>Pro tip:</strong> You don't need to be on EVERY platform. A law firm posting dance videos on TikTok? Awkward. A fashion brand ignoring Instagram? Criminal. <mark>Match the platform to your audience and content style.</mark>`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> LinkedIn is for professionals and TikTok is for entertainment. But a lawyer goes viral on TikTok giving legal advice. Does the \u201cpurpose\u201d of a platform still matter, or is it all about where your audience is?`,
+      },
     ],
   },
 
@@ -358,6 +363,11 @@ export const topics: Topic[] = [
         variant: "blue",
         html: `<strong>Analytics dashboards:</strong> Every platform has one. Facebook Insights, Instagram Insights, Twitter Analytics, LinkedIn Analytics. Third-party tools (Hootsuite, Sprout Social, Google Analytics) pull all of these into a single report. Professionals review these weekly or monthly.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> A post gets 100,000 impressions but only 3 clicks. The reach looks huge \u2014 is this a success or a failure? How would you diagnose what went wrong and fix it for the next post?`,
+      },
     ],
   },
 
@@ -444,6 +454,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "dark",
         html: `<strong>Budget basics:</strong> You can start with as little as $1/day. You set a daily or total budget, and the platform stops showing ads when the budget runs out. No surprise bills. <mark>CPC (Cost Per Click)</mark> — pay only when someone clicks. <mark>CPM (Cost Per Thousand Impressions)</mark> — pay per 1,000 views. Most students' first ad campaign costs less than a coffee.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> You have $100 to spend on ads. Would you rather reach 10,000 random people or 500 people who already visited your website? Why might a smaller, targeted audience give you a better return on investment?`,
       },
     ],
   },
@@ -545,6 +560,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "amber",
         html: `<strong>Do this today:</strong> Create a LinkedIn profile (or update your existing one). Add a professional photo, write a headline that's more than just "Student," and connect with 10 classmates. That's it. Takes 20 minutes, and you've just started building your professional network.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Two students graduate with identical grades. One has a strong LinkedIn profile with 500+ connections. The other has none. How might their job search experiences differ, and why?`,
       },
     ],
   },
@@ -659,6 +679,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "dark",
         html: `<strong>Start now, not later:</strong> You don't need to be an expert to start building your brand. Document your learning journey — "Today I learned about..." posts perform incredibly well. The best personal brands are built by people who start before they feel ready.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> If you had to build a personal brand from zero today, what 3 steps would you take in the first week? Consider which platform to start on, what niche to focus on, and how to create your first piece of content.`,
       },
     ],
   },

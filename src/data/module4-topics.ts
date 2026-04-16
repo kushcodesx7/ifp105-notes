@@ -173,6 +173,11 @@ export const topics: Topic[] = [
         variant: "amber",
         html: `<strong>Key difference:</strong> <code>&lt;p&gt;</code> is a <strong>tag</strong>. <code>&lt;p&gt;Hello&lt;/p&gt;</code> is an <strong>element</strong>. Elements include BOTH tags AND the content inside!`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Every website you use is built with the same tags you just learned. Try right-clicking any website and selecting \u201cView Page Source\u201d \u2014 can you spot <code>&lt;div&gt;</code>, <code>&lt;p&gt;</code>, and <code>&lt;a&gt;</code> tags in the real code?`,
+      },
     ],
   },
 
@@ -224,6 +229,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "blue",
         html: `<strong>Boolean attributes:</strong> Some attributes don't need a value — just being present makes them active. Example: <code>&lt;input disabled&gt;</code> makes the input disabled. Common booleans: <code>disabled</code>, <code>readonly</code>, <code>checked</code>.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> If you removed all <code>alt</code> attributes from every image on a website, who would be most affected and why? Think about users who rely on screen readers and what happens when images fail to load.`,
       },
     ],
   },
@@ -397,6 +407,11 @@ export const topics: Topic[] = [
         variant: "amber",
         html: `<strong>Table caption:</strong> Use <code>&lt;caption&gt;</code> right after the opening <code>&lt;table&gt;</code> tag to give your table a title. Example: <code>&lt;caption&gt;Student Grades&lt;/caption&gt;</code>. It appears above the table and helps describe what the table shows.`,
       },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> When should you use an HTML table vs just using paragraphs with formatting? What kind of data actually NEEDS rows and columns, and when would a table be overkill?`,
+      },
     ],
   },
 
@@ -499,6 +514,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "amber",
         html: `<strong>Exam detail:</strong> <code>target="_blank"</code> is a commonly tested attribute — it makes the link open in a NEW tab instead of replacing the current page. If not specified, the link opens in the same tab.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> A website has 50 pages but no hyperlinks between them. What would the user experience be like? Why are hyperlinks considered the backbone of the entire World Wide Web?`,
       },
     ],
   },
@@ -634,6 +654,11 @@ export const topics: Topic[] = [
         type: "callout",
         variant: "red",
         html: `<strong>Common mistakes:</strong> Forgetting <code>&lt;!DOCTYPE html&gt;</code> at the top. Not closing tags. Putting <code>&lt;td&gt;</code> directly inside <code>&lt;table&gt;</code> without <code>&lt;tr&gt;</code>. Forgetting the <code>border</code> attribute on tables. Missing <code>alt</code> on images.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Look at your favourite website. Can you identify the header, navigation, main content, and footer sections? Try sketching its HTML structure on paper using the semantic tags you learned.`,
       },
     ],
   },
