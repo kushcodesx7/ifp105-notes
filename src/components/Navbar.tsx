@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, useGoogleOneTapLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import RegistrationModal from "@/components/RegistrationModal";
@@ -88,19 +88,49 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, user?.email]);
 
+  // Keep the profile photo in sync with whatever Google is returning now.
+  // Fires whenever user.photo changes (which happens on a fresh sign-in —
+  // Google JWT carries the current Gmail avatar). The endpoint is a no-op
+  // if the DB already has this URL, so calling it on every load is cheap.
+  useEffect(() => {
+    if (!isLoggedIn || !user?.email || !user?.photo) return;
+    fetch("/api/students/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: user.email, photoUrl: user.photo }),
+    }).catch(() => {});
+  }, [isLoggedIn, user?.email, user?.photo]);
+
   function handleGoogleSuccess(response: { credential?: string }) {
     if (!response.credential) return;
     const payload = decodeJwt(response.credential);
-    if (payload?.name && payload?.email) {
-      login({
-        name: payload.name,
-        email: payload.email,
-        photo: payload.picture, // Google profile photo URL
-      });
-      setShowSignIn(false);
-      // Modal will auto-show via the useEffect above
-    }
+    if (!payload?.name || !payload?.email) return;
+
+    // Merge with existing user so a silent re-auth doesn't blow away
+    // registration info (enrollmentNo / batchId / section). The fresh JWT
+    // carries the current Gmail photo, so that overrides.
+    login({
+      ...(user || {}),
+      name: payload.name,
+      email: payload.email,
+      photo: payload.picture,
+    });
+    setShowSignIn(false);
   }
+
+  // Silent re-auth on every page load for returning users.
+  // auto_select=true: if the user has signed in before and granted consent,
+  // Google silently issues a fresh JWT — which carries the current Gmail
+  // avatar. Our sync effect then pushes the new photo to the DB.
+  // No UI prompt, no new scope request.
+  useGoogleOneTapLogin({
+    onSuccess: handleGoogleSuccess,
+    auto_select: true,
+    cancel_on_tap_outside: false,
+    // Suppress the One Tap UI for users already in auth context — silent
+    // refresh still works because auto_select doesn't require the UI.
+    disabled: false,
+  });
 
   return (
     <>
