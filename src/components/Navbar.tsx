@@ -181,12 +181,14 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           >
             🤝 Connect
           </Link>
+          {/* Practice link hidden until content is verified — uncomment to re-enable
           <Link
             href="/practice"
             className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"
           >
             🎯 Practice
           </Link>
+          */}
           {isLoggedIn && user ? (
             <>
               {!isRegistered && (

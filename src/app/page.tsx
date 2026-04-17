@@ -479,7 +479,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── PRACTICE ZONE CTA ─── */}
+      {/* ─── PRACTICE ZONE CTA — hidden until questions are verified ─── */}
+      {/*
       <section className="relative px-6 pb-16">
         <div className="max-w-5xl mx-auto">
           <Link href="/practice">
@@ -505,6 +506,7 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      */}
 
       {/* ─── FEATURES ─── */}
       <section className="relative py-20 px-6 border-t border-white/[0.04]">
