@@ -26,6 +26,7 @@ interface StudentData {
   email: string;
   enrollmentNo: string;
   batchId: string;
+  section: string;
   completedCount: number;
   totalTopics: number;
   completionPct: number;
@@ -35,7 +36,7 @@ interface StudentData {
   topics: Record<string, TopicProgress>;
 }
 
-type SortKey = "name" | "progress" | "lastActive" | "mcq";
+type SortKey = "name" | "progress" | "lastActive" | "mcq" | "section";
 
 const MODULES = [
   { id: 1, title: "Hardware", accent: "#6366F1", total: 11 },
@@ -86,6 +87,7 @@ export default function AdminProgressPage() {
   const [expandedModule, setExpandedModule] = useState<number>(1);
   const [sortBy, setSortBy] = useState<SortKey>("progress");
   const [filterBatch, setFilterBatch] = useState("");
+  const [filterSection, setFilterSection] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterScore, setFilterScore] = useState<string>("all");
 
@@ -156,10 +158,22 @@ export default function AdminProgressPage() {
     return Array.from(set).sort();
   }, [students]);
 
+  // Unique sections for filter (natural-sort so "Section 10" > "Section 2")
+  const sections = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) {
+      if (s.section) set.add(s.section);
+    }
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+  }, [students]);
+
   // Sorted + filtered
   const displayed = useMemo(() => {
     let list = [...students];
     if (filterBatch) list = list.filter((s) => s.batchId === filterBatch);
+    if (filterSection) list = list.filter((s) => s.section === filterSection);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -180,6 +194,11 @@ export default function AdminProgressPage() {
     }
     list.sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "section") {
+        // Natural-sort by section, then by name within the section
+        const bySection = (a.section || "").localeCompare(b.section || "", undefined, { numeric: true });
+        return bySection !== 0 ? bySection : a.name.localeCompare(b.name);
+      }
       if (sortBy === "progress") return b.completionPct - a.completionPct;
       if (sortBy === "mcq") {
         const aScore = a.avgMcqScore ?? -1;
@@ -194,7 +213,7 @@ export default function AdminProgressPage() {
       return 0;
     });
     return list;
-  }, [students, filterBatch, searchQuery, filterScore, sortBy]);
+  }, [students, filterBatch, filterSection, searchQuery, filterScore, sortBy]);
 
   // CSV Export
   function downloadCSV() {
@@ -203,6 +222,7 @@ export default function AdminProgressPage() {
       "Email",
       "Enrollment No",
       "Batch",
+      "Section",
       "M1 Hardware %",
       "M2 Office %",
       "M3 Social %",
@@ -218,6 +238,7 @@ export default function AdminProgressPage() {
       s.email,
       s.enrollmentNo,
       s.batchId,
+      s.section || "-",
       s.moduleStats[1]?.pct ?? 0,
       s.moduleStats[2]?.pct ?? 0,
       s.moduleStats[3]?.pct ?? 0,
@@ -384,10 +405,26 @@ export default function AdminProgressPage() {
             >
               <option value="progress">Progress</option>
               <option value="name">Name</option>
+              <option value="section">Section</option>
               <option value="lastActive">Last Active</option>
               <option value="mcq">MCQ Score</option>
             </select>
           </div>
+          {sections.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-zinc-500">Section:</label>
+              <select
+                value={filterSection}
+                onChange={(e) => setFilterSection(e.target.value)}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white focus:outline-none focus:border-white/20"
+              >
+                <option value="">All</option>
+                {sections.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {batchIds.length > 0 && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-zinc-500">Batch:</label>
@@ -449,7 +486,14 @@ export default function AdminProgressPage() {
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                       {/* Name + email */}
                       <div className="md:col-span-3">
-                        <p className="text-sm font-semibold truncate">{student.name}</p>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-sm font-semibold truncate">{student.name}</p>
+                          {student.section && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 shrink-0">
+                              {student.section}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-zinc-600 truncate">{student.email}</p>
                         <p className="text-[10px] text-zinc-500 truncate">
                           {student.enrollmentNo || "-"} · {student.batchId || "-"}

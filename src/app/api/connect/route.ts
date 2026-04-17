@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("students")
-    .select("enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, added_at")
+    .select("enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, skills, added_at")
     .order("added_at", { ascending: false });
 
   if (batchId) query = query.eq("batch_id", batchId);
@@ -33,8 +33,26 @@ export async function GET(req: NextRequest) {
     linkedinUrl: s.linkedin_url,
     photoUrl: s.photo_url,
     bio: s.bio,
+    skills: (s as { skills?: string[] }).skills || [],
+    addedAt: s.added_at,
     lastThree: (s.enrollment_no || "").slice(-3),
   }));
 
-  return Response.json({ students });
+  // Roll-list totals: overall + per section (used for "X of Y registered" progress)
+  let rollQuery = supabase.from("roll_list").select("batch_id, section", { count: "exact" });
+  if (batchId) rollQuery = rollQuery.eq("batch_id", batchId);
+  if (section) rollQuery = rollQuery.eq("section", section);
+  const { data: rollData, count: totalRolls } = await rollQuery;
+
+  const perSectionTotals: Record<string, number> = {};
+  for (const r of rollData || []) {
+    const sec = (r as { section?: string }).section || "";
+    if (sec) perSectionTotals[sec] = (perSectionTotals[sec] || 0) + 1;
+  }
+
+  return Response.json({
+    students,
+    totalRolls: totalRolls ?? 0,
+    perSectionTotals,
+  });
 }
