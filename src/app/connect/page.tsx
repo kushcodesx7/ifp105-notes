@@ -145,19 +145,23 @@ export default function IFSConnectPage() {
           s.enrollmentNo.toLowerCase().includes(q)
       );
     }
-    // Profile-completeness tier — lower number = higher in list
+    // Profile-completeness tier — lower number = higher in list.
+    // Interests (skills) are the strongest signal of someone who actively
+    // cared, so they dominate the ranking.
     //   0: user's own card (always pinned first)
-    //   1: bio AND skills (most complete)
-    //   2: LinkedIn set (but missing bio or skills)
-    //   3: registered only (no LinkedIn, no bio, no skills)
+    //   1: has interests selected (regardless of bio/LinkedIn)
+    //   2: has a bio (but no interests yet)
+    //   3: has LinkedIn (but no interests, no bio)
+    //   4: registered only
     const tier = (s: Student): number => {
       if (user && s.enrollmentNo === user.enrollmentNo) return 0;
-      const hasBio = !!(s.bio && s.bio.trim());
       const hasSkills = (s.skills?.length ?? 0) > 0;
+      const hasBio = !!(s.bio && s.bio.trim());
       const hasLinkedIn = !!s.linkedinUrl;
-      if (hasBio && hasSkills) return 1;
-      if (hasLinkedIn) return 2;
-      return 3;
+      if (hasSkills) return 1;
+      if (hasBio) return 2;
+      if (hasLinkedIn) return 3;
+      return 4;
     };
 
     list = [...list].sort((a, b) => {
