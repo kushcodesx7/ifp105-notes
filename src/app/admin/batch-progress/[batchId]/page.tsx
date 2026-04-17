@@ -91,7 +91,14 @@ export default function BatchProgressDetailPage() {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [sortBy, setSortBy] = useState<SortKey>("progress");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const CACHE_KEY = `admin_batch_${batchId}`;
 
@@ -202,8 +209,8 @@ export default function BatchProgressDetailPage() {
     if (sectionFilter !== "all") list = list.filter((s) => s.section === sectionFilter);
     if (filterMode === "registered") list = list.filter((s) => s.registered);
     if (filterMode === "pending") list = list.filter((s) => !s.registered);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter(
         (s) =>
           s.enrollmentNo.toLowerCase().includes(q) ||
@@ -224,7 +231,7 @@ export default function BatchProgressDetailPage() {
       return 0;
     });
     return list;
-  }, [students, filterMode, searchQuery, sortBy, sectionFilter]);
+  }, [students, filterMode, debouncedSearch, sortBy, sectionFilter]);
 
   function downloadCSV() {
     const headers = [

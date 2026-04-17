@@ -24,6 +24,7 @@ export default function BatchProgressListPage() {
   const [loading, setLoading] = useState(false);
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [orphanCount, setOrphanCount] = useState(0);
+  const [initialLoaded, setInitialLoaded] = useState(false);
 
   async function login() {
     setAuthError("");
@@ -37,6 +38,7 @@ export default function BatchProgressListPage() {
       const data = await res.json();
       setBatches(data.batches || []);
       setOrphanCount(data.orphanStudents || 0);
+      setInitialLoaded(true);
     } else {
       setAuthError("Wrong password.");
     }
@@ -51,6 +53,7 @@ export default function BatchProgressListPage() {
       const data = await res.json();
       setBatches(data.batches || []);
       setOrphanCount(data.orphanStudents || 0);
+      setInitialLoaded(true);
     }
   }
 
@@ -124,7 +127,29 @@ export default function BatchProgressListPage() {
           </button>
         </div>
 
-        {batches.length === 0 ? (
+        {!initialLoaded ? (
+          // Skeleton while first fetch is in flight
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl p-6 animate-pulse"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
+                <div className="h-5 w-40 rounded bg-white/[0.06] mb-3" />
+                <div className="h-3 w-24 rounded bg-white/[0.04] mb-5" />
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="h-8 rounded bg-white/[0.04]" />
+                  <div className="h-8 rounded bg-white/[0.04]" />
+                  <div className="h-8 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : batches.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-4xl mb-4">🎓</div>
             <p className="text-zinc-500">

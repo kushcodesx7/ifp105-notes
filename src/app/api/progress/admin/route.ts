@@ -25,30 +25,31 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get all progress rows
-  const { data: progressRows, error: progressError } = await supabase
-    .from("student_progress")
-    .select("*")
-    .order("student_email");
+  // Run all three Supabase queries in parallel (was sequential).
+  // Drop select("*") — list only the columns this endpoint actually reads.
+  const [progressRes, sessionsRes, studentsRes] = await Promise.all([
+    supabase
+      .from("student_progress")
+      .select(
+        "student_email, student_name, enrollment_no, batch_id, module_number, topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at"
+      )
+      .order("student_email"),
+    supabase.from("student_sessions").select("student_email, last_active_at"),
+    supabase.from("students").select("email, name, enrollment_no, batch_id, section"),
+  ]);
 
-  if (progressError) {
-    return Response.json({ error: progressError.message }, { status: 500 });
+  if (progressRes.error) {
+    return Response.json({ error: progressRes.error.message }, { status: 500 });
   }
 
-  // Get last active times from sessions
-  const { data: sessions } = await supabase
-    .from("student_sessions")
-    .select("student_email, last_active_at");
+  const progressRows = progressRes.data;
+  const sessions = sessionsRes.data;
+  const studentsList = studentsRes.data;
 
   const sessionMap: Record<string, string> = {};
   for (const s of sessions || []) {
     if (s.student_email) sessionMap[s.student_email] = s.last_active_at;
   }
-
-  // Get student master data from students table (has real batch_id and enrollment_no)
-  const { data: studentsList } = await supabase
-    .from("students")
-    .select("email, name, enrollment_no, batch_id, section");
 
   const studentMetaMap: Record<
     string,
@@ -170,5 +171,15 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return Response.json({ students });
+  return Response.json(
+    { students },
+    {
+      headers: {
+        // Private: don't let CDN cache admin data.
+        // max-age=10: browser serves instantly on re-visit within 10s.
+        // stale-while-revalidate=30: after that, serve stale and refresh in bg.
+        "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
+      },
+    }
+  );
 }

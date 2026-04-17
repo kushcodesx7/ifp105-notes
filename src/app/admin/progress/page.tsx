@@ -83,13 +83,21 @@ export default function AdminProgressPage() {
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState<StudentData[]>([]);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
   const [expandedModule, setExpandedModule] = useState<number>(1);
   const [sortBy, setSortBy] = useState<SortKey>("progress");
   const [filterBatch, setFilterBatch] = useState("");
   const [filterSection, setFilterSection] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterScore, setFilterScore] = useState<string>("all");
+
+  // Debounce search input so we don't re-filter on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   async function login() {
     setAuthError("");
@@ -102,6 +110,7 @@ export default function AdminProgressPage() {
       sessionStorage.setItem("admin_pw", password);
       const data = await res.json();
       setStudents(data.students || []);
+      setInitialLoaded(true);
     } else {
       setAuthError("Wrong password.");
     }
@@ -115,6 +124,7 @@ export default function AdminProgressPage() {
     if (res.ok) {
       const data = await res.json();
       setStudents(data.students || []);
+      setInitialLoaded(true);
     }
   }
 
@@ -174,8 +184,8 @@ export default function AdminProgressPage() {
     let list = [...students];
     if (filterBatch) list = list.filter((s) => s.batchId === filterBatch);
     if (filterSection) list = list.filter((s) => s.section === filterSection);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter(
         (s) =>
           s.name.toLowerCase().includes(q) ||
@@ -213,7 +223,7 @@ export default function AdminProgressPage() {
       return 0;
     });
     return list;
-  }, [students, filterBatch, filterSection, searchQuery, filterScore, sortBy]);
+  }, [students, filterBatch, filterSection, debouncedSearch, filterScore, sortBy]);
 
   // CSV Export
   function downloadCSV() {
@@ -460,7 +470,38 @@ export default function AdminProgressPage() {
         </div>
 
         {/* Table */}
-        {displayed.length === 0 ? (
+        {!initialLoaded ? (
+          // Skeleton rows while first fetch is in flight
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl p-4 animate-pulse"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                  <div className="md:col-span-3 space-y-2">
+                    <div className="h-3 w-32 rounded bg-white/[0.06]" />
+                    <div className="h-2 w-40 rounded bg-white/[0.04]" />
+                    <div className="h-2 w-24 rounded bg-white/[0.04]" />
+                  </div>
+                  <div className="md:col-span-6 grid grid-cols-5 gap-1.5">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <div key={j} className="h-1.5 rounded-full bg-white/[0.04]" />
+                    ))}
+                  </div>
+                  <div className="md:col-span-3 flex items-center gap-3 justify-end">
+                    <div className="h-6 w-12 rounded bg-white/[0.06]" />
+                    <div className="h-6 w-10 rounded bg-white/[0.06]" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : displayed.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-4xl mb-4">📊</div>
             <p className="text-zinc-500">

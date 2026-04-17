@@ -19,46 +19,26 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<QuickStats | null>(null);
 
+  async function fetchSummary(pw: string): Promise<QuickStats | null> {
+    const res = await fetch("/api/admin/summary", {
+      headers: { "x-admin-password": pw },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  }
+
   async function login() {
     setAuthError("");
     setLoading(true);
-    const res = await fetch("/api/progress/admin", {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
+    const summary = await fetchSummary(password);
+    if (summary) {
       setAuthenticated(true);
       sessionStorage.setItem("admin_pw", password);
-      const data = await res.json();
-      calcStats(data.students || []);
+      setStats(summary);
     } else {
       setAuthError("Wrong password.");
     }
     setLoading(false);
-  }
-
-  function calcStats(students: { lastActive: string | null; completionPct: number; avgMcqScore: number | null }[]) {
-    if (students.length === 0) {
-      setStats({ totalStudents: 0, activeThisWeek: 0, avgCompletion: 0, avgMcq: 0 });
-      return;
-    }
-    const active = students.filter((s) => {
-      if (!s.lastActive) return false;
-      const daysSince = (Date.now() - new Date(s.lastActive).getTime()) / (1000 * 60 * 60 * 24);
-      return daysSince < 7;
-    }).length;
-    const avgCompletion =
-      students.reduce((sum, s) => sum + s.completionPct, 0) / students.length;
-    const withMcq = students.filter((s) => s.avgMcqScore !== null);
-    const avgMcq =
-      withMcq.length > 0
-        ? withMcq.reduce((sum, s) => sum + (s.avgMcqScore ?? 0), 0) / withMcq.length
-        : 0;
-    setStats({
-      totalStudents: students.length,
-      activeThisWeek: active,
-      avgCompletion: Math.round(avgCompletion),
-      avgMcq: Math.round(avgMcq),
-    });
   }
 
   useEffect(() => {
@@ -66,12 +46,11 @@ export default function AdminHomePage() {
     if (saved) {
       setPassword(saved);
       setAuthenticated(true);
-      fetch("/api/progress/admin", { headers: { "x-admin-password": saved } })
-        .then((res) => {
-          if (!res.ok) throw new Error("auth failed");
-          return res.json();
+      fetchSummary(saved)
+        .then((summary) => {
+          if (!summary) throw new Error("auth failed");
+          setStats(summary);
         })
-        .then((data) => calcStats(data.students || []))
         .catch(() => {
           sessionStorage.removeItem("admin_pw");
           setAuthenticated(false);
@@ -168,64 +147,35 @@ export default function AdminHomePage() {
           </div>
         </motion.div>
 
-        {/* Quick stats */}
-        {stats && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10"
-          >
+        {/* Quick stats — show skeleton loaders while summary loads */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10"
+        >
+          {[
+            { label: "Total Students", value: stats?.totalStudents, bg: "rgba(99,102,241,0.06)", br: "rgba(99,102,241,0.15)", color: "text-white" },
+            { label: "Active This Week", value: stats?.activeThisWeek, bg: "rgba(34,197,94,0.06)", br: "rgba(34,197,94,0.15)", color: "text-green-400" },
+            { label: "Avg Completion", value: stats ? `${stats.avgCompletion}%` : undefined, bg: "rgba(245,158,11,0.06)", br: "rgba(245,158,11,0.15)", color: "text-amber-400" },
+            { label: "Avg MCQ Score", value: stats ? `${stats.avgMcq}%` : undefined, bg: "rgba(139,92,246,0.06)", br: "rgba(139,92,246,0.15)", color: "text-violet-400" },
+          ].map((card) => (
             <div
+              key={card.label}
               className="p-5 rounded-xl"
-              style={{
-                background: "rgba(99,102,241,0.06)",
-                border: "1px solid rgba(99,102,241,0.15)",
-              }}
+              style={{ background: card.bg, border: `1px solid ${card.br}` }}
             >
               <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
-                Total Students
+                {card.label}
               </div>
-              <div className="text-3xl font-bold text-white">{stats.totalStudents}</div>
+              {card.value !== undefined ? (
+                <div className={`text-3xl font-bold ${card.color}`}>{card.value}</div>
+              ) : (
+                <div className="h-9 w-16 rounded-md bg-white/[0.06] animate-pulse" />
+              )}
             </div>
-            <div
-              className="p-5 rounded-xl"
-              style={{
-                background: "rgba(34,197,94,0.06)",
-                border: "1px solid rgba(34,197,94,0.15)",
-              }}
-            >
-              <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
-                Active This Week
-              </div>
-              <div className="text-3xl font-bold text-green-400">{stats.activeThisWeek}</div>
-            </div>
-            <div
-              className="p-5 rounded-xl"
-              style={{
-                background: "rgba(245,158,11,0.06)",
-                border: "1px solid rgba(245,158,11,0.15)",
-              }}
-            >
-              <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
-                Avg Completion
-              </div>
-              <div className="text-3xl font-bold text-amber-400">{stats.avgCompletion}%</div>
-            </div>
-            <div
-              className="p-5 rounded-xl"
-              style={{
-                background: "rgba(139,92,246,0.06)",
-                border: "1px solid rgba(139,92,246,0.15)",
-              }}
-            >
-              <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
-                Avg MCQ Score
-              </div>
-              <div className="text-3xl font-bold text-violet-400">{stats.avgMcq}%</div>
-            </div>
-          </motion.div>
-        )}
+          ))}
+        </motion.div>
 
         {/* Navigation cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
