@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
 
 interface ModuleStats {
   done: number;
@@ -83,6 +85,10 @@ export default function BatchProgressDetailPage() {
   const params = useParams();
   const batchId = decodeURIComponent(params.batchId as string);
 
+  const { user, isLoggedIn, getIdToken } = useAuth();
+  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
+  const idToken = isAdmin ? getIdToken() : null;
+
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -132,23 +138,28 @@ export default function BatchProgressDetailPage() {
     if (saved) {
       setPassword(saved);
       setAuthenticated(true);
-      const cached = loadCache();
-      if (cached) {
-        setCachedBatch(cached.batch);
-        setCachedStudents(cached.students);
-      }
+    }
+    const cached = loadCache();
+    if (cached) {
+      setCachedBatch(cached.batch);
+      setCachedStudents(cached.students);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId]);
 
-  // SWR fetch (shares cache with the list page when visiting the same endpoint)
+  // Signed-in admin → auto-authenticate
+  useEffect(() => {
+    if (isAdmin && idToken) setAuthenticated(true);
+  }, [isAdmin, idToken]);
+
+  const credential = idToken ? { idToken } : password;
   const {
     data: detailData,
     error: fetchError,
     mutate: refreshData,
   } = useAdminFetch<{ batch: BatchInfo; students: StudentInBatch[] }>(
     `/api/progress/batches?batchId=${encodeURIComponent(batchId)}`,
-    password,
+    credential,
     { enabled: authenticated, refreshInterval: 20_000 }
   );
 
@@ -160,13 +171,15 @@ export default function BatchProgressDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailData]);
 
-  // Clear session on auth failure
+  // Clear password session on auth failure (leave Google session alone)
   useEffect(() => {
     if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
-      sessionStorage.removeItem("admin_pw");
-      setAuthenticated(false);
+      if (!isAdmin) {
+        sessionStorage.removeItem("admin_pw");
+        setAuthenticated(false);
+      }
     }
-  }, [fetchError]);
+  }, [fetchError, isAdmin]);
 
   // Prefer fresh data from SWR; fall back to the localStorage cache for instant paint
   const batch = detailData?.batch ?? cachedBatch;
@@ -318,7 +331,7 @@ export default function BatchProgressDetailPage() {
   return (
     <main className="min-h-screen">
       <Navbar showBack title={`Batch ${batchId}`} />
-      <div className="pt-20 pb-16 px-6 max-w-6xl mx-auto">
+      <div className="pt-8 pb-16 px-6 max-w-6xl mx-auto">
         {/* Breadcrumb */}
         <Link
           href="/admin/batch-progress"

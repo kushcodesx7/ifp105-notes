@@ -1,21 +1,14 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/modules";
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-function checkAuth(req: NextRequest): boolean {
-  if (!ADMIN_PASSWORD) return false;
-  const pw = req.headers.get("x-admin-password");
-  return pw === ADMIN_PASSWORD;
-}
+import { requireAdmin } from "@/lib/verify-google-token";
 
 // GET /api/progress/batches
 // GET /api/progress/batches?batchId=2025-2026  (drill into one batch)
+// Auth: either an admin Google ID token OR the legacy admin password.
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
 
   const { searchParams } = new URL(req.url);
   const batchIdFilter = searchParams.get("batchId");

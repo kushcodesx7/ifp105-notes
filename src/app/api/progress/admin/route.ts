@@ -1,20 +1,13 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/modules";
+import { requireAdmin } from "@/lib/verify-google-token";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-function checkAuth(req: NextRequest): boolean {
-  if (!ADMIN_PASSWORD) return false;
-  const pw = req.headers.get("x-admin-password");
-  return pw === ADMIN_PASSWORD;
-}
-
-// GET — Return all student progress grouped by student
+// GET — Return all student progress grouped by student.
+// Auth: either an admin Google ID token OR the legacy admin password.
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
 
   // Run all three Supabase queries in parallel (was sequential).
   // Drop select("*") — list only the columns this endpoint actually reads.

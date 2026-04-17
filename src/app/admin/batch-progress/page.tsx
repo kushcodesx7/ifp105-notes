@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
 
 interface BatchSummary {
   id: string;
@@ -19,12 +21,16 @@ interface BatchSummary {
 }
 
 export default function BatchProgressListPage() {
+  const { user, isLoggedIn, getIdToken } = useAuth();
+  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
+  const idToken = isAdmin ? getIdToken() : null;
+
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Restore session on mount (one-time hydration from sessionStorage)
+  // Restore password session on mount
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
     if (saved) {
@@ -34,24 +40,35 @@ export default function BatchProgressListPage() {
     }
   }, []);
 
+  // Signed-in admin → auto-authenticate
+  useEffect(() => {
+    if (isAdmin && idToken) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthenticated(true);
+    }
+  }, [isAdmin, idToken]);
+
+  const credential = idToken ? { idToken } : password;
   const { data: batchData, error: fetchError, mutate: refreshData, isLoading: fetchLoading } =
     useAdminFetch<{ batches: BatchSummary[]; orphanStudents: number }>(
       "/api/progress/batches",
-      password,
+      credential,
       { enabled: authenticated, refreshInterval: 30_000 }
     );
   const batches = batchData?.batches ?? [];
   const orphanCount = batchData?.orphanStudents ?? 0;
   const initialLoaded = !!batchData || (!fetchLoading && !!fetchError);
 
-  // Clear session on auth failure
+  // Clear password session on auth failure (leave Google session alone)
   useEffect(() => {
     if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
-      sessionStorage.removeItem("admin_pw");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthenticated(false);
+      if (!isAdmin) {
+        sessionStorage.removeItem("admin_pw");
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAuthenticated(false);
+      }
     }
-  }, [fetchError]);
+  }, [fetchError, isAdmin]);
 
   async function login() {
     setAuthError("");
@@ -103,8 +120,8 @@ export default function BatchProgressListPage() {
 
   return (
     <main className="min-h-screen">
-      <Navbar showBack title="Admin — Batch Progress" />
-      <div className="pt-20 pb-16 px-6 max-w-5xl mx-auto">
+      <Navbar showBack title="Batch Progress" />
+      <div className="pt-8 pb-16 px-6 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <Link

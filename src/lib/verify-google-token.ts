@@ -114,3 +114,38 @@ export async function requireAuth(
   }
   return { ok: true, user: verified };
 }
+
+/**
+ * Admin auth — accepts EITHER:
+ *  - a valid Google ID token whose email is in the admin allowlist
+ *  - the legacy admin password header (x-admin-password)
+ *
+ * The allowlist is imported lazily to avoid a circular dep with src/lib/admins.
+ */
+export async function requireAdmin(
+  req: Request
+): Promise<{ ok: true } | { ok: false; response: Response }> {
+  // 1. Try Google ID token first
+  const idToken = req.headers.get("x-id-token");
+  if (idToken) {
+    const verified = await verifyGoogleIdToken(idToken);
+    if (verified) {
+      const { isAdminEmail } = await import("./admins");
+      if (isAdminEmail(verified.email)) {
+        return { ok: true };
+      }
+    }
+  }
+
+  // 2. Fall back to the shared admin password (legacy)
+  const pw = req.headers.get("x-admin-password");
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (adminPassword && pw === adminPassword) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    response: Response.json({ error: "Unauthorized" }, { status: 401 }),
+  };
+}

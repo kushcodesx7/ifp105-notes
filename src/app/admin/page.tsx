@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
 
 interface QuickStats {
   totalStudents: number;
@@ -14,12 +16,17 @@ interface QuickStats {
 }
 
 export default function AdminHomePage() {
+  const { user, isLoggedIn, getIdToken } = useAuth();
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Restore session on mount
+  // Signed-in admin? We'll use their Google ID token — no password needed.
+  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
+  const idToken = isAdmin ? getIdToken() : null;
+
+  // Restore password session on mount (for the legacy password path)
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
     if (saved) {
@@ -29,21 +36,34 @@ export default function AdminHomePage() {
     }
   }, []);
 
-  // SWR shares this cache with any other admin page calling /api/admin/summary
+  // Admins with a valid ID token are auto-authenticated (no password prompt)
+  useEffect(() => {
+    if (isAdmin && idToken) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthenticated(true);
+    }
+  }, [isAdmin, idToken]);
+
+  // SWR shares this cache with any other admin page calling /api/admin/summary.
+  // Prefer the ID token if we have one, fall back to the password.
+  const credential = idToken ? { idToken } : password;
   const { data: stats, error } = useAdminFetch<QuickStats>(
     "/api/admin/summary",
-    password,
+    credential,
     { enabled: authenticated, refreshInterval: 60_000 }
   );
 
-  // If we get a 401 on session-restore, clear the session
+  // If we get a 401 on session-restore, clear the password session
   useEffect(() => {
     if (error && "status" in error && (error as { status?: number }).status === 401) {
-      sessionStorage.removeItem("admin_pw");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthenticated(false);
+      // Only wipe password — don't touch the user's Google session
+      if (!isAdmin) {
+        sessionStorage.removeItem("admin_pw");
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAuthenticated(false);
+      }
     }
-  }, [error]);
+  }, [error, isAdmin]);
 
   async function login() {
     setAuthError("");
@@ -124,7 +144,7 @@ export default function AdminHomePage() {
   return (
     <main className="min-h-screen">
       <Navbar showBack title="Admin" />
-      <div className="pt-20 pb-16 px-6 max-w-4xl mx-auto">
+      <div className="pt-8 pb-16 px-6 max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
