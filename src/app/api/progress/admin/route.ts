@@ -48,11 +48,11 @@ export async function GET(req: NextRequest) {
   // Get student master data from students table (has real batch_id and enrollment_no)
   const { data: studentsList } = await supabase
     .from("students")
-    .select("email, name, enrollment_no, batch_id");
+    .select("email, name, enrollment_no, batch_id, section");
 
   const studentMetaMap: Record<
     string,
-    { name: string; enrollmentNo: string; batchId: string }
+    { name: string; enrollmentNo: string; batchId: string; section: string }
   > = {};
   for (const s of studentsList || []) {
     if (s.email) {
@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
         name: s.name || "",
         enrollmentNo: s.enrollment_no || "",
         batchId: s.batch_id || "",
+        section: (s as { section?: string }).section || "",
       };
     }
   }
@@ -80,6 +81,7 @@ export async function GET(req: NextRequest) {
     email: string;
     enrollmentNo: string;
     batchId: string;
+    section: string;
     topics: Record<string, TopicProgress>;
     lastActive: string | null;
   }
@@ -99,6 +101,7 @@ export async function GET(req: NextRequest) {
         email,
         enrollmentNo: meta?.enrollmentNo || (row.enrollment_no !== "N/A" ? row.enrollment_no : ""),
         batchId: meta?.batchId || row.batch_id || "",
+        section: meta?.section || "",
         topics: {},
         lastActive: sessionMap[email] || null,
       };
@@ -156,6 +159,7 @@ export async function GET(req: NextRequest) {
       email: s.email,
       enrollmentNo: s.enrollmentNo,
       batchId: s.batchId,
+      section: s.section,
       completedCount,
       totalTopics: TOTAL_TOPICS,
       completionPct: Math.round((completedCount / TOTAL_TOPICS) * 100),
