@@ -195,21 +195,30 @@ export default function IFSConnectPage() {
 
   const registeredPct = totalRolls > 0 ? Math.round((students.length / totalRolls) * 100) : 0;
 
-  function meetSomeoneNew() {
+  // "Break the ice" — pick a random classmate to connect with.
+  // Only picks students who have LinkedIn set (so the CTA on their card is
+  // actually actionable — no point pushing the student toward someone they
+  // can't connect with).
+  function breakTheIce() {
     if (filtered.length === 0) return;
-    // Pick a random student who isn't the user
-    const others = filtered.filter((s) => !user || s.enrollmentNo !== user.enrollmentNo);
-    if (others.length === 0) return;
-    const pick = others[Math.floor(Math.random() * others.length)];
+    const pool = filtered.filter(
+      (s) =>
+        !!s.linkedinUrl && (!user || s.enrollmentNo !== user.enrollmentNo)
+    );
+    if (pool.length === 0) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
     setSpotlightEnrollment(pick.enrollmentNo);
-    // Scroll to the card
     setTimeout(() => {
       const el = document.getElementById(`student-${pick.enrollmentNo}`);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
-    // Clear spotlight after a few seconds
     setTimeout(() => setSpotlightEnrollment(null), 3500);
   }
+
+  // How many LinkedIn-connected classmates (excluding self) are available?
+  const icebreakerPoolSize = filtered.filter(
+    (s) => !!s.linkedinUrl && (!user || s.enrollmentNo !== user.enrollmentNo)
+  ).length;
 
   return (
     <main className="relative min-h-screen">
@@ -379,15 +388,20 @@ export default function IFSConnectPage() {
                 className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
               />
               <button
-                onClick={meetSomeoneNew}
-                title="Meet someone new"
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.03] shrink-0"
+                onClick={breakTheIce}
+                disabled={icebreakerPoolSize === 0}
+                title={
+                  icebreakerPoolSize === 0
+                    ? "No LinkedIn-connected classmates match your filter yet"
+                    : "Spotlight a random classmate with LinkedIn"
+                }
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.03] shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
                   boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
                 }}
               >
-                🎲 <span className="hidden sm:inline">Meet someone</span>
+                🧊 <span className="hidden sm:inline">Break the ice</span>
               </button>
             </div>
 
