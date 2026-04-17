@@ -138,12 +138,27 @@ export default function Home() {
   const [continueData, setContinueData] = useState<ContinueData | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
 
-  // Quick quiz state
-  const [quizIndex] = useState(() => Math.floor(Math.random() * quizQuestions.length));
+  // Quick quiz state — start with 0 on server, randomize on client to avoid hydration mismatch
+  const [quizIndex, setQuizIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showQuizResult, setShowQuizResult] = useState(false);
 
+  useEffect(() => {
+    setQuizIndex(Math.floor(Math.random() * quizQuestions.length));
+  }, []);
+
   const currentQuiz = quizQuestions[quizIndex];
+
+  function nextQuestion() {
+    let nextIdx = Math.floor(Math.random() * quizQuestions.length);
+    // Avoid immediately repeating the same question
+    if (quizQuestions.length > 1 && nextIdx === quizIndex) {
+      nextIdx = (nextIdx + 1) % quizQuestions.length;
+    }
+    setQuizIndex(nextIdx);
+    setSelectedAnswer(null);
+    setShowQuizResult(false);
+  }
 
   useEffect(() => {
     // Find the most recent module with partial progress
@@ -395,12 +410,20 @@ export default function Home() {
                         <span className="text-red-400 font-semibold">&#x274C; Not quite — the answer is {currentQuiz.options[currentQuiz.answer]}.</span>
                       )}
                     </p>
-                    <Link
-                      href="/module/1"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
-                    >
-                      Want to learn more? Start Module 1 &rarr;
-                    </Link>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <Link
+                        href="/module/1"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                      >
+                        Want to learn more? Start Module 1 &rarr;
+                      </Link>
+                      <button
+                        onClick={nextQuestion}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.08] hover:border-white/[0.16] hover:bg-white/[0.04]"
+                      >
+                        &#x21BB; New question
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

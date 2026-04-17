@@ -48,7 +48,12 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
     if (isLoggedIn && user && !isRegistered) {
       // Check DB to see if they're actually registered (maybe auth context is stale)
       fetch(`/api/students/check?email=${encodeURIComponent(user.email)}`)
-        .then((r) => r.json())
+        .then(async (r) => {
+          // Only treat an explicit 404 (or data.registered === false) as "not registered".
+          // Network/5xx errors should NOT pop the modal for already-registered users.
+          if (!r.ok) return { registered: false, _unknown: r.status !== 404 };
+          return r.json();
+        })
         .then((data) => {
           if (data.registered) {
             // Update auth context with registration info
@@ -60,13 +65,14 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               batchId: data.batchId,
               section: data.section,
             });
-          } else {
-            // Show registration modal
+          } else if (!data._unknown) {
+            // Confirmed not registered — show modal
             setShowRegistration(true);
           }
+          // Unknown / network error: do nothing, leave user alone
         })
         .catch(() => {
-          setShowRegistration(true);
+          // Network error — do NOT pop the modal; let the user try again later
         });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,7 +186,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/connect"
-            className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04] hidden sm:inline-block"
+            className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"
           >
             🤝 Connect
           </Link>
