@@ -1,15 +1,14 @@
 import { supabase } from "@/lib/supabase";
+import { isHiddenSection } from "@/lib/hidden-sections";
 
 // GET /api/connect/glimpse
 // Tiny endpoint for the home-page IFS Connect teaser. Returns:
-//   - totalRegistered, totalRolls
+//   - totalRegistered, totalRolls  (Test Section excluded)
 //   - recentJoiners: last 5 students in the 14-day window (for avatar strip)
 //   - topLearnersThisWeek: 3 students ranked by topic completion in the last 7 days
 //                          (fresh rotation — not all-time winners)
 //   - sectionLeader: section with the highest registered % (friendly competition)
-//
-// Respects hide_progress: opted-out students are never in topLearners,
-// and their progress is never included in the response.
+// Progress is always public — no opt-out.
 
 const TOTAL_TOPICS = 48;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -25,12 +24,9 @@ export async function GET() {
     supabase
       .from("students")
       .select(
-        "email, enrollment_no, name, batch_id, section, linkedin_url, photo_url, bio, skills, hide_progress, added_at"
+        "email, enrollment_no, name, batch_id, section, linkedin_url, photo_url, bio, skills, added_at"
       ),
-    supabase
-      .from("roll_list")
-      .select("section", { count: "exact" }),
-    // Only progress rows from the last 7 days — for "top learners THIS WEEK"
+    supabase.from("roll_list").select("section"),
     supabase
       .from("student_progress")
       .select("student_email, completed, updated_at")
@@ -41,7 +37,10 @@ export async function GET() {
     return Response.json({ error: studentsRes.error.message }, { status: 500 });
   }
 
-  const allStudents = studentsRes.data || [];
+  // Exclude Test Section (and any other hidden section) from every public number
+  const allStudents = (studentsRes.data || []).filter(
+    (s) => !isHiddenSection(s.section)
+  );
 
   // Count completions per email in the last 7 days
   const weeklyDone: Record<string, number> = {};
@@ -61,16 +60,9 @@ export async function GET() {
     allTimeDone[row.student_email] = (allTimeDone[row.student_email] || 0) + 1;
   }
 
-  // ── Top learners this week ──
-  // Eligible: students who haven't opted out of public progress AND
-  // have completed at least 1 topic this week.
+  // ── Top learners this week (progress is always public) ──
   const topLearners = allStudents
-    .filter(
-      (s) =>
-        !(s as { hide_progress?: boolean }).hide_progress &&
-        s.email &&
-        (weeklyDone[s.email] || 0) > 0
-    )
+    .filter((s) => s.email && (weeklyDone[s.email] || 0) > 0)
     .sort((a, b) => {
       const aDone = a.email ? weeklyDone[a.email] || 0 : 0;
       const bDone = b.email ? weeklyDone[b.email] || 0 : 0;
@@ -92,7 +84,7 @@ export async function GET() {
       };
     });
 
-  // ── Recent joiners (last 14 days) — for the avatar strip ──
+  // ── Recent joiners (last 14 days) ──
   const recentJoiners = allStudents
     .filter((s) => s.added_at && s.added_at >= twoWeeksAgo)
     .sort((a, b) => (b.added_at || "").localeCompare(a.added_at || ""))
@@ -105,11 +97,14 @@ export async function GET() {
       lastThree: (s.enrollment_no || "").slice(-3),
     }));
 
-  // ── Section leader (highest % registered) ──
+  // ── Section leader (highest % registered), excluding hidden sections ──
   const perSectionRolls: Record<string, number> = {};
+  let visibleRollCount = 0;
   for (const r of rollRes.data || []) {
     const sec = (r as { section?: string }).section || "";
-    if (sec) perSectionRolls[sec] = (perSectionRolls[sec] || 0) + 1;
+    if (!sec || isHiddenSection(sec)) continue;
+    perSectionRolls[sec] = (perSectionRolls[sec] || 0) + 1;
+    visibleRollCount += 1;
   }
   const perSectionRegistered: Record<string, number> = {};
   for (const s of allStudents) {
@@ -131,7 +126,7 @@ export async function GET() {
   return Response.json(
     {
       totalRegistered: allStudents.length,
-      totalRolls: rollRes.count ?? 0,
+      totalRolls: visibleRollCount,
       recentJoiners,
       topLearnersThisWeek: topLearners,
       sectionLeader,

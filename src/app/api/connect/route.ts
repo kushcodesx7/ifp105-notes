@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { isHiddenSection } from "@/lib/hidden-sections";
 
 // Keep in sync with /api/progress/admin and /api/admin/summary
 const TOTAL_TOPICS = 48; // 11+9+7+11+10
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const studentQuery = supabase
     .from("students")
     .select(
-      "enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, skills, hide_progress, added_at"
+      "enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, skills, added_at"
     )
     .order("added_at", { ascending: false });
   if (batchId) studentQuery.eq("batch_id", batchId);
@@ -52,11 +53,16 @@ export async function GET(req: NextRequest) {
     doneByEmail[row.student_email] = (doneByEmail[row.student_email] || 0) + 1;
   }
 
-  // Map to public shape (email never leaves the server side)
-  const students = (studentsRes.data || []).map((s) => {
+  // Filter out test/hidden sections before mapping
+  const visibleStudentRows = (studentsRes.data || []).filter(
+    (s) => !isHiddenSection(s.section)
+  );
+
+  // Map to public shape (email never leaves the server side).
+  // Progress is always public — no opt-out.
+  const students = visibleStudentRows.map((s) => {
     const done = s.email ? doneByEmail[s.email] || 0 : 0;
     const completionPct = Math.min(100, Math.round((done / TOTAL_TOPICS) * 100));
-    const hideProgress = !!(s as { hide_progress?: boolean }).hide_progress;
     return {
       enrollmentNo: s.enrollment_no,
       name: s.name,
@@ -69,20 +75,22 @@ export async function GET(req: NextRequest) {
       addedAt: s.added_at,
       lastThree: (s.enrollment_no || "").slice(-3),
       completionPct,
-      hideProgress,
     };
   });
 
   const perSectionTotals: Record<string, number> = {};
+  let visibleRollCount = 0;
   for (const r of rollRes.data || []) {
     const sec = (r as { section?: string }).section || "";
-    if (sec) perSectionTotals[sec] = (perSectionTotals[sec] || 0) + 1;
+    if (!sec || isHiddenSection(sec)) continue;
+    perSectionTotals[sec] = (perSectionTotals[sec] || 0) + 1;
+    visibleRollCount += 1;
   }
 
   return Response.json(
     {
       students,
-      totalRolls: rollRes.count ?? 0,
+      totalRolls: visibleRollCount,
       perSectionTotals,
     },
     {

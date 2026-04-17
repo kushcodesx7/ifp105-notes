@@ -20,7 +20,6 @@ interface Student {
   addedAt: string;
   lastThree: string;
   completionPct?: number;
-  hideProgress?: boolean;
 }
 
 // Section accent palette (matches the 5 module accents + one extra)
@@ -582,35 +581,9 @@ export default function IFSConnectPage() {
                       </div>
                     </div>
 
-                    {/* Progress — public at ≥20% unless hidden */}
+                    {/* Progress — always visible (own card + everyone else) */}
                     {(() => {
                       const pct = student.completionPct ?? 0;
-                      const hidden = !!student.hideProgress;
-                      // Own card always sees own progress (even if hidden/below threshold)
-                      if (isMe) {
-                        return (
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                                Your progress
-                              </span>
-                              <span className="text-[10px] font-bold" style={{ color: col.dot }}>
-                                {pct}%
-                              </span>
-                            </div>
-                            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{ width: `${pct}%`, background: col.dot }}
-                              />
-                            </div>
-                            {hidden && (
-                              <p className="text-[9px] text-zinc-600 mt-1">Hidden from classmates</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      if (hidden) return null; // opted out — show nothing
                       if (pct < 20) {
                         return (
                           <div className="mb-3 inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
@@ -622,7 +595,7 @@ export default function IFSConnectPage() {
                         <div className="mb-3">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                              Progress
+                              {isMe ? "Your progress" : "Progress"}
                             </span>
                             <span className="text-[10px] font-bold" style={{ color: col.dot }}>
                               {pct}%
@@ -748,7 +721,6 @@ export default function IFSConnectPage() {
           initialBio={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.bio || ""}
           initialSkills={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.skills || []}
           initialLinkedIn={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.linkedinUrl || ""}
-          initialHideProgress={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.hideProgress || false}
           onSaved={(next) => {
             setStudents((prev) =>
               prev.map((s) =>
@@ -758,7 +730,6 @@ export default function IFSConnectPage() {
                       bio: next.bio,
                       skills: next.skills,
                       linkedinUrl: next.linkedinUrl || null,
-                      hideProgress: next.hideProgress,
                     }
                   : s
               )

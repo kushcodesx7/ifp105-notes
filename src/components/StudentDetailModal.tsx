@@ -14,7 +14,6 @@ interface Student {
   addedAt: string;
   lastThree: string;
   completionPct?: number;
-  hideProgress?: boolean;
 }
 
 interface SectionColor {
@@ -159,10 +158,9 @@ export default function StudentDetailModal({
                 )}
               </div>
 
-              {/* Progress */}
+              {/* Progress (always public) */}
               {(() => {
                 const pct = student.completionPct ?? 0;
-                if (student.hideProgress) return null;
                 if (pct < 20) {
                   return (
                     <div className="mb-4 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
