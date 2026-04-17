@@ -541,6 +541,10 @@ export default function IFSConnectPage() {
                           <img
                             src={student.photoUrl}
                             alt={prettyName(student.name)}
+                            loading="lazy"
+                            decoding="async"
+                            width={56}
+                            height={56}
                             className="w-14 h-14 rounded-full object-cover"
                             style={{ border: `2px solid ${col.dot}50` }}
                             referrerPolicy="no-referrer"

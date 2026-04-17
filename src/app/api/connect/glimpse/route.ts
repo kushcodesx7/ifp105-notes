@@ -2,13 +2,10 @@ import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 
 // GET /api/connect/glimpse
-// Tiny endpoint for the home-page IFS Connect teaser. Returns:
-//   - totalRegistered, totalRolls  (Test Section excluded)
-//   - recentJoiners: last 5 students in the 14-day window (for avatar strip)
-//   - topLearnersThisWeek: 3 students ranked by topic completion in the last 7 days
-//                          (fresh rotation — not all-time winners)
-//   - sectionLeader: section with the highest registered % (friendly competition)
-// Progress is always public — no opt-out.
+// Tiny endpoint for the home-page IFS Connect teaser.
+// Designed to be FAST — returns aggregate counts + 5 recent joiners + 3 top
+// learners this week. Completion % for the 3 top learners is computed in a
+// narrow follow-up query filtered to those 3 emails (not "pull every row").
 
 const TOTAL_TOPICS = 48;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -19,17 +16,18 @@ export async function GET() {
   const weekAgo = new Date(now - WEEK_MS).toISOString();
   const twoWeeksAgo = new Date(now - TWO_WEEKS_MS).toISOString();
 
-  // Run everything in parallel
+  // ── All fat queries in parallel ──
   const [studentsRes, rollRes, recentProgressRes] = await Promise.all([
+    // Minimal columns for the public teaser. No email, no bio (the glimpse doesn't
+    // show bio on the 3 cards).
     supabase
       .from("students")
-      .select(
-        "email, enrollment_no, name, batch_id, section, linkedin_url, photo_url, bio, skills, added_at"
-      ),
+      .select("email, enrollment_no, name, section, photo_url, skills, added_at"),
     supabase.from("roll_list").select("section"),
+    // Only the last 7 days, and only the 3 columns we aggregate
     supabase
       .from("student_progress")
-      .select("student_email, completed, updated_at")
+      .select("student_email, completed")
       .gte("updated_at", weekAgo),
   ]);
 
@@ -37,54 +35,61 @@ export async function GET() {
     return Response.json({ error: studentsRes.error.message }, { status: 500 });
   }
 
-  // Exclude Test Section (and any other hidden section) from every public number
+  // Exclude hidden sections (e.g. Test Section) from every public number
   const allStudents = (studentsRes.data || []).filter(
     (s) => !isHiddenSection(s.section)
   );
 
-  // Count completions per email in the last 7 days
+  // Count weekly completions per email
   const weeklyDone: Record<string, number> = {};
   for (const row of recentProgressRes.data || []) {
     if (!row.student_email || !row.completed) continue;
     weeklyDone[row.student_email] = (weeklyDone[row.student_email] || 0) + 1;
   }
 
-  // Also pull all-time completion so we can show a % on the top-learners cards
-  const { data: allTimeProgressRows } = await supabase
-    .from("student_progress")
-    .select("student_email, completed");
-
-  const allTimeDone: Record<string, number> = {};
-  for (const row of allTimeProgressRows || []) {
-    if (!row.student_email || !row.completed) continue;
-    allTimeDone[row.student_email] = (allTimeDone[row.student_email] || 0) + 1;
-  }
-
-  // ── Top learners this week (progress is always public) ──
-  const topLearners = allStudents
+  // Rank + take top 3 BEFORE fetching all-time progress so we only query
+  // all-time data for those 3 emails.
+  const rankedTop = allStudents
     .filter((s) => s.email && (weeklyDone[s.email] || 0) > 0)
     .sort((a, b) => {
       const aDone = a.email ? weeklyDone[a.email] || 0 : 0;
       const bDone = b.email ? weeklyDone[b.email] || 0 : 0;
       return bDone - aDone;
     })
-    .slice(0, 3)
-    .map((s) => {
-      const allTime = s.email ? allTimeDone[s.email] || 0 : 0;
-      return {
-        enrollmentNo: s.enrollment_no,
-        name: s.name,
-        section: s.section,
-        photoUrl: s.photo_url,
-        bio: s.bio,
-        skills: (s as { skills?: string[] }).skills || [],
-        lastThree: (s.enrollment_no || "").slice(-3),
-        completionPct: Math.min(100, Math.round((allTime / TOTAL_TOPICS) * 100)),
-        topicsThisWeek: s.email ? weeklyDone[s.email] || 0 : 0,
-      };
-    });
+    .slice(0, 3);
 
-  // ── Recent joiners (last 14 days) ──
+  // All-time completion only for those up-to-3 emails — narrow query
+  const topEmails = rankedTop
+    .map((s) => s.email)
+    .filter((e): e is string => !!e);
+  const allTimeDone: Record<string, number> = {};
+  if (topEmails.length > 0) {
+    const { data: allTimeRows } = await supabase
+      .from("student_progress")
+      .select("student_email, completed")
+      .in("student_email", topEmails)
+      .eq("completed", true);
+    for (const row of allTimeRows || []) {
+      if (!row.student_email) continue;
+      allTimeDone[row.student_email] = (allTimeDone[row.student_email] || 0) + 1;
+    }
+  }
+
+  const topLearners = rankedTop.map((s) => {
+    const allTime = s.email ? allTimeDone[s.email] || 0 : 0;
+    return {
+      enrollmentNo: s.enrollment_no,
+      name: s.name,
+      section: s.section,
+      photoUrl: s.photo_url,
+      skills: (s as { skills?: string[] }).skills || [],
+      lastThree: (s.enrollment_no || "").slice(-3),
+      completionPct: Math.min(100, Math.round((allTime / TOTAL_TOPICS) * 100)),
+      topicsThisWeek: s.email ? weeklyDone[s.email] || 0 : 0,
+    };
+  });
+
+  // Recent joiners (last 14 days), no email exposed
   const recentJoiners = allStudents
     .filter((s) => s.added_at && s.added_at >= twoWeeksAgo)
     .sort((a, b) => (b.added_at || "").localeCompare(a.added_at || ""))
@@ -97,7 +102,7 @@ export async function GET() {
       lastThree: (s.enrollment_no || "").slice(-3),
     }));
 
-  // ── Section leader (highest % registered), excluding hidden sections ──
+  // Section leader + registered counts (hidden sections excluded)
   const perSectionRolls: Record<string, number> = {};
   let visibleRollCount = 0;
   for (const r of rollRes.data || []) {
@@ -133,7 +138,8 @@ export async function GET() {
     },
     {
       headers: {
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+        // 5-minute browser cache + 30 min stale-while-revalidate. Public stats.
+        "Cache-Control": "public, max-age=300, stale-while-revalidate=1800",
       },
     }
   );
