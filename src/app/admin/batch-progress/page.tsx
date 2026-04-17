@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useAdminFetch } from "@/lib/useAdminFetch";
 
 interface BatchSummary {
   id: string;
@@ -22,9 +23,35 @@ export default function BatchProgressListPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [batches, setBatches] = useState<BatchSummary[]>([]);
-  const [orphanCount, setOrphanCount] = useState(0);
-  const [initialLoaded, setInitialLoaded] = useState(false);
+
+  // Restore session on mount (one-time hydration from sessionStorage)
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPassword(saved);
+      setAuthenticated(true);
+    }
+  }, []);
+
+  const { data: batchData, error: fetchError, mutate: refreshData, isLoading: fetchLoading } =
+    useAdminFetch<{ batches: BatchSummary[]; orphanStudents: number }>(
+      "/api/progress/batches",
+      password,
+      { enabled: authenticated, refreshInterval: 30_000 }
+    );
+  const batches = batchData?.batches ?? [];
+  const orphanCount = batchData?.orphanStudents ?? 0;
+  const initialLoaded = !!batchData || (!fetchLoading && !!fetchError);
+
+  // Clear session on auth failure
+  useEffect(() => {
+    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
+      sessionStorage.removeItem("admin_pw");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthenticated(false);
+    }
+  }, [fetchError]);
 
   async function login() {
     setAuthError("");
@@ -35,39 +62,11 @@ export default function BatchProgressListPage() {
     if (res.ok) {
       setAuthenticated(true);
       sessionStorage.setItem("admin_pw", password);
-      const data = await res.json();
-      setBatches(data.batches || []);
-      setOrphanCount(data.orphanStudents || 0);
-      setInitialLoaded(true);
     } else {
       setAuthError("Wrong password.");
     }
     setLoading(false);
   }
-
-  async function fetchData(pw: string) {
-    const res = await fetch("/api/progress/batches", {
-      headers: { "x-admin-password": pw },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setBatches(data.batches || []);
-      setOrphanCount(data.orphanStudents || 0);
-      setInitialLoaded(true);
-    }
-  }
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-      fetchData(saved).catch(() => {
-        sessionStorage.removeItem("admin_pw");
-        setAuthenticated(false);
-      });
-    }
-  }, []);
 
   if (!authenticated) {
     return (
@@ -120,7 +119,7 @@ export default function BatchProgressListPage() {
             </p>
           </div>
           <button
-            onClick={() => fetchData(password)}
+            onClick={() => refreshData()}
             className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
           >
             ↻ Refresh
