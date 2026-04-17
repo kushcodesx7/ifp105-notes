@@ -149,19 +149,20 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
         aria-label="Main navigation"
         className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 sm:px-6 bg-[#09090F]/70 backdrop-blur-xl border-b border-white/[0.06]"
       >
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {showBack && (
             <Link
               href="/"
-              className="text-zinc-500 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5"
+              aria-label="Home"
+              className="text-zinc-500 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5 shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Home
+              <span className="hidden sm:inline">Home</span>
             </Link>
           )}
-          <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
+          <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white shrink-0 whitespace-nowrap">
             IFP105
           </span>
           {title && moduleNumber ? (
@@ -225,18 +226,19 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               )}
             </div>
           ) : title ? (
-            <span className="text-xs sm:text-sm font-medium text-zinc-400 truncate max-w-[100px] sm:max-w-none">
+            <span className="text-xs sm:text-sm font-medium text-zinc-400 truncate min-w-0">
               {title}
             </span>
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <Link
             href="/connect"
-            className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"
+            aria-label="IFS Connect"
+            className="text-[11px] font-medium px-2.5 sm:px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04] whitespace-nowrap shrink-0"
           >
-            🤝 Connect
+            🤝<span className="hidden sm:inline"> Connect</span>
           </Link>
           {/* Practice link hidden until content is verified — uncomment to re-enable
           <Link
@@ -251,26 +253,26 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               {isAdmin ? (
                 <Link
                   href="/admin"
-                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors border border-indigo-400/30"
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors border border-indigo-400/30 whitespace-nowrap shrink-0"
                   title="Admin panel"
                 >
-                  🛡 Admin
+                  🛡<span className="hidden sm:inline"> Admin</span>
                 </Link>
               ) : !isRegistered ? (
                 <button
                   onClick={() => setShowRegistration(true)}
-                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors animate-pulse"
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors animate-pulse whitespace-nowrap shrink-0"
                   title="Complete your registration"
                 >
-                  ⚠ Register
+                  ⚠<span className="hidden sm:inline"> Register</span>
                 </button>
               ) : null}
-              <span className="text-[11px] text-zinc-500 hidden sm:block">
+              <span className="text-[11px] text-zinc-500 hidden md:block truncate max-w-[120px]">
                 {user.name}
               </span>
               <button
                 onClick={logout}
-                className="text-[11px] font-medium text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+                className="text-[11px] font-medium text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10 whitespace-nowrap shrink-0"
               >
                 Logout
               </button>
@@ -278,7 +280,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           ) : (
             <button
               onClick={() => setShowSignIn(true)}
-              className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:scale-105 transition-transform"
+              className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:scale-105 transition-transform whitespace-nowrap shrink-0"
             >
               Sign In
             </button>
