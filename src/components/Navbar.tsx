@@ -37,8 +37,8 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   const [showModules, setShowModules] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
 
-  // Check if user is registered (has enrollmentNo + batchId)
-  const isRegistered = !!(user?.enrollmentNo && user?.batchId);
+  // Check if user is registered (has enrollmentNo + batchId + section)
+  const isRegistered = !!(user?.enrollmentNo && user?.batchId && user?.section);
 
   // After login, check if user needs to register
   useEffect(() => {
@@ -48,12 +48,14 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
         .then((r) => r.json())
         .then((data) => {
           if (data.registered) {
-            // Update auth context
+            // Update auth context with registration info
             login({
               ...user,
               name: data.name || user.name,
+              photo: data.photoUrl || user.photo,
               enrollmentNo: data.enrollmentNo,
               batchId: data.batchId,
+              section: data.section,
             });
           } else {
             // Show registration modal
@@ -61,7 +63,6 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           }
         })
         .catch(() => {
-          // On error, just show the modal
           setShowRegistration(true);
         });
     }
@@ -72,7 +73,11 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
     if (!response.credential) return;
     const payload = decodeJwt(response.credential);
     if (payload?.name && payload?.email) {
-      login({ name: payload.name, email: payload.email });
+      login({
+        name: payload.name,
+        email: payload.email,
+        photo: payload.picture, // Google profile photo URL
+      });
       setShowSignIn(false);
       // Modal will auto-show via the useEffect above
     }
@@ -170,6 +175,12 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/connect"
+            className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04] hidden sm:inline-block"
+          >
+            🤝 Connect
+          </Link>
           <Link
             href="/practice"
             className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"

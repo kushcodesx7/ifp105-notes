@@ -86,15 +86,20 @@ export async function POST(req: NextRequest) {
     }
 
     case "add-rolls": {
-      const { batchId, rolls } = body;
+      const { batchId, section, rolls } = body;
+      const sec = section || "Section 1"; // default if not provided
       const newRolls = (rolls as string[])
         .map((r: string) => r.trim().toUpperCase())
         .filter(Boolean)
-        .map((enrollment_no) => ({ batch_id: batchId, enrollment_no }));
+        .map((enrollment_no) => ({
+          batch_id: batchId,
+          section: sec,
+          enrollment_no,
+        }));
 
       const { error } = await supabase
         .from("roll_list")
-        .upsert(newRolls, { onConflict: "batch_id,enrollment_no" });
+        .upsert(newRolls, { onConflict: "batch_id,section,enrollment_no" });
 
       if (error) {
         return Response.json({ error: error.message }, { status: 500 });

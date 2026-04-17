@@ -13,8 +13,10 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 interface User {
   name: string;
   email: string;
+  photo?: string;
   enrollmentNo?: string;
   batchId?: string;
+  section?: string;
 }
 
 interface AuthContextType {

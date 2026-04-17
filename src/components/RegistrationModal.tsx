@@ -8,6 +8,10 @@ interface Batch {
   id: string;
   name: string;
   accent: string | null;
+}
+
+interface Section {
+  name: string;
   studentCount: number;
 }
 
@@ -44,9 +48,13 @@ export default function RegistrationModal({
 }: RegistrationModalProps) {
   const { user, login } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(false);
   const [batchesLoading, setBatchesLoading] = useState(true);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+
   const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
   const [enrollmentNo, setEnrollmentNo] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -61,6 +69,7 @@ export default function RegistrationModal({
       .then((data) => {
         setBatches(data.batches || []);
         setBatchesLoading(false);
+        // Auto-select if only one batch
         if (data.batches?.length === 1) {
           setSelectedBatchId(data.batches[0].id);
         }
@@ -71,7 +80,26 @@ export default function RegistrationModal({
       });
   }, [open]);
 
-  // Auto-build name preview: last3_firstname (e.g., 267_Farangiz)
+  // Load sections when batch is selected
+  useEffect(() => {
+    if (!selectedBatchId) {
+      setSections([]);
+      setSelectedSection("");
+      return;
+    }
+    setSectionsLoading(true);
+    fetch(`/api/batches/sections?batchId=${encodeURIComponent(selectedBatchId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setSections(data.sections || []);
+        setSectionsLoading(false);
+      })
+      .catch(() => {
+        setSectionsLoading(false);
+      });
+  }, [selectedBatchId]);
+
+  // Auto-build name preview
   const previewName = user?.name ? buildDisplayName(enrollmentNo, user.name) : "";
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,6 +108,10 @@ export default function RegistrationModal({
 
     if (!selectedBatchId) {
       setError("Please select your batch.");
+      return;
+    }
+    if (!selectedSection) {
+      setError("Please select your section.");
       return;
     }
     if (!enrollmentNo.trim()) {
@@ -93,7 +125,7 @@ export default function RegistrationModal({
 
     // Build the name in rollnumber_firstname format
     const rollNum = enrollmentNo.trim().toUpperCase();
-    const nameToSave = displayName.trim() || `${rollNum}_${firstName(user!.name)}`;
+    const nameToSave = displayName.trim() || `${lastThree(rollNum)}_${firstName(user!.name)}`;
 
     setLoading(true);
     const res = await fetch("/api/batches", {
@@ -101,10 +133,12 @@ export default function RegistrationModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         batchId: selectedBatchId,
+        section: selectedSection,
         enrollmentNo: rollNum,
         name: nameToSave,
         email: user!.email,
-        linkedinUrl: linkedinUrl.trim() || `https://linkedin.com/in/placeholder-${rollNum}`,
+        linkedinUrl: linkedinUrl.trim() || null,
+        photoUrl: (user as { photo?: string })?.photo || null,
       }),
     });
 
@@ -112,11 +146,11 @@ export default function RegistrationModal({
     setLoading(false);
 
     if (!res.ok) {
-      setError(data.error || "Registration failed. Check your enrollment number and batch.");
+      setError(data.error || "Registration failed.");
       return;
     }
 
-    // Update auth context with batch info
+    // Update auth context
     login({
       ...user!,
       name: nameToSave,
@@ -126,6 +160,7 @@ export default function RegistrationModal({
 
     // Reset form
     setSelectedBatchId("");
+    setSelectedSection("");
     setEnrollmentNo("");
     setDisplayName("");
     setLinkedinUrl("");
@@ -159,7 +194,6 @@ export default function RegistrationModal({
               boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
             }}
           >
-            {/* Close button */}
             {closable && (
               <button
                 onClick={onClose}
@@ -178,7 +212,7 @@ export default function RegistrationModal({
               <h2 className="text-xl font-bold text-white mb-1">Complete Registration</h2>
               <p className="text-sm text-zinc-400">
                 Hi <span className="text-white font-semibold">{firstName(user.name)}</span>! Link your account
-                to your batch so your progress syncs across devices.
+                to your section so your progress syncs across devices.
               </p>
             </div>
 
@@ -189,8 +223,8 @@ export default function RegistrationModal({
             >
               <span className="text-amber-400 font-bold">⚠️ Important:</span>{" "}
               <span className="text-zinc-400">
-                Your roll number and batch are <strong className="text-white">locked forever</strong> once set.
-                Make sure they&apos;re correct — double-check with your teacher if unsure.
+                Your batch, section, and roll number are <strong className="text-white">locked forever</strong>{" "}
+                once set. Double-check with your teacher if unsure.
               </span>
             </div>
 
@@ -199,17 +233,20 @@ export default function RegistrationModal({
               {/* Batch dropdown */}
               <div>
                 <label className="block text-xs font-semibold text-zinc-400 mb-2">
-                  Your Batch <span className="text-red-400">*</span>
+                  Batch <span className="text-red-400">*</span>
                 </label>
                 {batchesLoading ? (
                   <div className="h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center px-4">
                     <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-                    <span className="ml-2 text-sm text-zinc-500">Loading batches...</span>
+                    <span className="ml-2 text-sm text-zinc-500">Loading...</span>
                   </div>
                 ) : (
                   <select
                     value={selectedBatchId}
-                    onChange={(e) => setSelectedBatchId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedBatchId(e.target.value);
+                      setSelectedSection(""); // Reset section when batch changes
+                    }}
                     className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
                     required
                   >
@@ -223,60 +260,111 @@ export default function RegistrationModal({
                 )}
               </div>
 
+              {/* Section dropdown — only shown when batch is selected */}
+              {selectedBatchId && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2">
+                    Section <span className="text-red-400">*</span>
+                  </label>
+                  {sectionsLoading ? (
+                    <div className="h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center px-4">
+                      <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+                      <span className="ml-2 text-sm text-zinc-500">Loading sections...</span>
+                    </div>
+                  ) : sections.length === 0 ? (
+                    <p className="text-xs text-amber-400">No sections available in this batch.</p>
+                  ) : (
+                    <select
+                      value={selectedSection}
+                      onChange={(e) => setSelectedSection(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
+                      required
+                    >
+                      <option value="">Select your section...</option>
+                      {sections.map((s) => (
+                        <option key={s.name} value={s.name}>
+                          {s.name} ({s.studentCount} students)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </motion.div>
+              )}
+
               {/* Enrollment number */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-2">
-                  Enrollment / Roll Number <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={enrollmentNo}
-                  onChange={(e) => {
-                    setEnrollmentNo(e.target.value);
-                    // Auto-update display name preview
-                    if (e.target.value.trim() && user?.name) {
-                      setDisplayName(`${e.target.value.trim().toUpperCase()}_${firstName(user.name)}`);
-                    }
-                  }}
-                  placeholder="e.g., 56, 267, A11234"
-                  className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                  required
-                />
-                <p className="text-[10px] text-zinc-600 mt-1">
-                  The roll number your teacher gave you. This will be your unique ID.
-                </p>
-              </div>
+              {selectedSection && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2">
+                    Enrollment / Roll Number <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={enrollmentNo}
+                    onChange={(e) => {
+                      setEnrollmentNo(e.target.value);
+                      if (e.target.value.trim() && user?.name) {
+                        setDisplayName(buildDisplayName(e.target.value, user.name));
+                      }
+                    }}
+                    placeholder="e.g., A85456325267"
+                    className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                    required
+                  />
+                  <p className="text-[10px] text-zinc-600 mt-1">
+                    Your enrollment number in {selectedSection}. This is your unique ID.
+                  </p>
+                </motion.div>
+              )}
 
-              {/* Display name (auto-generated, but editable) */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-2">
-                  Display Name <span className="text-zinc-600">(format: rollnumber_firstname)</span>
-                </label>
-                <input
-                  type="text"
-                  value={displayName || previewName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder={previewName || "56_kush"}
-                  className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
-                <p className="text-[10px] text-zinc-600 mt-1">
-                  This is how teachers see you in the roster. You can edit this later.
-                </p>
-              </div>
+              {/* Display name */}
+              {selectedSection && enrollmentNo.trim() && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2">
+                    Display Name <span className="text-zinc-600">(last 3 digits + your name)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={displayName || previewName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder={previewName || "267_Farangiz"}
+                    className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                  <p className="text-[10px] text-zinc-600 mt-1">
+                    This is how classmates and teachers see you. You can edit later.
+                  </p>
+                </motion.div>
+              )}
 
-              {/* LinkedIn URL (optional) */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-2">
-                  LinkedIn URL <span className="text-zinc-600">(optional)</span>
-                </label>
-                <input
-                  type="url"
-                  value={linkedinUrl}
-                  onChange={(e) => setLinkedinUrl(e.target.value)}
-                  placeholder="https://linkedin.com/in/yourname"
-                  className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
-              </div>
+              {/* LinkedIn URL */}
+              {selectedSection && enrollmentNo.trim() && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <label className="block text-xs font-semibold text-zinc-400 mb-2">
+                    LinkedIn URL <span className="text-zinc-600">(optional, for IFS Connect)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                    placeholder="https://linkedin.com/in/yourname"
+                    className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                  <p className="text-[10px] text-zinc-600 mt-1">
+                    Let classmates find and connect with you professionally.
+                  </p>
+                </motion.div>
+              )}
 
               {/* Error */}
               {error && (
@@ -293,8 +381,8 @@ export default function RegistrationModal({
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                disabled={loading || !selectedBatchId || !selectedSection || !enrollmentNo.trim()}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
               >
                 {loading ? "Registering..." : "Register — Lock in my details →"}
               </button>
