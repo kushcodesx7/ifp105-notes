@@ -1,0 +1,317 @@
+import { NextRequest } from "next/server";
+import { supabase } from "@/lib/supabase";
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+// Total topics per module (for accurate completion %)
+const MODULE_TOTALS: Record<number, number> = {
+  1: 11,
+  2: 9,
+  3: 7,
+  4: 11,
+  5: 10,
+};
+const TOTAL_TOPICS = 48;
+
+function checkAuth(req: NextRequest): boolean {
+  if (!ADMIN_PASSWORD) return false;
+  const pw = req.headers.get("x-admin-password");
+  return pw === ADMIN_PASSWORD;
+}
+
+// GET /api/progress/batches
+// GET /api/progress/batches?batchId=2025-2026  (drill into one batch)
+export async function GET(req: NextRequest) {
+  if (!checkAuth(req)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const batchIdFilter = searchParams.get("batchId");
+
+  // 1. Fetch all batches
+  const { data: batches } = await supabase
+    .from("batches")
+    .select("id, name, accent, created_at")
+    .order("created_at", { ascending: false });
+
+  // 2. Fetch roll list to know expected student count per batch
+  const { data: rollList } = await supabase
+    .from("roll_list")
+    .select("batch_id, enrollment_no");
+
+  // 3. Fetch registered students (who completed registration)
+  const { data: registeredStudents } = await supabase
+    .from("students")
+    .select("batch_id, enrollment_no, name, email, linkedin_url, added_at");
+
+  // 4. Fetch all progress rows
+  const { data: progressRows } = await supabase
+    .from("student_progress")
+    .select("*");
+
+  // 5. Fetch session data for last_active
+  const { data: sessions } = await supabase
+    .from("student_sessions")
+    .select("student_email, last_active_at");
+
+  const sessionMap: Record<string, string> = {};
+  for (const s of sessions || []) {
+    if (s.student_email) sessionMap[s.student_email] = s.last_active_at;
+  }
+
+  // Build email → student metadata map (from registered students)
+  interface RegisteredStudent {
+    batchId: string;
+    enrollmentNo: string;
+    name: string;
+    email: string;
+    linkedinUrl: string | null;
+    addedAt: string;
+  }
+  const studentMeta: Record<string, RegisteredStudent> = {};
+  for (const s of registeredStudents || []) {
+    if (s.email) {
+      studentMeta[s.email] = {
+        batchId: s.batch_id || "",
+        enrollmentNo: s.enrollment_no || "",
+        name: s.name || "",
+        email: s.email,
+        linkedinUrl: s.linkedin_url,
+        addedAt: s.added_at,
+      };
+    }
+  }
+
+  // Build email → progress aggregation
+  interface TopicEntry {
+    moduleNumber: number;
+    topicId: number;
+    completed: boolean;
+    mcqScore: number | null;
+    mcqTotal: number | null;
+    challengeAttempted: boolean;
+    updatedAt: string;
+  }
+  interface StudentAggregate {
+    name: string;
+    email: string;
+    enrollmentNo: string;
+    batchId: string;
+    linkedinUrl: string | null;
+    registered: boolean;
+    topics: Record<string, TopicEntry>;
+    lastActive: string | null;
+  }
+
+  const studentAgg: Record<string, StudentAggregate> = {};
+
+  // First, add all registered students (even if they have no progress yet)
+  for (const s of registeredStudents || []) {
+    if (!s.email) continue;
+    studentAgg[s.email] = {
+      name: s.name || "Unknown",
+      email: s.email,
+      enrollmentNo: s.enrollment_no || "",
+      batchId: s.batch_id || "",
+      linkedinUrl: s.linkedin_url,
+      registered: true,
+      topics: {},
+      lastActive: sessionMap[s.email] || null,
+    };
+  }
+
+  // Then add/merge progress data
+  for (const row of progressRows || []) {
+    const email = row.student_email;
+    if (!email) continue;
+
+    if (!studentAgg[email]) {
+      // Progress exists but no registered student entry — signed-in but not registered
+      studentAgg[email] = {
+        name: row.student_name || "Unknown",
+        email,
+        enrollmentNo: "",
+        batchId: "",
+        linkedinUrl: null,
+        registered: false,
+        topics: {},
+        lastActive: sessionMap[email] || null,
+      };
+    }
+
+    // Use meta if available (registered students have better data)
+    const meta = studentMeta[email];
+    if (meta) {
+      studentAgg[email].batchId = meta.batchId;
+      studentAgg[email].enrollmentNo = meta.enrollmentNo;
+      if (meta.name) studentAgg[email].name = meta.name;
+    }
+
+    const key = `${row.module_number}-${row.topic_id}`;
+    studentAgg[email].topics[key] = {
+      moduleNumber: row.module_number,
+      topicId: row.topic_id,
+      completed: row.completed,
+      mcqScore: row.mcq_score,
+      mcqTotal: row.mcq_total,
+      challengeAttempted: row.challenge_attempted,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  // Compute per-student stats
+  function studentStats(s: StudentAggregate) {
+    const topicEntries = Object.values(s.topics);
+    const completedCount = topicEntries.filter((t) => t.completed).length;
+    const moduleStats: Record<number, { done: number; total: number; pct: number }> = {};
+    for (const mn of [1, 2, 3, 4, 5]) {
+      const mt = topicEntries.filter((t) => t.moduleNumber === mn);
+      const done = mt.filter((t) => t.completed).length;
+      const total = MODULE_TOTALS[mn];
+      moduleStats[mn] = {
+        done,
+        total,
+        pct: total > 0 ? Math.round((done / total) * 100) : 0,
+      };
+    }
+    const mcqEntries = topicEntries.filter(
+      (t) => t.mcqScore !== null && t.mcqTotal !== null
+    );
+    const avgMcqScore =
+      mcqEntries.length > 0
+        ? mcqEntries.reduce(
+            (sum, t) => sum + (t.mcqScore! / t.mcqTotal!) * 100,
+            0
+          ) / mcqEntries.length
+        : null;
+    return {
+      completedCount,
+      totalTopics: TOTAL_TOPICS,
+      completionPct: Math.round((completedCount / TOTAL_TOPICS) * 100),
+      moduleStats,
+      avgMcqScore: avgMcqScore !== null ? Math.round(avgMcqScore) : null,
+    };
+  }
+
+  // Count roll list per batch
+  const rollCountByBatch: Record<string, number> = {};
+  for (const r of rollList || []) {
+    if (r.batch_id) rollCountByBatch[r.batch_id] = (rollCountByBatch[r.batch_id] || 0) + 1;
+  }
+
+  // ─── If drilling into a specific batch ───
+  if (batchIdFilter) {
+    const batch = batches?.find((b) => b.id === batchIdFilter);
+    if (!batch) {
+      return Response.json({ error: "Batch not found" }, { status: 404 });
+    }
+
+    // Get roll list for this batch
+    const batchRolls = (rollList || []).filter((r) => r.batch_id === batchIdFilter);
+    const registeredInBatch = (registeredStudents || []).filter(
+      (s) => s.batch_id === batchIdFilter
+    );
+
+    // Build a map of enrollment_no → student status
+    const rollStatus = batchRolls.map((r) => {
+      const registered = registeredInBatch.find(
+        (s) => s.enrollment_no === r.enrollment_no
+      );
+
+      if (!registered) {
+        return {
+          enrollmentNo: r.enrollment_no,
+          registered: false,
+          name: null,
+          email: null,
+          linkedinUrl: null,
+          completionPct: 0,
+          completedCount: 0,
+          moduleStats: {},
+          avgMcqScore: null,
+          lastActive: null,
+        };
+      }
+
+      const agg = studentAgg[registered.email];
+      const stats = agg ? studentStats(agg) : null;
+
+      return {
+        enrollmentNo: r.enrollment_no,
+        registered: true,
+        name: registered.name,
+        email: registered.email,
+        linkedinUrl: registered.linkedin_url,
+        completionPct: stats?.completionPct ?? 0,
+        completedCount: stats?.completedCount ?? 0,
+        moduleStats: stats?.moduleStats ?? {},
+        avgMcqScore: stats?.avgMcqScore ?? null,
+        lastActive: agg?.lastActive ?? null,
+      };
+    });
+
+    return Response.json({
+      batch: {
+        id: batch.id,
+        name: batch.name,
+        accent: batch.accent,
+        totalRolls: batchRolls.length,
+        registered: registeredInBatch.length,
+        notRegistered: batchRolls.length - registeredInBatch.length,
+      },
+      students: rollStatus,
+    });
+  }
+
+  // ─── Otherwise: summary per batch ───
+  const batchSummaries = (batches || []).map((batch) => {
+    const batchStudents = Object.values(studentAgg).filter(
+      (s) => s.batchId === batch.id
+    );
+    const statsArray = batchStudents.map(studentStats);
+
+    const avgCompletion =
+      statsArray.length > 0
+        ? Math.round(
+            statsArray.reduce((sum, s) => sum + s.completionPct, 0) / statsArray.length
+          )
+        : 0;
+
+    const withMcq = statsArray.filter((s) => s.avgMcqScore !== null);
+    const avgMcq =
+      withMcq.length > 0
+        ? Math.round(
+            withMcq.reduce((sum, s) => sum + (s.avgMcqScore ?? 0), 0) / withMcq.length
+          )
+        : 0;
+
+    const activeThisWeek = batchStudents.filter((s) => {
+      if (!s.lastActive) return false;
+      const daysSince = (Date.now() - new Date(s.lastActive).getTime()) / (1000 * 60 * 60 * 24);
+      return daysSince < 7;
+    }).length;
+
+    const totalRolls = rollCountByBatch[batch.id] || 0;
+
+    return {
+      id: batch.id,
+      name: batch.name,
+      accent: batch.accent,
+      totalRolls,
+      registered: batchStudents.length,
+      notRegistered: Math.max(0, totalRolls - batchStudents.length),
+      activeThisWeek,
+      avgCompletion,
+      avgMcq,
+    };
+  });
+
+  // Also count "orphan" students who have progress but no batch
+  const orphanStudents = Object.values(studentAgg).filter((s) => !s.batchId);
+
+  return Response.json({
+    batches: batchSummaries,
+    orphanStudents: orphanStudents.length,
+  });
+}

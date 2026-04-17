@@ -118,17 +118,24 @@ export default function AdminHomePage() {
 
   const cards = [
     {
+      href: "/admin/batch-progress",
+      icon: "🎯",
+      title: "Batch Progress",
+      desc: "Drill into each batch. See who's registered, who's pending, and how each batch is performing.",
+      accent: "from-amber-500 to-orange-500",
+    },
+    {
       href: "/admin/progress",
       icon: "📊",
-      title: "Student Progress",
-      desc: "View every student's progress across all 5 modules. Filter, sort, search, export to CSV.",
+      title: "All Students",
+      desc: "Flat list of every student across all batches. Filter, sort, search, export to CSV.",
       accent: "from-indigo-500 to-violet-500",
     },
     {
       href: "/admin/batches",
       icon: "🎓",
       title: "Batches & Enrollments",
-      desc: "Manage student batches, enrollment lists, and roll call. Add/remove students and batches.",
+      desc: "Manage batches, upload roll lists, add/remove students. Setup and admin.",
       accent: "from-cyan-500 to-teal-500",
     },
   ];
@@ -221,7 +228,7 @@ export default function AdminHomePage() {
         )}
 
         {/* Navigation cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {cards.map((card, i) => (
             <motion.div
               key={card.href}

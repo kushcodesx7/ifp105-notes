@@ -1,0 +1,306 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+
+interface BatchSummary {
+  id: string;
+  name: string;
+  accent: string | null;
+  totalRolls: number;
+  registered: number;
+  notRegistered: number;
+  activeThisWeek: number;
+  avgCompletion: number;
+  avgMcq: number;
+}
+
+export default function BatchProgressListPage() {
+  const [password, setPassword] = useState("");
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [batches, setBatches] = useState<BatchSummary[]>([]);
+  const [orphanCount, setOrphanCount] = useState(0);
+
+  async function login() {
+    setAuthError("");
+    setLoading(true);
+    const res = await fetch("/api/progress/batches", {
+      headers: { "x-admin-password": password },
+    });
+    if (res.ok) {
+      setAuthenticated(true);
+      sessionStorage.setItem("admin_pw", password);
+      const data = await res.json();
+      setBatches(data.batches || []);
+      setOrphanCount(data.orphanStudents || 0);
+    } else {
+      setAuthError("Wrong password.");
+    }
+    setLoading(false);
+  }
+
+  async function fetchData(pw: string) {
+    const res = await fetch("/api/progress/batches", {
+      headers: { "x-admin-password": pw },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setBatches(data.batches || []);
+      setOrphanCount(data.orphanStudents || 0);
+    }
+  }
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) {
+      setPassword(saved);
+      setAuthenticated(true);
+      fetchData(saved).catch(() => {
+        sessionStorage.removeItem("admin_pw");
+        setAuthenticated(false);
+      });
+    }
+  }, []);
+
+  if (!authenticated) {
+    return (
+      <main className="min-h-screen">
+        <Navbar showBack title="Admin" />
+        <div className="flex items-center justify-center pt-32 px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-sm"
+          >
+            <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && login()}
+              placeholder="Enter admin password"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20 mb-3"
+            />
+            {authError && <p className="text-sm text-red-400 mb-3">{authError}</p>}
+            <button
+              onClick={login}
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.02] transition-transform disabled:opacity-50"
+            >
+              {loading ? "Checking..." : "Login"}
+            </button>
+          </motion.div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen">
+      <Navbar showBack title="Admin — Batch Progress" />
+      <div className="pt-20 pb-16 px-6 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <Link
+              href="/admin"
+              className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1 mb-2"
+            >
+              ← Admin Home
+            </Link>
+            <h1 className="text-2xl font-bold">Batch Progress</h1>
+            <p className="text-sm text-zinc-400 mt-1">
+              Click any batch to see its students.
+            </p>
+          </div>
+          <button
+            onClick={() => fetchData(password)}
+            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            ↻ Refresh
+          </button>
+        </div>
+
+        {batches.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-4xl mb-4">🎓</div>
+            <p className="text-zinc-500">
+              No batches yet. Create one in{" "}
+              <Link href="/admin/batches" className="text-indigo-400 hover:text-indigo-300">
+                Batches & Enrollments
+              </Link>
+              .
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {batches.map((batch, i) => (
+              <motion.div
+                key={batch.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <Link href={`/admin/batch-progress/${encodeURIComponent(batch.id)}`}>
+                  <motion.div
+                    whileHover={{ y: -3 }}
+                    className="relative p-6 rounded-2xl overflow-hidden cursor-pointer group card-glass"
+                  >
+                    <div
+                      className="absolute top-0 left-0 right-0 h-[3px] opacity-60 group-hover:opacity-100 transition-opacity"
+                      style={{ background: batch.accent || "#6366F1" }}
+                    />
+                    <div
+                      className="absolute -top-24 -right-24 w-48 h-48 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl"
+                      style={{ background: batch.accent || "#6366F1" }}
+                    />
+
+                    <div className="relative">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
+                            Batch
+                          </p>
+                          <h2 className="text-xl font-bold">{batch.name}</h2>
+                        </div>
+                        <div className="text-right">
+                          <div
+                            className="text-3xl font-bold"
+                            style={{ color: batch.accent || "#6366F1" }}
+                          >
+                            {batch.avgCompletion}%
+                          </div>
+                          <div className="text-[10px] text-zinc-500">Avg Completion</div>
+                        </div>
+                      </div>
+
+                      {/* Student counts */}
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div
+                          className="px-3 py-2 rounded-lg text-center"
+                          style={{
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <div className="text-lg font-bold">{batch.totalRolls}</div>
+                          <div className="text-[9px] text-zinc-500 uppercase tracking-wider">
+                            Roll List
+                          </div>
+                        </div>
+                        <div
+                          className="px-3 py-2 rounded-lg text-center"
+                          style={{
+                            background: "rgba(34,197,94,0.06)",
+                            border: "1px solid rgba(34,197,94,0.15)",
+                          }}
+                        >
+                          <div className="text-lg font-bold text-green-400">{batch.registered}</div>
+                          <div className="text-[9px] text-zinc-500 uppercase tracking-wider">
+                            Registered
+                          </div>
+                        </div>
+                        <div
+                          className="px-3 py-2 rounded-lg text-center"
+                          style={{
+                            background: "rgba(239,68,68,0.06)",
+                            border: "1px solid rgba(239,68,68,0.15)",
+                          }}
+                        >
+                          <div className="text-lg font-bold text-red-400">{batch.notRegistered}</div>
+                          <div className="text-[9px] text-zinc-500 uppercase tracking-wider">
+                            Pending
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Activity bar */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-zinc-500">Active this week</span>
+                          <span className="font-bold text-white">
+                            {batch.activeThisWeek} / {batch.registered || 0}
+                          </span>
+                        </div>
+                        <div
+                          className="h-1.5 rounded-full overflow-hidden"
+                          style={{ background: "rgba(255,255,255,0.06)" }}
+                        >
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${
+                                batch.registered > 0
+                                  ? (batch.activeThisWeek / batch.registered) * 100
+                                  : 0
+                              }%`,
+                              background: "#22c55e",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-4 text-xs">
+                        <span className="text-zinc-500">
+                          Avg MCQ:{" "}
+                          <span
+                            className={
+                              batch.avgMcq >= 80
+                                ? "text-green-400 font-bold"
+                                : batch.avgMcq >= 60
+                                ? "text-yellow-400 font-bold"
+                                : "text-red-400 font-bold"
+                            }
+                          >
+                            {batch.avgMcq}%
+                          </span>
+                        </span>
+                        <span className="text-zinc-500 flex items-center gap-1 group-hover:text-zinc-300 transition-colors">
+                          View students
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            className="group-hover:translate-x-1 transition-transform"
+                          >
+                            <path
+                              d="M4 10h12m0 0l-4-4m4 4l-4 4"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {orphanCount > 0 && (
+          <div
+            className="mt-6 p-4 rounded-xl text-sm"
+            style={{
+              background: "rgba(245,158,11,0.06)",
+              border: "1px solid rgba(245,158,11,0.15)",
+              color: "#fbbf24",
+            }}
+          >
+            ⚠️ {orphanCount} student{orphanCount !== 1 ? "s" : ""} signed in but haven&apos;t
+            completed registration (not linked to any batch). They&apos;re saving progress but
+            you can&apos;t group them yet. Encourage them to register via the batch page.
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
