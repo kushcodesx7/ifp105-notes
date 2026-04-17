@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
+import RegistrationModal from "@/components/RegistrationModal";
 
 interface NavbarProps {
   showBack?: boolean;
@@ -34,6 +35,38 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   const { user, isLoggedIn, login, logout } = useAuth();
   const [showSignIn, setShowSignIn] = useState(false);
   const [showModules, setShowModules] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
+
+  // Check if user is registered (has enrollmentNo + batchId)
+  const isRegistered = !!(user?.enrollmentNo && user?.batchId);
+
+  // After login, check if user needs to register
+  useEffect(() => {
+    if (isLoggedIn && user && !isRegistered) {
+      // Check DB to see if they're actually registered (maybe auth context is stale)
+      fetch(`/api/students/check?email=${encodeURIComponent(user.email)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.registered) {
+            // Update auth context
+            login({
+              ...user,
+              name: data.name || user.name,
+              enrollmentNo: data.enrollmentNo,
+              batchId: data.batchId,
+            });
+          } else {
+            // Show registration modal
+            setShowRegistration(true);
+          }
+        })
+        .catch(() => {
+          // On error, just show the modal
+          setShowRegistration(true);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, user?.email]);
 
   function handleGoogleSuccess(response: { credential?: string }) {
     if (!response.credential) return;
@@ -41,6 +74,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
     if (payload?.name && payload?.email) {
       login({ name: payload.name, email: payload.email });
       setShowSignIn(false);
+      // Modal will auto-show via the useEffect above
     }
   }
 
@@ -144,6 +178,15 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           </Link>
           {isLoggedIn && user ? (
             <>
+              {!isRegistered && (
+                <button
+                  onClick={() => setShowRegistration(true)}
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors animate-pulse"
+                  title="Complete your registration"
+                >
+                  ⚠ Register
+                </button>
+              )}
               <span className="text-[11px] text-zinc-500 hidden sm:block">
                 {user.name}
               </span>
@@ -217,6 +260,13 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           </motion.div>
         </motion.div>
       )}
+
+      {/* Registration Modal — shown after login if student hasn't registered */}
+      <RegistrationModal
+        open={showRegistration}
+        onClose={() => setShowRegistration(false)}
+        closable={true}
+      />
     </>
   );
 }
