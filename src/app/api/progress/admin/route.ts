@@ -1,17 +1,8 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/modules";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-// Total topics per module (for accurate completion %)
-const MODULE_TOTALS: Record<number, number> = {
-  1: 11,
-  2: 9,
-  3: 7,
-  4: 11,
-  5: 10,
-};
-const TOTAL_TOPICS = 48; // 11+9+7+11+10
 
 function checkAuth(req: NextRequest): boolean {
   if (!ADMIN_PASSWORD) return false;

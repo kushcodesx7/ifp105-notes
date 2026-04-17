@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { TOTAL_TOPICS } from "@/lib/modules";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -46,7 +47,6 @@ export async function GET(req: NextRequest) {
   const activeThisWeek = activeSet.size;
 
   // Aggregate completion + MCQ per-student from the progress rows.
-  const TOTAL_TOPICS = 48; // 11+9+7+11+10 across 5 modules
   type Agg = { completed: number; mcqSum: number; mcqCount: number };
   const byStudent = new Map<string, Agg>();
   for (const row of progressRes.data || []) {

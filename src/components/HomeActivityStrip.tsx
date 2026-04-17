@@ -105,12 +105,12 @@ export default function HomeActivityStrip() {
     return () => clearInterval(tick);
   }, [events]);
 
-  // Re-render every 30s so "3m ago" ticks forward
+  // Re-render every 30s so "3m ago" ticks forward. Using a dedicated
+  // state so we don't rebuild the whole events array (which would cause
+  // parent components to see a new reference and re-render too).
+  const [, tick] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => {
-      // trivial state nudge via SetState with same list ref
-      setEvents((e) => (e ? [...e] : e));
-    }, 30_000);
+    const t = setInterval(() => tick((n) => n + 1), 30_000);
     return () => clearInterval(t);
   }, []);
 

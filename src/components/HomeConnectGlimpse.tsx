@@ -98,7 +98,7 @@ export default function HomeConnectGlimpse() {
         if (!cancelled) setLoading(false);
       });
     return () => {
-      cancelled = false;
+      cancelled = true;
     };
   }, []);
 
