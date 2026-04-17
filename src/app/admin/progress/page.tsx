@@ -187,8 +187,8 @@ export default function AdminProgressPage() {
         return bScore - aScore;
       }
       if (sortBy === "lastActive") {
-        const aTime = a.lastActive ? new Date(a.lastActive).getTime() : 0;
-        const bTime = b.lastActive ? new Date(b.lastActive).getTime() : 0;
+        const aTime = a.lastActive ? parseUTC(a.lastActive) : 0;
+        const bTime = b.lastActive ? parseUTC(b.lastActive) : 0;
         return bTime - aTime;
       }
       return 0;
@@ -226,7 +226,7 @@ export default function AdminProgressPage() {
       s.completionPct,
       `${s.completedCount}/${s.totalTopics}`,
       s.avgMcqScore !== null ? s.avgMcqScore : "-",
-      s.lastActive ? new Date(s.lastActive).toISOString() : "Never",
+      s.lastActive ? new Date(parseUTC(s.lastActive)).toISOString() : "Never",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -245,7 +245,7 @@ export default function AdminProgressPage() {
     if (students.length === 0) return null;
     const active = students.filter((s) => {
       if (!s.lastActive) return false;
-      const daysSince = (Date.now() - new Date(s.lastActive).getTime()) / (1000 * 60 * 60 * 24);
+      const daysSince = (Date.now() - parseUTC(s.lastActive)) / (1000 * 60 * 60 * 24);
       return daysSince < 7;
     }).length;
     const avgCompletion =
