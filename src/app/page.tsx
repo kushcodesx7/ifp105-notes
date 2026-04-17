@@ -489,8 +489,9 @@ export default function Home() {
                         e.preventDefault();
                         handleRemoveBookmark(bm.moduleNumber, bm.topicId);
                       }}
-                      className="text-zinc-600 hover:text-red-400 transition-colors text-sm shrink-0 opacity-0 group-hover:opacity-100"
+                      className="text-zinc-600 hover:text-red-400 active:text-red-400 transition-colors text-base shrink-0 w-8 h-8 flex items-center justify-center rounded-md sm:opacity-0 sm:group-hover:opacity-100"
                       title="Remove bookmark"
+                      aria-label="Remove bookmark"
                     >
                       &#x2715;
                     </button>

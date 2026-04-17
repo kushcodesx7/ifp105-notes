@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -24,6 +24,7 @@ interface Topic {
   time: string;
   badges: { text: string; type: "star" | "hot" }[];
   hook: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   content: any[];
 }
 
@@ -137,7 +138,6 @@ export default function ModulePage({
   // Load Supabase progress on mount when logged in (merge with localStorage, Supabase wins)
   useEffect(() => {
     if (!isLoggedIn || !user || supabaseLoaded.current) return;
-    supabaseLoaded.current = true;
 
     async function loadProgress() {
       try {
@@ -146,6 +146,9 @@ export default function ModulePage({
         );
         if (!res.ok) return;
         const data = await res.json();
+        // Only mark as loaded on success so we retry on next mount if the
+        // first attempt fails (network / 5xx).
+        supabaseLoaded.current = true;
         const remoteProgress = data.progress as Record<
           number,
           { completed: boolean; mcqScore: number | null; mcqTotal: number | null }
@@ -176,19 +179,28 @@ export default function ModulePage({
     loadProgress();
   }, [isLoggedIn, user, moduleNumber]);
 
-  // Reading progress bar
-  const handleScroll = useCallback(() => {
-    const scrollTop = window.scrollY;
-    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    if (docHeight > 0) {
-      setScrollProgress(Math.min(scrollTop / docHeight, 1));
-    }
-  }, []);
-
+  // Reading progress bar — rAF-throttled so setState fires at most once per frame
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [handleScroll]);
+    let rafId = 0;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      rafId = requestAnimationFrame(() => {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (docHeight > 0) {
+          setScrollProgress(Math.min(scrollTop / docHeight, 1));
+        }
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   // Reset scroll progress when switching topics
   useEffect(() => {
