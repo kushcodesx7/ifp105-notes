@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// Keep in sync with /api/progress/admin and /api/admin/summary
+const TOTAL_TOPICS = 48; // 11+9+7+11+10
+
 // GET /api/connect — list of all registered students for IFS Connect
 // Optional query params:
 //   batchId — filter by batch
@@ -10,49 +13,83 @@ export async function GET(req: NextRequest) {
   const batchId = searchParams.get("batchId");
   const section = searchParams.get("section");
 
-  let query = supabase
+  const studentQuery = supabase
     .from("students")
-    .select("enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, skills, added_at")
+    .select(
+      "enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, skills, hide_progress, added_at"
+    )
     .order("added_at", { ascending: false });
+  if (batchId) studentQuery.eq("batch_id", batchId);
+  if (section) studentQuery.eq("section", section);
 
-  if (batchId) query = query.eq("batch_id", batchId);
-  if (section) query = query.eq("section", section);
+  const rollQuery = supabase
+    .from("roll_list")
+    .select("batch_id, section", { count: "exact" });
+  if (batchId) rollQuery.eq("batch_id", batchId);
+  if (section) rollQuery.eq("section", section);
 
-  const { data, error } = await query;
+  // Pull completion data so each card can show a progress bar.
+  // Only the minimum columns we need to compute a percentage.
+  const progressQuery = supabase
+    .from("student_progress")
+    .select("student_email, completed");
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  // All three queries in parallel (borrowed from the admin perf work)
+  const [studentsRes, rollRes, progressRes] = await Promise.all([
+    studentQuery,
+    rollQuery,
+    progressQuery,
+  ]);
+
+  if (studentsRes.error) {
+    return Response.json({ error: studentsRes.error.message }, { status: 500 });
   }
 
-  // Map to public shape (don't expose email publicly — only for signed-in user's own record)
-  const students = (data || []).map((s) => ({
-    enrollmentNo: s.enrollment_no,
-    name: s.name,
-    batchId: s.batch_id,
-    section: s.section,
-    linkedinUrl: s.linkedin_url,
-    photoUrl: s.photo_url,
-    bio: s.bio,
-    skills: (s as { skills?: string[] }).skills || [],
-    addedAt: s.added_at,
-    lastThree: (s.enrollment_no || "").slice(-3),
-  }));
+  // Aggregate per-email completion count
+  const doneByEmail: Record<string, number> = {};
+  for (const row of progressRes.data || []) {
+    if (!row.student_email || !row.completed) continue;
+    doneByEmail[row.student_email] = (doneByEmail[row.student_email] || 0) + 1;
+  }
 
-  // Roll-list totals: overall + per section (used for "X of Y registered" progress)
-  let rollQuery = supabase.from("roll_list").select("batch_id, section", { count: "exact" });
-  if (batchId) rollQuery = rollQuery.eq("batch_id", batchId);
-  if (section) rollQuery = rollQuery.eq("section", section);
-  const { data: rollData, count: totalRolls } = await rollQuery;
+  // Map to public shape (email never leaves the server side)
+  const students = (studentsRes.data || []).map((s) => {
+    const done = s.email ? doneByEmail[s.email] || 0 : 0;
+    const completionPct = Math.min(100, Math.round((done / TOTAL_TOPICS) * 100));
+    const hideProgress = !!(s as { hide_progress?: boolean }).hide_progress;
+    return {
+      enrollmentNo: s.enrollment_no,
+      name: s.name,
+      batchId: s.batch_id,
+      section: s.section,
+      linkedinUrl: s.linkedin_url,
+      photoUrl: s.photo_url,
+      bio: s.bio,
+      skills: (s as { skills?: string[] }).skills || [],
+      addedAt: s.added_at,
+      lastThree: (s.enrollment_no || "").slice(-3),
+      completionPct,
+      hideProgress,
+    };
+  });
 
   const perSectionTotals: Record<string, number> = {};
-  for (const r of rollData || []) {
+  for (const r of rollRes.data || []) {
     const sec = (r as { section?: string }).section || "";
     if (sec) perSectionTotals[sec] = (perSectionTotals[sec] || 0) + 1;
   }
 
-  return Response.json({
-    students,
-    totalRolls: totalRolls ?? 0,
-    perSectionTotals,
-  });
+  return Response.json(
+    {
+      students,
+      totalRolls: rollRes.count ?? 0,
+      perSectionTotals,
+    },
+    {
+      headers: {
+        // Brief public cache — stats don't need to be second-accurate
+        "Cache-Control": "public, max-age=30, stale-while-revalidate=120",
+      },
+    }
+  );
 }

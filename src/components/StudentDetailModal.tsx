@@ -13,6 +13,8 @@ interface Student {
   skills: string[];
   addedAt: string;
   lastThree: string;
+  completionPct?: number;
+  hideProgress?: boolean;
 }
 
 interface SectionColor {
@@ -156,6 +158,42 @@ export default function StudentDetailModal({
                   </>
                 )}
               </div>
+
+              {/* Progress */}
+              {(() => {
+                const pct = student.completionPct ?? 0;
+                if (student.hideProgress) return null;
+                if (pct < 20) {
+                  return (
+                    <div className="mb-4 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                      🚀 Just getting started
+                    </div>
+                  );
+                }
+                return (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        Course progress
+                      </span>
+                      <span className="text-xs font-bold" style={{ color: col.dot }}>
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden"
+                      style={{ background: "rgba(255,255,255,0.05)" }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${pct}%`,
+                          background: `linear-gradient(90deg, ${col.from}, ${col.to})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Bio */}
               {student.bio ? (

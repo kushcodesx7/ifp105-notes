@@ -11,7 +11,13 @@ interface ProfileEditModalProps {
   initialBio: string;
   initialSkills: string[];
   initialLinkedIn: string;
-  onSaved: (next: { bio: string; skills: string[]; linkedinUrl: string }) => void;
+  initialHideProgress?: boolean;
+  onSaved: (next: {
+    bio: string;
+    skills: string[];
+    linkedinUrl: string;
+    hideProgress: boolean;
+  }) => void;
 }
 
 export default function ProfileEditModal({
@@ -21,11 +27,13 @@ export default function ProfileEditModal({
   initialBio,
   initialSkills,
   initialLinkedIn,
+  initialHideProgress = false,
   onSaved,
 }: ProfileEditModalProps) {
   const [bio, setBio] = useState(initialBio);
   const [skills, setSkills] = useState<string[]>(initialSkills);
   const [linkedIn, setLinkedIn] = useState(initialLinkedIn);
+  const [hideProgress, setHideProgress] = useState(initialHideProgress);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,9 +43,10 @@ export default function ProfileEditModal({
       setBio(initialBio);
       setSkills(initialSkills);
       setLinkedIn(initialLinkedIn);
+      setHideProgress(initialHideProgress);
       setError("");
     }
-  }, [open, initialBio, initialSkills, initialLinkedIn]);
+  }, [open, initialBio, initialSkills, initialLinkedIn, initialHideProgress]);
 
   function toggleSkill(id: string) {
     setSkills((prev) => {
@@ -59,6 +68,7 @@ export default function ProfileEditModal({
           bio: bio.trim(),
           skills,
           linkedinUrl: linkedIn.trim(),
+          hideProgress,
         }),
       });
       const data = await res.json();
@@ -66,7 +76,12 @@ export default function ProfileEditModal({
         setError(data.error || "Couldn't save. Try again.");
         return;
       }
-      onSaved({ bio: bio.trim(), skills, linkedinUrl: linkedIn.trim() });
+      onSaved({
+        bio: bio.trim(),
+        skills,
+        linkedinUrl: linkedIn.trim(),
+        hideProgress,
+      });
       onClose();
     } catch {
       setError("Network error. Check your connection and try again.");
@@ -186,6 +201,44 @@ export default function ProfileEditModal({
                 <p className="text-[10px] text-zinc-600 mt-1.5">
                   Adding LinkedIn gives your card a blue glow and lets classmates connect.
                 </p>
+              </div>
+
+              {/* Privacy — hide progress toggle */}
+              <div>
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <span className="relative inline-block shrink-0 mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={hideProgress}
+                      onChange={(e) => setHideProgress(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <span
+                      className="block w-9 h-5 rounded-full transition-colors"
+                      style={{
+                        background: hideProgress
+                          ? "rgba(99,102,241,0.5)"
+                          : "rgba(255,255,255,0.1)",
+                      }}
+                    />
+                    <span
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                      style={{
+                        left: "2px",
+                        transform: hideProgress ? "translateX(16px)" : "translateX(0)",
+                      }}
+                    />
+                  </span>
+                  <span className="flex-1">
+                    <span className="text-xs font-semibold text-zinc-300 block">
+                      Hide my course progress from classmates
+                    </span>
+                    <span className="text-[10px] text-zinc-600 block mt-0.5">
+                      By default, your % shows on your card once you reach 20%.
+                      Turn this on to keep your progress private.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               {error && (

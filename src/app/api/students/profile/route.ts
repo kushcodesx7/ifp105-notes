@@ -10,7 +10,7 @@ import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
 // already uses the same pattern.
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { email, bio, skills, linkedinUrl } = body;
+  const { email, bio, skills, linkedinUrl, hideProgress } = body;
 
   if (!email || typeof email !== "string") {
     return Response.json({ error: "Missing email" }, { status: 400 });
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
   if (bio !== undefined) updates.bio = bio || null;
   if (cleanSkills !== undefined) updates.skills = cleanSkills;
   if (linkedinUrl !== undefined) updates.linkedin_url = linkedinUrl || null;
+  if (hideProgress !== undefined) updates.hide_progress = !!hideProgress;
 
   if (Object.keys(updates).length === 0) {
     return Response.json({ error: "No fields to update" }, { status: 400 });
