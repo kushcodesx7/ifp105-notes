@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
+import HomeConnectGlimpse from "@/components/HomeConnectGlimpse";
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
 
@@ -144,6 +145,7 @@ export default function Home() {
   const [showQuizResult, setShowQuizResult] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuizIndex(Math.floor(Math.random() * quizQuestions.length));
   }, []);
 
@@ -196,6 +198,7 @@ export default function Home() {
     if (progressEntries.length > 0) {
       // Pick the one with most progress
       progressEntries.sort((a, b) => b.done - a.done);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContinueData(progressEntries[0]);
     }
 
@@ -431,6 +434,9 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* ─── IFS CONNECT GLIMPSE ─── */}
+      <HomeConnectGlimpse />
 
       {/* ─── SAVED TOPICS (Bookmarks) ─── */}
       {bookmarks.length > 0 && (

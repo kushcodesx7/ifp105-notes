@@ -11,7 +11,11 @@ interface ProfileEditModalProps {
   initialBio: string;
   initialSkills: string[];
   initialLinkedIn: string;
-  onSaved: (next: { bio: string; skills: string[]; linkedinUrl: string }) => void;
+  onSaved: (next: {
+    bio: string;
+    skills: string[];
+    linkedinUrl: string;
+  }) => void;
 }
 
 export default function ProfileEditModal({
@@ -66,7 +70,11 @@ export default function ProfileEditModal({
         setError(data.error || "Couldn't save. Try again.");
         return;
       }
-      onSaved({ bio: bio.trim(), skills, linkedinUrl: linkedIn.trim() });
+      onSaved({
+        bio: bio.trim(),
+        skills,
+        linkedinUrl: linkedIn.trim(),
+      });
       onClose();
     } catch {
       setError("Network error. Check your connection and try again.");

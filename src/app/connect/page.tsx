@@ -19,6 +19,7 @@ interface Student {
   skills: string[];
   addedAt: string;
   lastThree: string;
+  completionPct?: number;
 }
 
 // Section accent palette (matches the 5 module accents + one extra)
@@ -580,6 +581,36 @@ export default function IFSConnectPage() {
                       </div>
                     </div>
 
+                    {/* Progress — always visible (own card + everyone else) */}
+                    {(() => {
+                      const pct = student.completionPct ?? 0;
+                      if (pct < 20) {
+                        return (
+                          <div className="mb-3 inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
+                            🚀 Just getting started
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                              {isMe ? "Your progress" : "Progress"}
+                            </span>
+                            <span className="text-[10px] font-bold" style={{ color: col.dot }}>
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{ width: `${pct}%`, background: col.dot }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Bio */}
                     {student.bio && (
                       <p className="text-[11px] text-zinc-400 leading-relaxed mb-3 italic line-clamp-2">
@@ -691,11 +722,15 @@ export default function IFSConnectPage() {
           initialSkills={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.skills || []}
           initialLinkedIn={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.linkedinUrl || ""}
           onSaved={(next) => {
-            // Optimistically update local state
             setStudents((prev) =>
               prev.map((s) =>
                 s.enrollmentNo === user.enrollmentNo
-                  ? { ...s, bio: next.bio, skills: next.skills, linkedinUrl: next.linkedinUrl || null }
+                  ? {
+                      ...s,
+                      bio: next.bio,
+                      skills: next.skills,
+                      linkedinUrl: next.linkedinUrl || null,
+                    }
                   : s
               )
             );
