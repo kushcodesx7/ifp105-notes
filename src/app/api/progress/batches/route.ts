@@ -38,12 +38,12 @@ export async function GET(req: NextRequest) {
   // 2. Fetch roll list to know expected student count per batch
   const { data: rollList } = await supabase
     .from("roll_list")
-    .select("batch_id, enrollment_no");
+    .select("batch_id, section, enrollment_no");
 
   // 3. Fetch registered students (who completed registration)
   const { data: registeredStudents } = await supabase
     .from("students")
-    .select("batch_id, enrollment_no, name, email, linkedin_url, added_at");
+    .select("batch_id, section, enrollment_no, name, email, linkedin_url, added_at");
 
   // 4. Fetch all progress rows
   const { data: progressRows } = await supabase
@@ -213,15 +213,19 @@ export async function GET(req: NextRequest) {
       (s) => s.batch_id === batchIdFilter
     );
 
-    // Build a map of enrollment_no → student status
+    // Build a map of enrollment_no+section → student status (same roll can exist in multiple sections)
     const rollStatus = batchRolls.map((r) => {
+      const rollSection = (r as { section?: string }).section || "";
       const registered = registeredInBatch.find(
-        (s) => s.enrollment_no === r.enrollment_no
+        (s) =>
+          s.enrollment_no === r.enrollment_no &&
+          (s as { section?: string }).section === rollSection
       );
 
       if (!registered) {
         return {
           enrollmentNo: r.enrollment_no,
+          section: rollSection,
           registered: false,
           name: null,
           email: null,
@@ -239,6 +243,7 @@ export async function GET(req: NextRequest) {
 
       return {
         enrollmentNo: r.enrollment_no,
+        section: rollSection,
         registered: true,
         name: registered.name,
         email: registered.email,

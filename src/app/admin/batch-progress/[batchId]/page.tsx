@@ -14,6 +14,7 @@ interface ModuleStats {
 
 interface StudentInBatch {
   enrollmentNo: string;
+  section: string;
   registered: boolean;
   name: string | null;
   email: string | null;
@@ -42,19 +43,29 @@ const MODULES = [
   { id: 5, title: "Tech", accent: "#8B5CF6", total: 10 },
 ];
 
+// Normalize timestamp — Supabase sometimes stores without 'Z' suffix
+// which makes JS parse it as local time instead of UTC.
+function parseUTC(dateStr: string): number {
+  // If no timezone info, append 'Z' to force UTC parsing
+  const hasTimezone = /[Zz]|[+-]\d{2}:?\d{2}$/.test(dateStr);
+  return new Date(hasTimezone ? dateStr : dateStr + "Z").getTime();
+}
+
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return "Never";
   const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = now - then;
-  const minutes = Math.floor(diff / 1000 / 60);
+  const then = parseUTC(dateStr);
+  const diff = Math.max(0, now - then); // never show negative
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  if (minutes < 1) return "Just now";
+  if (seconds < 30) return "Just now";
+  if (minutes < 1) return `${seconds}s ago`;
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+  return new Date(then).toLocaleDateString();
 }
 
 function barColor(pct: number): string {
@@ -80,6 +91,32 @@ export default function BatchProgressDetailPage() {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [sortBy, setSortBy] = useState<SortKey>("progress");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sectionFilter, setSectionFilter] = useState<string>("all");
+
+  const CACHE_KEY = `admin_batch_${batchId}`;
+
+  // Cache-then-revalidate: load from localStorage instantly, then fetch fresh
+  function saveCache(batch: BatchInfo | null, students: StudentInBatch[]) {
+    try {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ batch, students, cachedAt: Date.now() })
+      );
+    } catch {}
+  }
+
+  function loadCache(): { batch: BatchInfo | null; students: StudentInBatch[] } | null {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // Don't use cache older than 1 hour
+      if (Date.now() - parsed.cachedAt > 60 * 60 * 1000) return null;
+      return { batch: parsed.batch, students: parsed.students };
+    } catch {
+      return null;
+    }
+  }
 
   async function login() {
     setAuthError("");
@@ -93,6 +130,7 @@ export default function BatchProgressDetailPage() {
       const data = await res.json();
       setBatch(data.batch);
       setStudents(data.students || []);
+      saveCache(data.batch, data.students || []);
     } else {
       setAuthError("Wrong password.");
     }
@@ -107,6 +145,7 @@ export default function BatchProgressDetailPage() {
       const data = await res.json();
       setBatch(data.batch);
       setStudents(data.students || []);
+      saveCache(data.batch, data.students || []);
     }
   }
 
@@ -115,6 +154,13 @@ export default function BatchProgressDetailPage() {
     if (saved) {
       setPassword(saved);
       setAuthenticated(true);
+      // Show cached data instantly
+      const cached = loadCache();
+      if (cached) {
+        setBatch(cached.batch);
+        setStudents(cached.students);
+      }
+      // Then fetch fresh in background
       fetchData(saved).catch(() => {
         sessionStorage.removeItem("admin_pw");
         setAuthenticated(false);
@@ -123,8 +169,37 @@ export default function BatchProgressDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId]);
 
+  // Auto-refresh every 20 seconds when authenticated + tab is visible
+  useEffect(() => {
+    if (!authenticated || !password) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchData(password).catch(() => {});
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated, password, batchId]);
+
+  // Force re-render every 30s so timeAgo displays update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Unique sections in this batch for the dropdown
+  const availableSections = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) if (s.section) set.add(s.section);
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+  }, [students]);
+
   const displayed = useMemo(() => {
     let list = [...students];
+    if (sectionFilter !== "all") list = list.filter((s) => s.section === sectionFilter);
     if (filterMode === "registered") list = list.filter((s) => s.registered);
     if (filterMode === "pending") list = list.filter((s) => !s.registered);
     if (searchQuery) {
@@ -149,11 +224,12 @@ export default function BatchProgressDetailPage() {
       return 0;
     });
     return list;
-  }, [students, filterMode, searchQuery, sortBy]);
+  }, [students, filterMode, searchQuery, sortBy, sectionFilter]);
 
   function downloadCSV() {
     const headers = [
       "Enrollment No",
+      "Section",
       "Status",
       "Name",
       "Email",
@@ -170,6 +246,7 @@ export default function BatchProgressDetailPage() {
     ];
     const rows = displayed.map((s) => [
       s.enrollmentNo,
+      s.section || "",
       s.registered ? "Registered" : "Pending",
       s.name || "",
       s.email || "",
@@ -257,6 +334,10 @@ export default function BatchProgressDetailPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-green-400" title="Auto-refreshing every 20 seconds">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              LIVE
+            </span>
             <button
               onClick={downloadCSV}
               disabled={displayed.length === 0}
@@ -304,6 +385,20 @@ export default function BatchProgressDetailPage() {
             );
           })}
           <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {availableSections.length > 1 && (
+              <select
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white focus:outline-none focus:border-white/20"
+              >
+                <option value="all">All Sections</option>
+                {availableSections.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               type="text"
               placeholder="Search name / enrollment..."
@@ -334,10 +429,10 @@ export default function BatchProgressDetailPage() {
           <div className="space-y-2">
             {displayed.map((s, i) => (
               <motion.div
-                key={s.enrollmentNo}
+                key={`${s.section}-${s.enrollmentNo}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.02 }}
+                transition={{ delay: Math.min(i * 0.02, 0.3) }}
                 className="rounded-xl p-4"
                 style={{
                   background: s.registered
@@ -353,10 +448,15 @@ export default function BatchProgressDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                   {/* Enrollment + name */}
                   <div className="md:col-span-3">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-xs font-mono font-bold text-zinc-500">
                         #{s.enrollmentNo}
                       </span>
+                      {s.section && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">
+                          {s.section}
+                        </span>
+                      )}
                       {!s.registered && (
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
                           PENDING

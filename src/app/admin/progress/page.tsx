@@ -45,21 +45,28 @@ const MODULES = [
   { id: 5, title: "Tech", accent: "#8B5CF6", total: 10 },
 ];
 
+// Supabase sometimes stores timestamps without 'Z' suffix — append it for UTC parsing
+function parseUTC(dateStr: string): number {
+  const hasTimezone = /[Zz]|[+-]\d{2}:?\d{2}$/.test(dateStr);
+  return new Date(hasTimezone ? dateStr : dateStr + "Z").getTime();
+}
+
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return "Never";
   const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = now - then;
+  const then = parseUTC(dateStr);
+  const diff = Math.max(0, now - then);
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (seconds < 60) return "Just now";
+  if (seconds < 30) return "Just now";
+  if (minutes < 1) return `${seconds}s ago`;
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+  return new Date(then).toLocaleDateString();
 }
 
 function barColor(pct: number): string {
@@ -119,6 +126,25 @@ export default function AdminProgressPage() {
         setAuthenticated(false);
       });
     }
+  }, []);
+
+  // Auto-refresh every 20s when tab is visible
+  useEffect(() => {
+    if (!authenticated || !password) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchData(password).catch(() => {});
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated, password]);
+
+  // Force re-render every 30s so timeAgo updates
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 30000);
+    return () => clearInterval(t);
   }, []);
 
   // Unique batch IDs for filter
@@ -288,6 +314,10 @@ export default function AdminProgressPage() {
             <h1 className="text-2xl font-bold">Student Progress</h1>
           </div>
           <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-green-400" title="Auto-refreshing every 20 seconds">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              LIVE
+            </span>
             <button
               onClick={downloadCSV}
               disabled={displayed.length === 0}
