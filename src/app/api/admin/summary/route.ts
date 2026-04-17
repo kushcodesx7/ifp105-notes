@@ -1,23 +1,17 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { TOTAL_TOPICS } from "@/lib/modules";
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-function checkAuth(req: NextRequest): boolean {
-  if (!ADMIN_PASSWORD) return false;
-  const pw = req.headers.get("x-admin-password");
-  return pw === ADMIN_PASSWORD;
-}
+import { requireAdmin } from "@/lib/verify-google-token";
 
 // GET /api/admin/summary
 // Lightweight endpoint for the /admin landing page — returns only the 4 KPIs
 // the page displays. Avoids fetching the full student list (hundreds of KB)
 // just to compute "Total Students" etc.
+//
+// Auth: either an admin Google ID token OR the legacy admin password.
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
 
   const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 

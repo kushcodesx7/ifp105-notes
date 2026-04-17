@@ -2,12 +2,17 @@
 
 import useSWR from "swr";
 
-// Admin-authenticated fetcher. Key is a tuple so we can include the password
-// in the cache key without leaking it into the URL.
-async function adminFetcher([url, password]: [string, string]) {
-  const res = await fetch(url, {
-    headers: { "x-admin-password": password },
-  });
+// Admin-authenticated fetcher. The cache key carries the credential so a
+// password change (or a fresh login) invalidates the SWR cache naturally.
+// The credential format is "pw:PASSWORD" or "tok:ID_TOKEN" to distinguish.
+async function adminFetcher([url, credential]: [string, string]) {
+  const headers: Record<string, string> = {};
+  if (credential.startsWith("tok:")) {
+    headers["x-id-token"] = credential.slice(4);
+  } else if (credential.startsWith("pw:")) {
+    headers["x-admin-password"] = credential.slice(3);
+  }
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const err = new Error(`Fetch failed: ${res.status}`) as Error & {
       status?: number;
@@ -19,25 +24,34 @@ async function adminFetcher([url, password]: [string, string]) {
 }
 
 /**
- * Admin API fetch with SWR. Gives us:
- *  - Deduped in-flight requests (two pages asking for the same data = 1 call)
- *  - Automatic cache across pages (going /admin → /admin/progress reuses cache)
- *  - Revalidate on focus (switch back to tab → fresh data)
- *  - Revalidate on reconnect
- *  - Stale-while-revalidate semantics at the client level
+ * Admin API fetch with SWR. Accepts either:
+ *  - `password` (string): the legacy admin password — sent as x-admin-password
+ *  - `idToken` (string): a Google ID token — sent as x-id-token (server
+ *    checks the verified email against the admin allowlist)
  *
- * Pass `enabled=false` to skip the fetch (e.g. before login).
+ * Returns the usual SWR tuple. `enabled=false` pauses the fetch.
  */
 export function useAdminFetch<T>(
   url: string | null,
-  password: string | null,
+  credential: { password: string | null } | { idToken: string | null } | string | null,
   options?: {
     refreshInterval?: number;
     enabled?: boolean;
   }
 ) {
   const enabled = options?.enabled !== false;
-  const key = url && password && enabled ? ([url, password] as const) : null;
+
+  // Normalize the credential into a single string with a prefix.
+  let cred: string | null = null;
+  if (typeof credential === "string") {
+    cred = credential ? `pw:${credential}` : null;
+  } else if (credential && "idToken" in credential && credential.idToken) {
+    cred = `tok:${credential.idToken}`;
+  } else if (credential && "password" in credential && credential.password) {
+    cred = `pw:${credential.password}`;
+  }
+
+  const key = url && cred && enabled ? ([url, cred] as const) : null;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<T>(
     key,
@@ -46,8 +60,8 @@ export function useAdminFetch<T>(
       refreshInterval: options?.refreshInterval,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 3000, // 2 identical calls within 3s → 1 network call
-      keepPreviousData: true, // Don't wipe UI while revalidating
+      dedupingInterval: 3000,
+      keepPreviousData: true,
     }
   );
 

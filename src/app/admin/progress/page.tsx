@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
 
 interface TopicProgress {
   moduleNumber: number;
@@ -79,6 +81,10 @@ function barColor(pct: number): string {
 }
 
 export default function AdminProgressPage() {
+  const { user, isLoggedIn, getIdToken } = useAuth();
+  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
+  const idToken = isAdmin ? getIdToken() : null;
+
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -98,7 +104,7 @@ export default function AdminProgressPage() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Restore session on mount
+  // Restore password session on mount (legacy path)
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
     if (saved) {
@@ -107,24 +113,33 @@ export default function AdminProgressPage() {
     }
   }, []);
 
-  // SWR-powered fetch: dedup, cached, auto-refresh, revalidate on focus
+  // Admins with Google ID token → auto-authenticated, no password prompt
+  useEffect(() => {
+    if (isAdmin && idToken) setAuthenticated(true);
+  }, [isAdmin, idToken]);
+
+  // Prefer ID token over password when available
+  const credential = idToken ? { idToken } : password;
   const { data: progressData, error: fetchError, isLoading: fetchLoading, mutate: refreshProgress } =
     useAdminFetch<{ students: StudentData[] }>(
       "/api/progress/admin",
-      password,
+      credential,
       { enabled: authenticated, refreshInterval: 20_000 }
     );
   // Memoize so dependent useMemos get a stable reference
   const students = useMemo(() => progressData?.students ?? [], [progressData]);
   const initialLoaded = !!progressData || (!fetchLoading && !!fetchError);
 
-  // If auth failed, clear session
+  // If auth failed for a password user, clear session. Don't touch the
+  // Google session for admin users (their token path handles itself).
   useEffect(() => {
     if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
-      sessionStorage.removeItem("admin_pw");
-      setAuthenticated(false);
+      if (!isAdmin) {
+        sessionStorage.removeItem("admin_pw");
+        setAuthenticated(false);
+      }
     }
-  }, [fetchError]);
+  }, [fetchError, isAdmin]);
 
   async function login() {
     setAuthError("");

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
 
 interface Student {
   enrollmentNo: string;
@@ -39,6 +41,9 @@ const ACCENT_OPTIONS = [
 ];
 
 export default function AdminBatchesPage() {
+  const { user, isLoggedIn, getIdToken } = useAuth();
+  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
+
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -55,10 +60,16 @@ export default function AdminBatchesPage() {
   const [rollInput, setRollInput] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
 
-  const headers = {
-    "Content-Type": "application/json",
-    "x-admin-password": password,
-  };
+  // Auth headers — prefer Google ID token (signed-in admin) over password.
+  // getIdToken is stable via useCallback, so this can run in a getter.
+  function authHeaders(): Record<string, string> {
+    const h: Record<string, string> = { "Content-Type": "application/json" };
+    const tok = isAdmin ? getIdToken() : null;
+    if (tok) h["x-id-token"] = tok;
+    else if (password) h["x-admin-password"] = password;
+    return h;
+  }
+  const headers = authHeaders();
 
   async function login() {
     setAuthError("");
@@ -75,9 +86,8 @@ export default function AdminBatchesPage() {
   }
 
   async function fetchData() {
-    const pw = password || sessionStorage.getItem("admin_pw") || "";
     const res = await fetch("/api/batches/admin", {
-      headers: { "x-admin-password": pw },
+      headers: authHeaders(),
     });
     if (res.ok) {
       const data = await res.json();
@@ -106,47 +116,25 @@ export default function AdminBatchesPage() {
     }
   }
 
+  // Restore session + auto-auth for admin Google users on mount
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
     if (saved) {
       setPassword(saved);
       setAuthenticated(true);
-      fetch("/api/batches/admin", {
-        headers: { "x-admin-password": saved },
-      })
-        .then((r) => {
-          if (r.ok) return r.json();
-          throw new Error();
-        })
-        .then(async (d) => {
-          setBatches(d.batches);
-          const stats: Record<string, ProfileStats> = {};
-          await Promise.all(
-            d.batches.map(async (b: Batch) => {
-              try {
-                const pRes = await fetch(`/api/profiles?batchId=${b.id}`);
-                if (pRes.ok) {
-                  const pData = await pRes.json();
-                  const profiles = pData.profiles || [];
-                  stats[b.id] = {
-                    total: profiles.length,
-                    working: profiles.filter((p: { status: string }) => p.status === "working").length,
-                    studying: profiles.filter((p: { status: string }) => p.status === "studying").length,
-                    freelancing: profiles.filter((p: { status: string }) => p.status === "freelancing").length,
-                    looking: profiles.filter((p: { status: string }) => p.status === "looking").length,
-                  };
-                }
-              } catch { /* ignore */ }
-            })
-          );
-          setProfileStats(stats);
-        })
-        .catch(() => {
-          sessionStorage.removeItem("admin_pw");
-          setAuthenticated(false);
-        });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isAdmin && getIdToken()) setAuthenticated(true);
+  }, [isAdmin, getIdToken]);
+
+  // Once authenticated, fetch batches
+  useEffect(() => {
+    if (authenticated) fetchData().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated]);
 
   async function addBatch() {
     if (!newBatchId || !newBatchName) return;

@@ -1,19 +1,11 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-function checkAuth(req: NextRequest): boolean {
-  if (!ADMIN_PASSWORD) return false;
-  const pw = req.headers.get("x-admin-password");
-  return pw === ADMIN_PASSWORD;
-}
+import { requireAdmin } from "@/lib/verify-google-token";
 
 // GET — return full data including roll list (admin only)
 export async function GET(req: NextRequest) {
-  if (!checkAuth(req)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
 
   const { data: batches, error } = await supabase
     .from("batches")
@@ -58,9 +50,8 @@ export async function GET(req: NextRequest) {
 
 // POST — admin actions
 export async function POST(req: NextRequest) {
-  if (!checkAuth(req)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
 
   const body = await req.json();
   const { action } = body;
