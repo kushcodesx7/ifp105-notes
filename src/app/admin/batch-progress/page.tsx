@@ -295,8 +295,8 @@ export default function BatchProgressListPage() {
               color: "#fbbf24",
             }}
           >
-            ⚠️ {orphanCount} student{orphanCount !== 1 ? "s" : ""} signed in but haven&apos;t
-            completed registration (not linked to any batch). They&apos;re saving progress but
+            ⚠️ {orphanCount} student{orphanCount !== 1 ? "s" : ""}{" "}signed in but haven&apos;t{" "}
+            completed registration (not linked to any batch). They&apos;re saving progress but{" "}
             you can&apos;t group them yet. Encourage them to register via the batch page.
           </div>
         )}
