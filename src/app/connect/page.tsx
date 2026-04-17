@@ -3,7 +3,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import ProfileEditModal from "@/components/ProfileEditModal";
 import { useAuth } from "@/lib/auth-context";
+import { SKILLS, getSkill } from "@/lib/skills";
 
 interface Student {
   enrollmentNo: string;
@@ -13,6 +15,7 @@ interface Student {
   linkedinUrl: string | null;
   photoUrl: string | null;
   bio: string | null;
+  skills: string[];
   addedAt: string;
   lastThree: string;
 }
@@ -80,8 +83,10 @@ export default function IFSConnectPage() {
   const [perSectionTotals, setPerSectionTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
+  const [skillFilter, setSkillFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [spotlightEnrollment, setSpotlightEnrollment] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/connect")
@@ -113,10 +118,21 @@ export default function IFSConnectPage() {
       .slice(0, 5);
   }, [students]);
 
+  // Skills actually used across registered students (so we only show filter chips
+  // for skills anyone picked — avoids a wall of empty filters)
+  const availableSkills = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) for (const id of s.skills || []) set.add(id);
+    return SKILLS.filter((s) => set.has(s.id));
+  }, [students]);
+
   const filtered = useMemo(() => {
     let list = students;
     if (sectionFilter !== "all") {
       list = list.filter((s) => s.section === sectionFilter);
+    }
+    if (skillFilter !== "all") {
+      list = list.filter((s) => (s.skills || []).includes(skillFilter));
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -133,7 +149,7 @@ export default function IFSConnectPage() {
       return prettyName(a.name).localeCompare(prettyName(b.name));
     });
     return list;
-  }, [students, sectionFilter, searchQuery, user]);
+  }, [students, sectionFilter, skillFilter, searchQuery, user]);
 
   const registeredPct = totalRolls > 0 ? Math.round((students.length / totalRolls) * 100) : 0;
 
@@ -380,6 +396,44 @@ export default function IFSConnectPage() {
                 );
               })}
             </div>
+
+            {/* Skill filter — only show if anyone has picked skills */}
+            {availableSkills.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+                style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 shrink-0 self-center">
+                  Interests:
+                </span>
+                <button
+                  onClick={() => setSkillFilter("all")}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all shrink-0 ${
+                    skillFilter === "all"
+                      ? "bg-white/[0.1] text-white"
+                      : "bg-white/[0.03] text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  All
+                </button>
+                {availableSkills.map((s) => {
+                  const isActive = skillFilter === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setSkillFilter(s.id)}
+                      className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all shrink-0 ${
+                        isActive
+                          ? `bg-gradient-to-r ${s.color} text-white shadow-md`
+                          : "bg-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <span>{s.emoji}</span>
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -507,14 +561,33 @@ export default function IFSConnectPage() {
                       </p>
                     )}
 
+                    {/* Skill badges (up to 3) */}
+                    {student.skills && student.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {student.skills.slice(0, 3).map((id) => {
+                          const sk = getSkill(id);
+                          if (!sk) return null;
+                          return (
+                            <span
+                              key={id}
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 bg-gradient-to-r ${sk.color} text-white`}
+                            >
+                              <span>{sk.emoji}</span>
+                              {sk.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {/* Actions */}
-                    <div>
+                    <div className="flex items-stretch gap-2">
                       {hasLinkedIn ? (
                         <a
                           href={student.linkedinUrl!}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.99]"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.99]"
                           style={{
                             background: "#0A66C2",
                             boxShadow: "0 2px 10px rgba(10,102,194,0.35)",
@@ -526,11 +599,9 @@ export default function IFSConnectPage() {
                           Connect on LinkedIn
                         </a>
                       ) : isMe ? (
-                        <a
-                          href="https://www.linkedin.com/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold transition-all hover:scale-[1.02]"
+                        <button
+                          onClick={() => setEditOpen(true)}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold transition-all hover:scale-[1.02]"
                           style={{
                             background: "linear-gradient(135deg, #FACC15, #F59E0B)",
                             color: "#422006",
@@ -539,12 +610,24 @@ export default function IFSConnectPage() {
                           title="Add your LinkedIn so classmates can connect with you"
                         >
                           + Add your LinkedIn
-                        </a>
+                        </button>
                       ) : (
-                        <div className="w-full px-3 py-2.5 rounded-lg text-[11px] text-zinc-500 text-center bg-white/[0.02] border border-white/[0.04] flex items-center justify-center gap-1.5">
+                        <div className="flex-1 px-3 py-2.5 rounded-lg text-[11px] text-zinc-500 text-center bg-white/[0.02] border border-white/[0.04] flex items-center justify-center gap-1.5">
                           <span className="opacity-50">🔗</span>
                           LinkedIn not added yet
                         </div>
+                      )}
+
+                      {/* Edit pencil — only on own card */}
+                      {isMe && (
+                        <button
+                          onClick={() => setEditOpen(true)}
+                          className="px-3 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all shrink-0"
+                          title="Edit your profile"
+                          aria-label="Edit profile"
+                        >
+                          ✏️
+                        </button>
                       )}
                     </div>
                   </motion.div>
@@ -554,6 +637,28 @@ export default function IFSConnectPage() {
           </div>
         )}
       </div>
+
+      {/* Profile edit modal — own profile */}
+      {user && (
+        <ProfileEditModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          email={user.email}
+          initialBio={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.bio || ""}
+          initialSkills={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.skills || []}
+          initialLinkedIn={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.linkedinUrl || ""}
+          onSaved={(next) => {
+            // Optimistically update local state
+            setStudents((prev) =>
+              prev.map((s) =>
+                s.enrollmentNo === user.enrollmentNo
+                  ? { ...s, bio: next.bio, skills: next.skills, linkedinUrl: next.linkedinUrl || null }
+                  : s
+              )
+            );
+          }}
+        />
+      )}
     </main>
   );
 }

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("students")
-    .select("enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, added_at")
+    .select("enrollment_no, name, email, batch_id, section, linkedin_url, photo_url, bio, skills, added_at")
     .order("added_at", { ascending: false });
 
   if (batchId) query = query.eq("batch_id", batchId);
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     linkedinUrl: s.linkedin_url,
     photoUrl: s.photo_url,
     bio: s.bio,
+    skills: (s as { skills?: string[] }).skills || [],
     addedAt: s.added_at,
     lastThree: (s.enrollment_no || "").slice(-3),
   }));
