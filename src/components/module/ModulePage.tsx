@@ -68,7 +68,7 @@ export default function ModulePage({
   const LS_KEY = `ifp105_m${moduleNumber}_progress`;
   const LS_ACTIVE_TAB_KEY = `ifp105_m${moduleNumber}_active_tab`;
 
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getIdToken } = useAuth();
 
   const [activeTab, setActiveTab] = useState(1);
   const [direction, setDirection] = useState(1);
@@ -227,11 +227,19 @@ export default function ModulePage({
     challengeAttempted?: boolean;
   }) {
     if (!isLoggedIn || !user) return;
+    const token = getIdToken();
+    // No token this session → they're on a restored-from-localStorage session
+    // without a fresh sign-in. Skip the remote save; local state still tracks
+    // their progress. Next sign-in will sync.
+    if (!token) return;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     fetch("/api/progress", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-id-token": token,
+      },
       body: JSON.stringify({
         email: user.email,
         name: user.name,

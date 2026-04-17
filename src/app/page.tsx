@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
 import dynamic from "next/dynamic";
 
-// Lazy-load IFS Connect glimpse — not critical for first paint, no SSR needed
+// Lazy-load the social / peer-compare widgets — not critical for first paint, no SSR needed
 const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse"), {
   ssr: false,
   loading: () => (
@@ -21,6 +21,9 @@ const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse
       />
     </section>
   ),
+});
+const HomeCompareWithClass = dynamic(() => import("@/components/HomeCompareWithClass"), {
+  ssr: false,
 });
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
@@ -453,6 +456,9 @@ export default function Home() {
 
       {/* ─── IFS CONNECT GLIMPSE ─── */}
       <HomeConnectGlimpse />
+
+      {/* ─── COMPARE WITH CLASS ─── (signed-in students only) */}
+      <HomeCompareWithClass />
 
       {/* ─── SAVED TOPICS (Bookmarks) ─── */}
       {bookmarks.length > 0 && (

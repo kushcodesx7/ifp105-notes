@@ -33,7 +33,7 @@ function decodeJwt(token: string): Record<string, string> | null {
 }
 
 export default function Navbar({ showBack = false, title, moduleNumber }: NavbarProps) {
-  const { user, isLoggedIn, login, logout } = useAuth();
+  const { user, isLoggedIn, login, logout, setIdToken, getIdToken } = useAuth();
   const [showSignIn, setShowSignIn] = useState(false);
   const [showModules, setShowModules] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
@@ -68,10 +68,14 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               section: data.section,
             });
             // Silently update the DB if the Google photo changed
-            if (user.photo && user.photo !== data.photoUrl) {
+            const token = getIdToken();
+            if (user.photo && user.photo !== data.photoUrl && token) {
               fetch("/api/students/sync", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-id-token": token,
+                },
                 body: JSON.stringify({ email: user.email, photoUrl: user.photo }),
               }).catch(() => {});
             }
@@ -94,17 +98,28 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   // if the DB already has this URL, so calling it on every load is cheap.
   useEffect(() => {
     if (!isLoggedIn || !user?.email || !user?.photo) return;
+    const token = getIdToken();
+    // No token → they were restored from localStorage without signing in
+    // fresh this session. Skip — they'll sync next time they sign in.
+    if (!token) return;
     fetch("/api/students/sync", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-id-token": token,
+      },
       body: JSON.stringify({ email: user.email, photoUrl: user.photo }),
     }).catch(() => {});
-  }, [isLoggedIn, user?.email, user?.photo]);
+  }, [isLoggedIn, user?.email, user?.photo, getIdToken]);
 
   function handleGoogleSuccess(response: { credential?: string }) {
     if (!response.credential) return;
     const payload = decodeJwt(response.credential);
     if (!payload?.name || !payload?.email) return;
+
+    // Stash the ID token so authenticated writes can send it as x-id-token.
+    // Kept in memory only — never persisted.
+    setIdToken(response.credential);
 
     // Merge with existing user so a silent re-auth doesn't blow away
     // registration info (enrollmentNo / batchId / section). The fresh JWT

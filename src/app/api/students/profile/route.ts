@@ -1,13 +1,14 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
+import { requireSelf } from "@/lib/verify-google-token";
 
 // POST /api/students/profile
 // Body: { email, bio?, skills?, linkedinUrl? }
-// Updates bio / skills / linkedin_url on the caller's own student row.
-// Auth: the row is located by email. Google OAuth on the client means we trust
-// that the submitted email came from a verified session; the register flow
-// already uses the same pattern.
+// Updates bio / skills / linkedin_url on the caller's OWN student row.
+// Auth: the caller must supply a valid Google ID token (x-id-token header)
+// and the token's verified email must match the `email` in the body. No one
+// can edit another student's profile.
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { email, bio, skills, linkedinUrl } = body;
@@ -15,6 +16,10 @@ export async function POST(req: NextRequest) {
   if (!email || typeof email !== "string") {
     return Response.json({ error: "Missing email" }, { status: 400 });
   }
+
+  // Verify the caller owns this email
+  const auth = await requireSelf(req, email);
+  if (!auth.ok) return auth.response;
 
   // Validate bio length
   if (bio !== undefined && bio !== null) {

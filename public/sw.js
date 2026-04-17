@@ -1,4 +1,4 @@
-const CACHE_NAME = "ifp105-v2";
+const CACHE_NAME = "ifp105-v3";
 const STATIC_ASSETS = [
   "/",
   "/module/1",

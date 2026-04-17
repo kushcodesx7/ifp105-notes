@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
+import { useAuth } from "@/lib/auth-context";
 
 interface ProfileEditModalProps {
   open: boolean;
@@ -27,6 +28,7 @@ export default function ProfileEditModal({
   initialLinkedIn,
   onSaved,
 }: ProfileEditModalProps) {
+  const { getIdToken } = useAuth();
   const [bio, setBio] = useState(initialBio);
   const [skills, setSkills] = useState<string[]>(initialSkills);
   const [linkedIn, setLinkedIn] = useState(initialLinkedIn);
@@ -53,11 +55,19 @@ export default function ProfileEditModal({
 
   async function save() {
     setError("");
+    const token = getIdToken();
+    if (!token) {
+      setError("Please sign in again to save your profile.");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/students/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-id-token": token,
+        },
         body: JSON.stringify({
           email,
           bio: bio.trim(),

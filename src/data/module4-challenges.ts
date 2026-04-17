@@ -46,7 +46,7 @@ export const module4Challenges: Record<number, Challenge> = {
 
   4: {
     instruction: `Create an image using attributes. Write an <code>&lt;img&gt;</code> tag with these attributes:<br>
-1. <code>src</code> = any image URL (try: <code>https://via.placeholder.com/300x200</code>)<br>
+1. <code>src</code> = any image URL (try: <code>https://placehold.co/300x200</code>)<br>
 2. <code>alt</code> = a description of the image<br>
 3. <code>width</code> = 300`,
     hint: "All attributes go inside the opening tag: <img src=\"url\" alt=\"text\" width=\"300\">. Remember, img is self-closing — no </img> needed!",

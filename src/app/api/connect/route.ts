@@ -1,9 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
-
-// Keep in sync with /api/progress/admin and /api/admin/summary
-const TOTAL_TOPICS = 48; // 11+9+7+11+10
+import { TOTAL_TOPICS } from "@/lib/modules";
 
 // GET /api/connect — list of all registered students for IFS Connect
 // Optional query params:

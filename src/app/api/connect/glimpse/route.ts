@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
+import { TOTAL_TOPICS } from "@/lib/modules";
 
 // GET /api/connect/glimpse
 // Tiny endpoint for the home-page IFS Connect teaser.
@@ -7,7 +8,6 @@ import { isHiddenSection } from "@/lib/hidden-sections";
 // learners this week. Completion % for the 3 top learners is computed in a
 // narrow follow-up query filtered to those 3 emails (not "pull every row").
 
-const TOTAL_TOPICS = 48;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 

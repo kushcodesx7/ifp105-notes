@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireSelf } from "@/lib/verify-google-token";
 
 // GET — Load student progress for a module
 export async function GET(req: NextRequest) {
@@ -75,6 +76,10 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  // Auth: caller must own the email they're writing progress for
+  const auth = await requireSelf(req, email);
+  if (!auth.ok) return auth.response;
 
   // Upsert progress row
   const upsertData: Record<string, unknown> = {

@@ -46,7 +46,7 @@ export default function RegistrationModal({
   onSuccess,
   closable = true,
 }: RegistrationModalProps) {
-  const { user, login } = useAuth();
+  const { user, login, getIdToken } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,7 +118,12 @@ export default function RegistrationModal({
       setError("Please enter your enrollment number.");
       return;
     }
-    if (linkedinUrl.trim() && !/^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/.test(linkedinUrl.trim())) {
+    // Accept any linkedin.com/in/<handle> URL. Query strings, trailing slashes,
+    // and non-word chars in the handle (e.g. non-Latin names) are allowed.
+    if (
+      linkedinUrl.trim() &&
+      !/^https?:\/\/(www\.)?linkedin\.com\/in\/[^/\s?#]+/i.test(linkedinUrl.trim())
+    ) {
       setError("LinkedIn URL format: https://linkedin.com/in/yourname");
       return;
     }
@@ -127,10 +132,19 @@ export default function RegistrationModal({
     const rollNum = enrollmentNo.trim().toUpperCase();
     const nameToSave = displayName.trim() || `${lastThree(rollNum)}_${firstName(user!.name)}`;
 
+    const token = getIdToken();
+    if (!token) {
+      setError("Please sign in again to register.");
+      return;
+    }
+
     setLoading(true);
     const res = await fetch("/api/batches", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-id-token": token,
+      },
       body: JSON.stringify({
         batchId: selectedBatchId,
         section: selectedSection,

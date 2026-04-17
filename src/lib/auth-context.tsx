@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
@@ -24,6 +25,11 @@ interface AuthContextType {
   login: (user: User) => void;
   logout: () => void;
   isLoggedIn: boolean;
+  // Raw Google ID token (JWT). Kept in memory only — never persisted to
+  // localStorage or cookies. Lost on page reload (user must sign in again
+  // to perform authenticated writes).
+  getIdToken: () => string | null;
+  setIdToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,6 +37,8 @@ const AuthContext = createContext<AuthContextType>({
   login: () => {},
   logout: () => {},
   isLoggedIn: false,
+  getIdToken: () => null,
+  setIdToken: () => {},
 });
 
 export function useAuth() {
@@ -41,8 +49,11 @@ const SESSION_KEY = "ifp105_user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  // ID token in a ref — not state — so it doesn't trigger re-renders and
+  // never ends up in localStorage/sessionStorage.
+  const idTokenRef = useRef<string | null>(null);
 
-  // Restore from localStorage on mount
+  // Restore user (but not the token) on mount.
   useEffect(() => {
     try {
       const saved = localStorage.getItem(SESSION_KEY);
@@ -61,9 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null);
+    idTokenRef.current = null;
     try {
       localStorage.removeItem(SESSION_KEY);
     } catch {}
+  }, []);
+
+  const getIdToken = useCallback(() => idTokenRef.current, []);
+  const setIdToken = useCallback((token: string | null) => {
+    idTokenRef.current = token;
   }, []);
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
@@ -71,7 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <GoogleOAuthProvider clientId={clientId} locale="en">
       <AuthContext.Provider
-        value={{ user, login, logout, isLoggedIn: !!user }}
+        value={{
+          user,
+          login,
+          logout,
+          isLoggedIn: !!user,
+          getIdToken,
+          setIdToken,
+        }}
       >
         {children}
       </AuthContext.Provider>

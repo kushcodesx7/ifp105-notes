@@ -92,15 +92,35 @@ export default function IFSConnectPage() {
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
 
   useEffect(() => {
-    fetch("/api/connect")
-      .then((r) => r.json())
-      .then((data) => {
+    let alive = true;
+    async function loadConnect() {
+      try {
+        const r = await fetch("/api/connect");
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!alive) return;
         setStudents(data.students || []);
         setTotalRolls(data.totalRolls || 0);
         setPerSectionTotals(data.perSectionTotals || {});
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } catch {
+        if (alive) setLoading(false);
+      }
+    }
+    // Initial fetch
+    loadConnect();
+    // Poll every 60s while the tab is open so newly-joined students appear live
+    const tick = setInterval(() => {
+      if (document.visibilityState === "visible") loadConnect();
+    }, 60_000);
+    // Also refetch immediately when the tab regains focus
+    const onFocus = () => loadConnect();
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      alive = false;
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   // Unique sections for filter pills (natural sort)
@@ -145,19 +165,23 @@ export default function IFSConnectPage() {
           s.enrollmentNo.toLowerCase().includes(q)
       );
     }
-    // Profile-completeness tier — lower number = higher in list
+    // Profile-completeness tier — lower number = higher in list.
+    // Interests (skills) are the strongest signal of someone who actively
+    // cared, so they dominate the ranking.
     //   0: user's own card (always pinned first)
-    //   1: bio AND skills (most complete)
-    //   2: LinkedIn set (but missing bio or skills)
-    //   3: registered only (no LinkedIn, no bio, no skills)
+    //   1: has interests selected (regardless of bio/LinkedIn)
+    //   2: has a bio (but no interests yet)
+    //   3: has LinkedIn (but no interests, no bio)
+    //   4: registered only
     const tier = (s: Student): number => {
       if (user && s.enrollmentNo === user.enrollmentNo) return 0;
-      const hasBio = !!(s.bio && s.bio.trim());
       const hasSkills = (s.skills?.length ?? 0) > 0;
+      const hasBio = !!(s.bio && s.bio.trim());
       const hasLinkedIn = !!s.linkedinUrl;
-      if (hasBio && hasSkills) return 1;
-      if (hasLinkedIn) return 2;
-      return 3;
+      if (hasSkills) return 1;
+      if (hasBio) return 2;
+      if (hasLinkedIn) return 3;
+      return 4;
     };
 
     list = [...list].sort((a, b) => {
@@ -296,7 +320,8 @@ export default function IFSConnectPage() {
             >
               {recentlyJoined.map((s, i) => {
                 const col = sectionColor(s.section);
-                const isFreshest = i === 0 && daysSince(s.addedAt) <= 1;
+                // Mark up to the first 3 as NEW if they joined in the last 24h.
+                const isFreshest = i < 3 && daysSince(s.addedAt) <= 1;
                 return (
                   <button
                     key={s.enrollmentNo}
