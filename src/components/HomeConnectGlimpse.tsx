@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getSkill } from "@/lib/skills";
+import HomeActivityStrip from "@/components/HomeActivityStrip";
 
 interface RecentJoiner {
   enrollmentNo: string;
@@ -245,6 +246,9 @@ export default function HomeConnectGlimpse() {
             />
           </div>
         </div>
+
+        {/* Live activity strip — rotates recent events */}
+        <HomeActivityStrip />
 
         {/* Top learners this week */}
         {data.topLearnersThisWeek.length > 0 ? (

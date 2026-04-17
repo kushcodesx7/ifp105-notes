@@ -88,6 +88,19 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, user?.email]);
 
+  // Keep the profile photo in sync with whatever Google is returning now.
+  // Fires whenever user.photo changes (which happens on a fresh sign-in —
+  // Google JWT carries the current Gmail avatar). The endpoint is a no-op
+  // if the DB already has this URL, so calling it on every load is cheap.
+  useEffect(() => {
+    if (!isLoggedIn || !user?.email || !user?.photo) return;
+    fetch("/api/students/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: user.email, photoUrl: user.photo }),
+    }).catch(() => {});
+  }, [isLoggedIn, user?.email, user?.photo]);
+
   function handleGoogleSuccess(response: { credential?: string }) {
     if (!response.credential) return;
     const payload = decodeJwt(response.credential);
