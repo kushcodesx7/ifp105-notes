@@ -29,31 +29,45 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const batchIdFilter = searchParams.get("batchId");
 
-  // 1. Fetch all batches
-  const { data: batches } = await supabase
-    .from("batches")
-    .select("id, name, accent, created_at")
-    .order("created_at", { ascending: false });
-
-  // 2. Fetch roll list to know expected student count per batch
-  const { data: rollList } = await supabase
+  // Scope the heavy tables to the drilldown batch when possible so we don't
+  // fetch every batch's data every time. `batches` stays unscoped so the
+  // summary view still works; on drilldown we still need batches[] to find
+  // the one batch object, so we fetch it too (tiny table).
+  const rollQuery = supabase
     .from("roll_list")
     .select("batch_id, section, enrollment_no");
+  if (batchIdFilter) rollQuery.eq("batch_id", batchIdFilter);
 
-  // 3. Fetch registered students (who completed registration)
-  const { data: registeredStudents } = await supabase
+  const studentsQuery = supabase
     .from("students")
     .select("batch_id, section, enrollment_no, name, email, linkedin_url, added_at");
+  if (batchIdFilter) studentsQuery.eq("batch_id", batchIdFilter);
 
-  // 4. Fetch all progress rows
-  const { data: progressRows } = await supabase
+  const progressQuery = supabase
     .from("student_progress")
-    .select("*");
+    .select(
+      "student_email, student_name, enrollment_no, batch_id, module_number, topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at"
+    );
+  if (batchIdFilter) progressQuery.eq("batch_id", batchIdFilter);
 
-  // 5. Fetch session data for last_active
-  const { data: sessions } = await supabase
-    .from("student_sessions")
-    .select("student_email, last_active_at");
+  // Run all 5 queries in parallel — biggest single perf win on this endpoint.
+  const [batchesRes, rollListRes, registeredRes, progressRes, sessionsRes] =
+    await Promise.all([
+      supabase
+        .from("batches")
+        .select("id, name, accent, created_at")
+        .order("created_at", { ascending: false }),
+      rollQuery,
+      studentsQuery,
+      progressQuery,
+      supabase.from("student_sessions").select("student_email, last_active_at"),
+    ]);
+
+  const batches = batchesRes.data;
+  const rollList = rollListRes.data;
+  const registeredStudents = registeredRes.data;
+  const progressRows = progressRes.data;
+  const sessions = sessionsRes.data;
 
   const sessionMap: Record<string, string> = {};
   for (const s of sessions || []) {
@@ -256,17 +270,24 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return Response.json({
-      batch: {
-        id: batch.id,
-        name: batch.name,
-        accent: batch.accent,
-        totalRolls: batchRolls.length,
-        registered: registeredInBatch.length,
-        notRegistered: batchRolls.length - registeredInBatch.length,
+    return Response.json(
+      {
+        batch: {
+          id: batch.id,
+          name: batch.name,
+          accent: batch.accent,
+          totalRolls: batchRolls.length,
+          registered: registeredInBatch.length,
+          notRegistered: batchRolls.length - registeredInBatch.length,
+        },
+        students: rollStatus,
       },
-      students: rollStatus,
-    });
+      {
+        headers: {
+          "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
+        },
+      }
+    );
   }
 
   // ─── Otherwise: summary per batch ───
@@ -315,8 +336,15 @@ export async function GET(req: NextRequest) {
   // Also count "orphan" students who have progress but no batch
   const orphanStudents = Object.values(studentAgg).filter((s) => !s.batchId);
 
-  return Response.json({
-    batches: batchSummaries,
-    orphanStudents: orphanStudents.length,
-  });
+  return Response.json(
+    {
+      batches: batchSummaries,
+      orphanStudents: orphanStudents.length,
+    },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
+      },
+    }
+  );
 }

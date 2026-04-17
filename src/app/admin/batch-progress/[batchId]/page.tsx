@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { useAdminFetch } from "@/lib/useAdminFetch";
 
 interface ModuleStats {
   done: number;
@@ -86,12 +87,19 @@ export default function BatchProgressDetailPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [batch, setBatch] = useState<BatchInfo | null>(null);
-  const [students, setStudents] = useState<StudentInBatch[]>([]);
+  const [cachedBatch, setCachedBatch] = useState<BatchInfo | null>(null);
+  const [cachedStudents, setCachedStudents] = useState<StudentInBatch[]>([]);
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [sortBy, setSortBy] = useState<SortKey>("progress");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const CACHE_KEY = `admin_batch_${batchId}`;
 
@@ -118,6 +126,52 @@ export default function BatchProgressDetailPage() {
     }
   }
 
+  // Restore session + seed from localStorage cache for instant paint
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) {
+      setPassword(saved);
+      setAuthenticated(true);
+      const cached = loadCache();
+      if (cached) {
+        setCachedBatch(cached.batch);
+        setCachedStudents(cached.students);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchId]);
+
+  // SWR fetch (shares cache with the list page when visiting the same endpoint)
+  const {
+    data: detailData,
+    error: fetchError,
+    mutate: refreshData,
+  } = useAdminFetch<{ batch: BatchInfo; students: StudentInBatch[] }>(
+    `/api/progress/batches?batchId=${encodeURIComponent(batchId)}`,
+    password,
+    { enabled: authenticated, refreshInterval: 20_000 }
+  );
+
+  // Persist fresh data to localStorage for instant next visit
+  useEffect(() => {
+    if (detailData) {
+      saveCache(detailData.batch, detailData.students || []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailData]);
+
+  // Clear session on auth failure
+  useEffect(() => {
+    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
+      sessionStorage.removeItem("admin_pw");
+      setAuthenticated(false);
+    }
+  }, [fetchError]);
+
+  // Prefer fresh data from SWR; fall back to the localStorage cache for instant paint
+  const batch = detailData?.batch ?? cachedBatch;
+  const students = detailData?.students ?? cachedStudents;
+
   async function login() {
     setAuthError("");
     setLoading(true);
@@ -127,59 +181,11 @@ export default function BatchProgressDetailPage() {
     if (res.ok) {
       setAuthenticated(true);
       sessionStorage.setItem("admin_pw", password);
-      const data = await res.json();
-      setBatch(data.batch);
-      setStudents(data.students || []);
-      saveCache(data.batch, data.students || []);
     } else {
       setAuthError("Wrong password.");
     }
     setLoading(false);
   }
-
-  async function fetchData(pw: string) {
-    const res = await fetch(`/api/progress/batches?batchId=${encodeURIComponent(batchId)}`, {
-      headers: { "x-admin-password": pw },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setBatch(data.batch);
-      setStudents(data.students || []);
-      saveCache(data.batch, data.students || []);
-    }
-  }
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-      // Show cached data instantly
-      const cached = loadCache();
-      if (cached) {
-        setBatch(cached.batch);
-        setStudents(cached.students);
-      }
-      // Then fetch fresh in background
-      fetchData(saved).catch(() => {
-        sessionStorage.removeItem("admin_pw");
-        setAuthenticated(false);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [batchId]);
-
-  // Auto-refresh every 20 seconds when authenticated + tab is visible
-  useEffect(() => {
-    if (!authenticated || !password) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchData(password).catch(() => {});
-      }
-    }, 20000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, password, batchId]);
 
   // Force re-render every 30s so timeAgo displays update
   const [, setTick] = useState(0);
@@ -202,8 +208,8 @@ export default function BatchProgressDetailPage() {
     if (sectionFilter !== "all") list = list.filter((s) => s.section === sectionFilter);
     if (filterMode === "registered") list = list.filter((s) => s.registered);
     if (filterMode === "pending") list = list.filter((s) => !s.registered);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter(
         (s) =>
           s.enrollmentNo.toLowerCase().includes(q) ||
@@ -224,7 +230,7 @@ export default function BatchProgressDetailPage() {
       return 0;
     });
     return list;
-  }, [students, filterMode, searchQuery, sortBy, sectionFilter]);
+  }, [students, filterMode, debouncedSearch, sortBy, sectionFilter]);
 
   function downloadCSV() {
     const headers = [
@@ -346,7 +352,7 @@ export default function BatchProgressDetailPage() {
               📥 Download CSV
             </button>
             <button
-              onClick={() => fetchData(password)}
+              onClick={() => refreshData()}
               className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
             >
               ↻ Refresh

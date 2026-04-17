@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useAdminFetch } from "@/lib/useAdminFetch";
 
 interface BatchSummary {
   id: string;
@@ -22,8 +23,35 @@ export default function BatchProgressListPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [batches, setBatches] = useState<BatchSummary[]>([]);
-  const [orphanCount, setOrphanCount] = useState(0);
+
+  // Restore session on mount (one-time hydration from sessionStorage)
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPassword(saved);
+      setAuthenticated(true);
+    }
+  }, []);
+
+  const { data: batchData, error: fetchError, mutate: refreshData, isLoading: fetchLoading } =
+    useAdminFetch<{ batches: BatchSummary[]; orphanStudents: number }>(
+      "/api/progress/batches",
+      password,
+      { enabled: authenticated, refreshInterval: 30_000 }
+    );
+  const batches = batchData?.batches ?? [];
+  const orphanCount = batchData?.orphanStudents ?? 0;
+  const initialLoaded = !!batchData || (!fetchLoading && !!fetchError);
+
+  // Clear session on auth failure
+  useEffect(() => {
+    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
+      sessionStorage.removeItem("admin_pw");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthenticated(false);
+    }
+  }, [fetchError]);
 
   async function login() {
     setAuthError("");
@@ -34,37 +62,11 @@ export default function BatchProgressListPage() {
     if (res.ok) {
       setAuthenticated(true);
       sessionStorage.setItem("admin_pw", password);
-      const data = await res.json();
-      setBatches(data.batches || []);
-      setOrphanCount(data.orphanStudents || 0);
     } else {
       setAuthError("Wrong password.");
     }
     setLoading(false);
   }
-
-  async function fetchData(pw: string) {
-    const res = await fetch("/api/progress/batches", {
-      headers: { "x-admin-password": pw },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setBatches(data.batches || []);
-      setOrphanCount(data.orphanStudents || 0);
-    }
-  }
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-      fetchData(saved).catch(() => {
-        sessionStorage.removeItem("admin_pw");
-        setAuthenticated(false);
-      });
-    }
-  }, []);
 
   if (!authenticated) {
     return (
@@ -117,14 +119,36 @@ export default function BatchProgressListPage() {
             </p>
           </div>
           <button
-            onClick={() => fetchData(password)}
+            onClick={() => refreshData()}
             className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
           >
             ↻ Refresh
           </button>
         </div>
 
-        {batches.length === 0 ? (
+        {!initialLoaded ? (
+          // Skeleton while first fetch is in flight
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl p-6 animate-pulse"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
+                <div className="h-5 w-40 rounded bg-white/[0.06] mb-3" />
+                <div className="h-3 w-24 rounded bg-white/[0.04] mb-5" />
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="h-8 rounded bg-white/[0.04]" />
+                  <div className="h-8 rounded bg-white/[0.04]" />
+                  <div className="h-8 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : batches.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-4xl mb-4">🎓</div>
             <p className="text-zinc-500">
