@@ -144,10 +144,25 @@ export default function IFSConnectPage() {
           s.enrollmentNo.toLowerCase().includes(q)
       );
     }
-    // Sort: user first, then alphabetical by pretty name
+    // Profile-completeness tier — lower number = higher in list
+    //   0: user's own card (always pinned first)
+    //   1: bio AND skills (most complete)
+    //   2: LinkedIn set (but missing bio or skills)
+    //   3: registered only (no LinkedIn, no bio, no skills)
+    const tier = (s: Student): number => {
+      if (user && s.enrollmentNo === user.enrollmentNo) return 0;
+      const hasBio = !!(s.bio && s.bio.trim());
+      const hasSkills = (s.skills?.length ?? 0) > 0;
+      const hasLinkedIn = !!s.linkedinUrl;
+      if (hasBio && hasSkills) return 1;
+      if (hasLinkedIn) return 2;
+      return 3;
+    };
+
     list = [...list].sort((a, b) => {
-      if (user && a.enrollmentNo === user.enrollmentNo) return -1;
-      if (user && b.enrollmentNo === user.enrollmentNo) return 1;
+      const tierDiff = tier(a) - tier(b);
+      if (tierDiff !== 0) return tierDiff;
+      // Within the same tier, alphabetical by pretty name
       return prettyName(a.name).localeCompare(prettyName(b.name));
     });
     return list;
