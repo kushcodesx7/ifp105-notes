@@ -190,12 +190,12 @@ export default function AdminBatchesPage() {
     fetchData();
   }
 
-  async function deleteBatch(batchId: string) {
-    if (!confirm(`Delete batch "${batchId}" and all its data?`)) return;
+  async function deleteRoll(batchId: string, enrollmentNo: string) {
+    if (!confirm(`Remove roll ${enrollmentNo} from this batch?`)) return;
     await fetch("/api/batches/admin", {
       method: "POST",
       headers,
-      body: JSON.stringify({ action: "delete-batch", batchId }),
+      body: JSON.stringify({ action: "delete-roll", batchId, enrollmentNo }),
     });
     fetchData();
   }
@@ -369,12 +369,6 @@ export default function AdminBatchesPage() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => deleteBatch(batch.id)}
-                className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
-              >
-                Delete Batch
-              </button>
             </div>
 
             {/* Roll list preview */}
@@ -387,9 +381,17 @@ export default function AdminBatchesPage() {
                   {batch.rollList.map((r) => (
                     <span
                       key={r}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/5"
+                      className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/5 group/roll"
                     >
                       {r}
+                      <button
+                        onClick={() => deleteRoll(batch.id, r)}
+                        className="ml-0.5 text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover/roll:opacity-100"
+                        title={`Remove ${r}`}
+                        aria-label={`Remove ${r}`}
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>

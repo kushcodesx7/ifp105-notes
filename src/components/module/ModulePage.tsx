@@ -65,6 +65,7 @@ export default function ModulePage({
 }: ModulePageProps) {
   const TOTAL_TOPICS = topics.length;
   const LS_KEY = `ifp105_m${moduleNumber}_progress`;
+  const LS_ACTIVE_TAB_KEY = `ifp105_m${moduleNumber}_active_tab`;
 
   const { user, isLoggedIn } = useAuth();
 
@@ -91,6 +92,26 @@ export default function ModulePage({
       if (saved) setDone(new Set(JSON.parse(saved)));
     } catch {}
   }, [LS_KEY]);
+
+  // Restore last viewed topic on mount so refresh stays on same topic
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_ACTIVE_TAB_KEY);
+      if (saved) {
+        const n = parseInt(saved, 10);
+        if (n >= 1 && n <= TOTAL_TOPICS) setActiveTab(n);
+      }
+    } catch {}
+    // Only on mount per module
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [LS_ACTIVE_TAB_KEY, TOTAL_TOPICS]);
+
+  // Persist active topic when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_ACTIVE_TAB_KEY, String(activeTab));
+    } catch {}
+  }, [activeTab, LS_ACTIVE_TAB_KEY]);
 
   // Load bookmarks on mount
   useEffect(() => {
@@ -523,11 +544,25 @@ export default function ModulePage({
                 const mcqRemaining = hasMcq && topicMcq ? topicMcq.total - topicMcq.answered : 0;
 
                 if (done.has(activeTab)) {
+                  const isLast = activeTab >= TOTAL_TOPICS;
                   return (
-                    <div className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-center"
-                      style={{ background: 'linear-gradient(135deg, #16a34a, #059669)', color: 'white', opacity: 0.8 }}>
+                    <motion.button
+                      whileHover={{ scale: isLast ? 1 : 1.01, y: isLast ? 0 : -1 }}
+                      whileTap={{ scale: isLast ? 1 : 0.98 }}
+                      onClick={() => {
+                        if (isLast) {
+                          setShowCertificate(true);
+                        } else {
+                          switchTab(activeTab + 1);
+                        }
+                      }}
+                      className="w-full mt-6 py-4 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2"
+                      style={{ background: 'linear-gradient(135deg, #16a34a, #059669)', boxShadow: '0 4px 16px rgba(22,163,74,0.3)' }}
+                    >
                       ✅ Completed
-                    </div>
+                      <span className="opacity-70">·</span>
+                      {isLast ? "View certificate →" : "Next topic →"}
+                    </motion.button>
                   );
                 }
 

@@ -121,13 +121,18 @@ export async function POST(req: NextRequest) {
       return Response.json({ success: true });
     }
 
-    case "delete-batch": {
-      const { batchId: delId } = body;
-      const { error } = await supabase
-        .from("batches")
+    case "delete-roll": {
+      const { batchId: bid, section, enrollmentNo } = body;
+      if (!bid || !enrollmentNo) {
+        return Response.json({ error: "batchId and enrollmentNo required" }, { status: 400 });
+      }
+      let query = supabase
+        .from("roll_list")
         .delete()
-        .eq("id", delId);
-
+        .eq("batch_id", bid)
+        .eq("enrollment_no", enrollmentNo.toUpperCase());
+      if (section) query = query.eq("section", section);
+      const { error } = await query;
       if (error) {
         return Response.json({ error: error.message }, { status: 500 });
       }
