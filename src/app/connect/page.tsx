@@ -92,15 +92,35 @@ export default function IFSConnectPage() {
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
 
   useEffect(() => {
-    fetch("/api/connect")
-      .then((r) => r.json())
-      .then((data) => {
+    let alive = true;
+    async function loadConnect() {
+      try {
+        const r = await fetch("/api/connect");
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!alive) return;
         setStudents(data.students || []);
         setTotalRolls(data.totalRolls || 0);
         setPerSectionTotals(data.perSectionTotals || {});
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } catch {
+        if (alive) setLoading(false);
+      }
+    }
+    // Initial fetch
+    loadConnect();
+    // Poll every 60s while the tab is open so newly-joined students appear live
+    const tick = setInterval(() => {
+      if (document.visibilityState === "visible") loadConnect();
+    }, 60_000);
+    // Also refetch immediately when the tab regains focus
+    const onFocus = () => loadConnect();
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      alive = false;
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, []);
 
   // Unique sections for filter pills (natural sort)
@@ -300,7 +320,8 @@ export default function IFSConnectPage() {
             >
               {recentlyJoined.map((s, i) => {
                 const col = sectionColor(s.section);
-                const isFreshest = i === 0 && daysSince(s.addedAt) <= 1;
+                // Mark up to the first 3 as NEW if they joined in the last 24h.
+                const isFreshest = i < 3 && daysSince(s.addedAt) <= 1;
                 return (
                   <button
                     key={s.enrollmentNo}
