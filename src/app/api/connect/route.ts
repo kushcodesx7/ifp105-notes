@@ -95,8 +95,8 @@ export async function GET(req: NextRequest) {
     },
     {
       headers: {
-        // Brief public cache — stats don't need to be second-accurate
-        "Cache-Control": "public, max-age=30, stale-while-revalidate=120",
+        // Public cache — profile + progress data. 2min fresh, 10min stale.
+        "Cache-Control": "public, max-age=120, stale-while-revalidate=600",
       },
     }
   );

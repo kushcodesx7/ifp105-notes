@@ -5,7 +5,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
-import HomeConnectGlimpse from "@/components/HomeConnectGlimpse";
+import dynamic from "next/dynamic";
+
+// Lazy-load IFS Connect glimpse — not critical for first paint, no SSR needed
+const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse"), {
+  ssr: false,
+  loading: () => (
+    <section className="px-6 mb-10">
+      <div
+        className="max-w-5xl mx-auto rounded-2xl p-5 h-[180px] animate-pulse"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.04)",
+        }}
+      />
+    </section>
+  ),
+});
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
 

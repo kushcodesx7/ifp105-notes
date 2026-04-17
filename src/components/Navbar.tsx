@@ -56,15 +56,25 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
         })
         .then((data) => {
           if (data.registered) {
-            // Update auth context with registration info
+            // Prefer the FRESH Google photo over the stored one — Gmail
+            // avatar may have changed since last visit.
+            const freshPhoto = user.photo || data.photoUrl;
             login({
               ...user,
               name: data.name || user.name,
-              photo: data.photoUrl || user.photo,
+              photo: freshPhoto,
               enrollmentNo: data.enrollmentNo,
               batchId: data.batchId,
               section: data.section,
             });
+            // Silently update the DB if the Google photo changed
+            if (user.photo && user.photo !== data.photoUrl) {
+              fetch("/api/students/sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: user.email, photoUrl: user.photo }),
+              }).catch(() => {});
+            }
           } else if (!data._unknown) {
             // Confirmed not registered — show modal
             setShowRegistration(true);
