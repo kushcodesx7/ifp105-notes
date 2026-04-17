@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
 import RegistrationModal from "@/components/RegistrationModal";
 
 interface NavbarProps {
@@ -39,9 +40,11 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
 
   // Check if user is registered (has enrollmentNo + batchId + section)
   const isRegistered = !!(user?.enrollmentNo && user?.batchId && user?.section);
+  const isAdmin = isAdminEmail(user?.email);
 
-  // After login, check if user needs to register
+  // After login, check if user needs to register (skip for admins)
   useEffect(() => {
+    if (isAdmin) return;
     if (isLoggedIn && user && !isRegistered) {
       // Check DB to see if they're actually registered (maybe auth context is stale)
       fetch(`/api/students/check?email=${encodeURIComponent(user.email)}`)
@@ -191,7 +194,15 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           */}
           {isLoggedIn && user ? (
             <>
-              {!isRegistered && (
+              {isAdmin ? (
+                <Link
+                  href="/admin"
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors border border-indigo-400/30"
+                  title="Admin panel"
+                >
+                  🛡 Admin
+                </Link>
+              ) : !isRegistered ? (
                 <button
                   onClick={() => setShowRegistration(true)}
                   className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors animate-pulse"
@@ -199,7 +210,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                 >
                   ⚠ Register
                 </button>
-              )}
+              ) : null}
               <span className="text-[11px] text-zinc-500 hidden sm:block">
                 {user.name}
               </span>
