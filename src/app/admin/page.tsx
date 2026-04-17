@@ -144,7 +144,7 @@ export default function AdminHomePage() {
   return (
     <main className="min-h-screen">
       <Navbar showBack title="Admin" />
-      <div className="pt-20 pb-16 px-6 max-w-4xl mx-auto">
+      <div className="pt-8 pb-16 px-6 max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}

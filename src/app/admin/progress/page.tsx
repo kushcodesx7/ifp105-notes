@@ -335,9 +335,9 @@ export default function AdminProgressPage() {
 
   return (
     <main className="min-h-screen">
-      <Navbar showBack title="Admin — Student Progress" />
+      <Navbar showBack title="All Students" />
 
-      <div className="pt-20 pb-16 px-6 max-w-7xl mx-auto">
+      <div className="pt-8 pb-16 px-6 max-w-7xl mx-auto">
         {/* Header + actions */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>

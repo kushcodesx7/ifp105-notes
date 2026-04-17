@@ -331,7 +331,7 @@ export default function BatchProgressDetailPage() {
   return (
     <main className="min-h-screen">
       <Navbar showBack title={`Batch ${batchId}`} />
-      <div className="pt-20 pb-16 px-6 max-w-6xl mx-auto">
+      <div className="pt-8 pb-16 px-6 max-w-6xl mx-auto">
         {/* Breadcrumb */}
         <Link
           href="/admin/batch-progress"

@@ -120,8 +120,8 @@ export default function BatchProgressListPage() {
 
   return (
     <main className="min-h-screen">
-      <Navbar showBack title="Admin — Batch Progress" />
-      <div className="pt-20 pb-16 px-6 max-w-5xl mx-auto">
+      <Navbar showBack title="Batch Progress" />
+      <div className="pt-8 pb-16 px-6 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <Link

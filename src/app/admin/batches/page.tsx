@@ -123,7 +123,6 @@ export default function AdminBatchesPage() {
       setPassword(saved);
       setAuthenticated(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -227,9 +226,9 @@ export default function AdminBatchesPage() {
   // Admin dashboard
   return (
     <main className="min-h-screen">
-      <Navbar showBack title="Admin — Batches" />
+      <Navbar showBack title="Enrollments" />
 
-      <div className="pt-20 pb-16 px-6 max-w-4xl mx-auto">
+      <div className="pt-8 pb-16 px-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold">Manage Batches</h1>
           <button
