@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireSelf } from "@/lib/verify-google-token";
 
 // GET — return all batches with students (public)
 export async function GET() {
@@ -52,8 +53,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // LinkedIn URL is optional but if provided, validate it
-  if (linkedinUrl && !/^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/.test(linkedinUrl)) {
+  // Auth: registering student must own the email they claim
+  const auth = await requireSelf(req, email);
+  if (!auth.ok) return auth.response;
+
+  // LinkedIn URL is optional but if provided, validate it.
+  // Permissive: accepts query strings, trailing slashes, non-Latin handles.
+  if (linkedinUrl && !/^https?:\/\/(www\.)?linkedin\.com\/in\/[^/\s?#]+/i.test(linkedinUrl)) {
     return Response.json(
       { error: "Invalid LinkedIn URL. Use format: https://linkedin.com/in/yourname" },
       { status: 400 }

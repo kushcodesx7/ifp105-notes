@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireSelf } from "@/lib/verify-google-token";
 
 // POST /api/students/sync
 // Keeps the student's profile photo fresh after Google auth. If the photo URL
@@ -7,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 // silently by the Navbar on login so a student's avatar stays current.
 //
 // Body: { email, photoUrl }
+// Auth: caller must own the email (Google ID token check).
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || typeof body.photoUrl !== "string") {
@@ -15,6 +17,10 @@ export async function POST(req: NextRequest) {
 
   const email = body.email.toLowerCase().trim();
   const photoUrl = body.photoUrl.trim();
+
+  // Verify caller owns this email
+  const auth = await requireSelf(req, email);
+  if (!auth.ok) return auth.response;
 
   // Only accept Google / trusted hosts to avoid someone POSTing arbitrary URLs
   if (!/^https?:\/\/(lh\d\.googleusercontent\.com|lh[\w-]+\.googleusercontent\.com)\//i.test(photoUrl)) {
