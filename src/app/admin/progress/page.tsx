@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useAdminFetch } from "@/lib/useAdminFetch";
 
 interface TopicProgress {
   moduleNumber: number;
@@ -82,8 +83,6 @@ export default function AdminProgressPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [students, setStudents] = useState<StudentData[]>([]);
-  const [initialLoaded, setInitialLoaded] = useState(false);
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
   const [expandedModule, setExpandedModule] = useState<number>(1);
   const [sortBy, setSortBy] = useState<SortKey>("progress");
@@ -99,6 +98,34 @@ export default function AdminProgressPage() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
+  // Restore session on mount
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) {
+      setPassword(saved);
+      setAuthenticated(true);
+    }
+  }, []);
+
+  // SWR-powered fetch: dedup, cached, auto-refresh, revalidate on focus
+  const { data: progressData, error: fetchError, isLoading: fetchLoading, mutate: refreshProgress } =
+    useAdminFetch<{ students: StudentData[] }>(
+      "/api/progress/admin",
+      password,
+      { enabled: authenticated, refreshInterval: 20_000 }
+    );
+  // Memoize so dependent useMemos get a stable reference
+  const students = useMemo(() => progressData?.students ?? [], [progressData]);
+  const initialLoaded = !!progressData || (!fetchLoading && !!fetchError);
+
+  // If auth failed, clear session
+  useEffect(() => {
+    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
+      sessionStorage.removeItem("admin_pw");
+      setAuthenticated(false);
+    }
+  }, [fetchError]);
+
   async function login() {
     setAuthError("");
     setLoading(true);
@@ -108,49 +135,11 @@ export default function AdminProgressPage() {
     if (res.ok) {
       setAuthenticated(true);
       sessionStorage.setItem("admin_pw", password);
-      const data = await res.json();
-      setStudents(data.students || []);
-      setInitialLoaded(true);
     } else {
       setAuthError("Wrong password.");
     }
     setLoading(false);
   }
-
-  async function fetchData(pw: string) {
-    const res = await fetch("/api/progress/admin", {
-      headers: { "x-admin-password": pw },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setStudents(data.students || []);
-      setInitialLoaded(true);
-    }
-  }
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-      fetchData(saved).catch(() => {
-        sessionStorage.removeItem("admin_pw");
-        setAuthenticated(false);
-      });
-    }
-  }, []);
-
-  // Auto-refresh every 20s when tab is visible
-  useEffect(() => {
-    if (!authenticated || !password) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchData(password).catch(() => {});
-      }
-    }, 20000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, password]);
 
   // Force re-render every 30s so timeAgo updates
   const [, setTick] = useState(0);
@@ -276,6 +265,7 @@ export default function AdminProgressPage() {
     if (students.length === 0) return null;
     const active = students.filter((s) => {
       if (!s.lastActive) return false;
+      // eslint-disable-next-line react-hooks/purity
       const daysSince = (Date.now() - parseUTC(s.lastActive)) / (1000 * 60 * 60 * 24);
       return daysSince < 7;
     }).length;
@@ -357,7 +347,7 @@ export default function AdminProgressPage() {
               📥 Download CSV
             </button>
             <button
-              onClick={() => fetchData(password)}
+              onClick={() => refreshProgress()}
               className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
             >
               ↻ Refresh

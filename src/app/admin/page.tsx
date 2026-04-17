@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useAdminFetch } from "@/lib/useAdminFetch";
 
 interface QuickStats {
   totalStudents: number;
@@ -17,46 +18,47 @@ export default function AdminHomePage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<QuickStats | null>(null);
 
-  async function fetchSummary(pw: string): Promise<QuickStats | null> {
-    const res = await fetch("/api/admin/summary", {
-      headers: { "x-admin-password": pw },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  }
+  // Restore session on mount
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPassword(saved);
+      setAuthenticated(true);
+    }
+  }, []);
+
+  // SWR shares this cache with any other admin page calling /api/admin/summary
+  const { data: stats, error } = useAdminFetch<QuickStats>(
+    "/api/admin/summary",
+    password,
+    { enabled: authenticated, refreshInterval: 60_000 }
+  );
+
+  // If we get a 401 on session-restore, clear the session
+  useEffect(() => {
+    if (error && "status" in error && (error as { status?: number }).status === 401) {
+      sessionStorage.removeItem("admin_pw");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthenticated(false);
+    }
+  }, [error]);
 
   async function login() {
     setAuthError("");
     setLoading(true);
-    const summary = await fetchSummary(password);
-    if (summary) {
+    const res = await fetch("/api/admin/summary", {
+      headers: { "x-admin-password": password },
+    });
+    if (res.ok) {
       setAuthenticated(true);
       sessionStorage.setItem("admin_pw", password);
-      setStats(summary);
     } else {
       setAuthError("Wrong password.");
     }
     setLoading(false);
   }
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-      fetchSummary(saved)
-        .then((summary) => {
-          if (!summary) throw new Error("auth failed");
-          setStats(summary);
-        })
-        .catch(() => {
-          sessionStorage.removeItem("admin_pw");
-          setAuthenticated(false);
-        });
-    }
-  }, []);
 
   if (!authenticated) {
     return (
