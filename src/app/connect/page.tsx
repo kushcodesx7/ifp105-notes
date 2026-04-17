@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ProfileEditModal from "@/components/ProfileEditModal";
+import StudentDetailModal from "@/components/StudentDetailModal";
 import { useAuth } from "@/lib/auth-context";
 import { SKILLS, getSkill } from "@/lib/skills";
 
@@ -87,6 +88,7 @@ export default function IFSConnectPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [spotlightEnrollment, setSpotlightEnrollment] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     fetch("/api/connect")
@@ -478,7 +480,16 @@ export default function IFSConnectPage() {
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ delay: Math.min(i * 0.02, 0.5) }}
                     whileHover={{ y: -4 }}
-                    className="relative p-5 rounded-2xl card-glass group transition-shadow"
+                    onClick={() => setDetailStudent(student)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setDetailStudent(student);
+                      }
+                    }}
+                    className="relative p-5 rounded-2xl card-glass group transition-shadow cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                     style={{
                       border: isMe
                         ? "1.5px solid rgba(250,204,21,0.45)"
@@ -587,6 +598,7 @@ export default function IFSConnectPage() {
                           href={student.linkedinUrl!}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.99]"
                           style={{
                             background: "#0A66C2",
@@ -600,7 +612,10 @@ export default function IFSConnectPage() {
                         </a>
                       ) : isMe ? (
                         <button
-                          onClick={() => setEditOpen(true)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditOpen(true);
+                          }}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold transition-all hover:scale-[1.02]"
                           style={{
                             background: "linear-gradient(135deg, #FACC15, #F59E0B)",
@@ -621,7 +636,10 @@ export default function IFSConnectPage() {
                       {/* Edit pencil — only on own card */}
                       {isMe && (
                         <button
-                          onClick={() => setEditOpen(true)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditOpen(true);
+                          }}
                           className="px-3 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all shrink-0"
                           title="Edit your profile"
                           aria-label="Edit profile"
@@ -637,6 +655,16 @@ export default function IFSConnectPage() {
           </div>
         )}
       </div>
+
+      {/* Student detail modal — opens on any card click */}
+      <StudentDetailModal
+        student={detailStudent}
+        onClose={() => setDetailStudent(null)}
+        sectionColor={sectionColor}
+        prettyName={prettyName}
+        initials={initials}
+        joinedLabel={joinedLabel}
+      />
 
       {/* Profile edit modal — own profile */}
       {user && (
