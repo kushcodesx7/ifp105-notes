@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { GoogleLogin, useGoogleOneTapLogin } from "@react-oauth/google";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import RegistrationModal from "@/components/RegistrationModal";
@@ -118,19 +118,12 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
     setShowSignIn(false);
   }
 
-  // Silent re-auth on every page load for returning users.
-  // auto_select=true: if the user has signed in before and granted consent,
-  // Google silently issues a fresh JWT — which carries the current Gmail
-  // avatar. Our sync effect then pushes the new photo to the DB.
-  // No UI prompt, no new scope request.
-  useGoogleOneTapLogin({
-    onSuccess: handleGoogleSuccess,
-    auto_select: true,
-    cancel_on_tap_outside: false,
-    // Suppress the One Tap UI for users already in auth context — silent
-    // refresh still works because auto_select doesn't require the UI.
-    disabled: false,
-  });
+  // NOTE: we tried useGoogleOneTapLogin + auto_select to silently refresh
+  // photos for returning users. Chrome's FedCM protocol throws
+  // "[GSI_LOGGER]: FedCM get() rejects with NetworkError" when the user
+  // hasn't granted prior consent in a FedCM-compatible way — fills the
+  // console with errors on every page load. Removed for now. Photo still
+  // syncs on fresh sign-in via the effect below + /api/students/sync.
 
   return (
     <>
