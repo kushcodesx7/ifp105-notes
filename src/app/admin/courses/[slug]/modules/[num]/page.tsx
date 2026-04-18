@@ -12,6 +12,9 @@ import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import BlockEditor from "@/components/admin/BlockEditor";
 import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
+import LabelledInput from "@/components/admin/shared/LabelledInput";
+import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
+import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import type { ContentBlock } from "@/types/content";
 
@@ -653,11 +656,11 @@ function TopicEditorPanel({
         )}
         <div className="space-y-2">
           {questions.map((q) => (
-            <QuestionEditor
+            <SharedQuestionEditor
               key={q.id}
               slug={slug}
-              num={num}
-              topicNum={topic.number}
+              moduleNumber={num}
+              topicNumber={topic.number}
               question={q}
               idToken={idToken}
               password={password}
@@ -668,13 +671,14 @@ function TopicEditorPanel({
             />
           ))}
         </div>
-        <NewQuestionForm
+        <SharedNewQuestionForm
           slug={slug}
-          num={num}
-          topicNum={topic.number}
+          moduleNumber={num}
+          topicNumber={topic.number}
           nextNumber={(questions[questions.length - 1]?.number ?? 0) + 1}
           idToken={idToken}
           password={password}
+          initialOptions={2}
           onCreated={() => {
             mutateQs();
             onChange();
@@ -685,348 +689,7 @@ function TopicEditorPanel({
   );
 }
 
-// ─── MCQ editor (per question) ──────────────────────────────
 
-function QuestionEditor({
-  slug,
-  num,
-  topicNum,
-  question: q,
-  idToken,
-  password,
-  onChange,
-}: {
-  slug: string;
-  num: string;
-  topicNum: number;
-  question: Question;
-  idToken: string | null;
-  password: string;
-  onChange: () => void;
-}) {
-  const [text, setText] = useState(q.question);
-  const [options, setOptions] = useState<string[]>(q.options);
-  const [correctIndex, setCorrectIndex] = useState(q.correctIndex);
-  const [explanation, setExplanation] = useState(q.explanation || "");
-  const [bloom, setBloom] = useState(q.bloom || "");
-  const [difficulty, setDifficulty] = useState(q.difficulty || "");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  function setOption(i: number, v: string) {
-    setOptions((prev) => {
-      const next = [...prev];
-      next[i] = v;
-      return next;
-    });
-  }
-
-  function addOption() {
-    if (options.length >= 6) return;
-    setOptions((prev) => [...prev, ""]);
-  }
-
-  function removeOption(i: number) {
-    if (options.length <= 2) return;
-    setOptions((prev) => prev.filter((_, idx) => idx !== i));
-    if (correctIndex === i) setCorrectIndex(0);
-    else if (correctIndex > i) setCorrectIndex((v) => v - 1);
-  }
-
-  async function save() {
-    setErr(null);
-    setSaving(true);
-    try {
-      await adminWrite(
-        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topicNum}/questions/${q.number}`,
-        "PATCH",
-        { idToken, password },
-        {
-          question: text,
-          options,
-          correctIndex,
-          explanation,
-          bloom: bloom || null,
-          difficulty: difficulty || null,
-        }
-      );
-      onChange();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function del() {
-    if (!confirm(`Delete question ${q.number}?`)) return;
-    try {
-      await adminWrite(
-        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topicNum}/questions/${q.number}`,
-        "DELETE",
-        { idToken, password }
-      );
-      onChange();
-    } catch (e) {
-      alert((e as Error).message);
-    }
-  }
-
-  return (
-    <div
-      className="rounded-lg p-3"
-      style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}
-    >
-      <div className="flex items-start gap-2 mb-2">
-        <span className="text-[11px] text-zinc-500 font-mono shrink-0 mt-1.5">
-          Q{q.number}
-        </span>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={2}
-          className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
-          placeholder="Question text…"
-        />
-      </div>
-
-      <div className="space-y-1.5 mb-2 pl-7">
-        {options.map((opt, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="radio"
-              name={`correct-${q.id}`}
-              checked={correctIndex === i}
-              onChange={() => setCorrectIndex(i)}
-              className="w-4 h-4 accent-emerald-500 shrink-0"
-              aria-label={`Mark option ${i + 1} as correct`}
-            />
-            <input
-              type="text"
-              value={opt}
-              onChange={(e) => setOption(i, e.target.value)}
-              placeholder={`Option ${i + 1}`}
-              className={`w-full px-2.5 py-1.5 rounded-lg bg-white/[0.03] border text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 ${
-                correctIndex === i
-                  ? "border-emerald-500/40"
-                  : "border-white/[0.06]"
-              }`}
-            />
-            {options.length > 2 && (
-              <button
-                onClick={() => removeOption(i)}
-                className="text-zinc-600 hover:text-red-400 text-sm shrink-0 w-6 h-6 rounded"
-                aria-label="Remove option"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {options.length < 6 && (
-          <button
-            onClick={addOption}
-            className="text-[11px] text-indigo-400 hover:text-indigo-300"
-          >
-            + Add option
-          </button>
-        )}
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-2 pl-7 mb-2">
-        <LabelledInput
-          label="Explanation"
-          value={explanation}
-          onChange={setExplanation}
-          textarea
-        />
-        <LabelledInput label="Bloom" value={bloom} onChange={setBloom} />
-        <LabelledInput
-          label="Difficulty"
-          value={difficulty}
-          onChange={setDifficulty}
-        />
-      </div>
-
-      {err && <p className="text-[11px] text-red-400 mb-2 pl-7">{err}</p>}
-
-      <div className="flex items-center gap-2 pl-7">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="text-[11px] font-semibold text-white bg-white/[0.05] hover:bg-white/[0.1] px-2.5 py-1 rounded-md transition-colors"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
-        <button
-          onClick={del}
-          className="text-[11px] font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-2.5 py-1 rounded-md transition-colors ml-auto"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function NewQuestionForm({
-  slug,
-  num,
-  topicNum,
-  nextNumber,
-  idToken,
-  password,
-  onCreated,
-}: {
-  slug: string;
-  num: string;
-  topicNum: number;
-  nextNumber: number;
-  idToken: string | null;
-  password: string;
-  onCreated: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
-  const [options, setOptions] = useState<string[]>(["", ""]);
-  const [correctIndex, setCorrectIndex] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  function reset() {
-    setText("");
-    setOptions(["", ""]);
-    setCorrectIndex(0);
-    setErr(null);
-  }
-
-  async function submit() {
-    setErr(null);
-    setSubmitting(true);
-    try {
-      await adminWrite(
-        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topicNum}/questions`,
-        "POST",
-        { idToken, password },
-        {
-          number: nextNumber,
-          question: text.trim(),
-          options: options.map((o) => o.trim()).filter(Boolean),
-          correctIndex,
-        }
-      );
-      reset();
-      setOpen(false);
-      onCreated();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-3 w-full text-[12px] text-zinc-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-dashed border-white/[0.08] rounded-lg py-2 transition-colors"
-      >
-        + Add question
-      </button>
-    );
-  }
-
-  return (
-    <div
-      className="mt-3 rounded-lg p-3"
-      style={{
-        background: "rgba(99,102,241,0.04)",
-        border: "1px solid rgba(99,102,241,0.2)",
-      }}
-    >
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={2}
-        placeholder="Question text…"
-        className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 mb-2"
-      />
-      <div className="space-y-1.5 mb-2">
-        {options.map((opt, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={correctIndex === i}
-              onChange={() => setCorrectIndex(i)}
-              className="w-4 h-4 accent-emerald-500"
-              aria-label={`Mark option ${i + 1} as correct`}
-            />
-            <input
-              type="text"
-              value={opt}
-              onChange={(e) => {
-                const v = e.target.value;
-                setOptions((prev) => {
-                  const next = [...prev];
-                  next[i] = v;
-                  return next;
-                });
-              }}
-              placeholder={`Option ${i + 1}`}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
-            />
-            {options.length > 2 && (
-              <button
-                onClick={() => {
-                  setOptions((prev) => prev.filter((_, idx) => idx !== i));
-                  if (correctIndex >= i && correctIndex > 0)
-                    setCorrectIndex((v) => v - 1);
-                }}
-                className="text-zinc-600 hover:text-red-400 text-sm w-6 h-6"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {options.length < 6 && (
-          <button
-            onClick={() => setOptions((prev) => [...prev, ""])}
-            className="text-[11px] text-indigo-400 hover:text-indigo-300"
-          >
-            + Add option
-          </button>
-        )}
-      </div>
-      {err && <p className="text-[11px] text-red-400 mb-2">{err}</p>}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={submit}
-          disabled={
-            submitting ||
-            !text.trim() ||
-            options.filter((o) => o.trim()).length < 2
-          }
-          className="text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 px-3 py-1.5 rounded-lg"
-        >
-          {submitting ? "Creating…" : "Create question"}
-        </button>
-        <button
-          onClick={() => {
-            reset();
-            setOpen(false);
-          }}
-          className="text-xs text-zinc-400 hover:text-white px-3 py-1.5"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── New topic form ─────────────────────────────────────────
 
@@ -1122,43 +785,3 @@ function NewTopicForm({
   );
 }
 
-// ─── Shared input helper ────────────────────────────────────
-
-function LabelledInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  textarea,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  textarea?: boolean;
-}) {
-  const cls =
-    "w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50";
-  return (
-    <label className="block">
-      <span className="text-[11px] text-zinc-500 block mb-1">{label}</span>
-      {textarea ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={2}
-          className={cls}
-        />
-      ) : (
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={cls}
-        />
-      )}
-    </label>
-  );
-}
