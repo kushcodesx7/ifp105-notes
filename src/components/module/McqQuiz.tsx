@@ -22,11 +22,27 @@ interface Question {
   bloom?: BloomLevel;
 }
 
+// JSON shapes sent to /api/progress on completion. Kept simple so the server
+// can store them as-is (JSONB columns) without custom parsing.
+export type BloomStatsPayload = Partial<
+  Record<BloomLevel, { correct: number; total: number }>
+>;
+export interface ConfidenceStatsPayload {
+  rated: number;
+  confidentWrong: number;
+  humbleRight: number;
+}
+
 interface McqQuizProps {
   topicId: number;
   moduleNumber?: number;
   questions: Question[];
-  onComplete?: (score: number, total: number) => void;
+  onComplete?: (
+    score: number,
+    total: number,
+    bloomStats?: BloomStatsPayload,
+    confidenceStats?: ConfidenceStatsPayload
+  ) => void;
   onAnswerCountChange?: (answered: number, total: number) => void;
 }
 
@@ -262,7 +278,20 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
       if (pct === 100) { addXP(XP_REWARDS.QUIZ_PERFECT); earnBadge("perfect_quiz"); }
       else if (pct >= 80) addXP(XP_REWARDS.QUIZ_GOOD);
       else if (pct >= 60) addXP(XP_REWARDS.QUIZ_PASS);
-      onComplete?.(score, total);
+
+      // Shape the Bloom + calibration payloads for the /api/progress save.
+      // These are the same numbers shown on the results screen, just packaged
+      // as plain objects so the server can store them as JSONB.
+      const bloomPayload: BloomStatsPayload = {};
+      for (const entry of bloomBreakdown) {
+        bloomPayload[entry.level] = { correct: entry.correct, total: entry.total };
+      }
+      const calibrationPayload: ConfidenceStatsPayload = {
+        rated: calibration.ratedCount,
+        confidentWrong: calibration.confidentWrong,
+        humbleRight: calibration.humbleRight,
+      };
+      onComplete?.(score, total, bloomPayload, calibrationPayload);
     }
   }
 

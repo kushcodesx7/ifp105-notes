@@ -225,6 +225,10 @@ export default function ModulePage({
     mcqScore?: number;
     mcqTotal?: number;
     challengeAttempted?: boolean;
+    // Phase 3: Bloom's per-level stats + calibration snapshot. Optional so
+    // non-quiz callers (e.g. Mark-as-done) don't need to pass them.
+    bloomStats?: Partial<Record<string, { correct: number; total: number }>>;
+    confidenceStats?: { rated: number; confidentWrong: number; humbleRight: number };
   }) {
     if (!isLoggedIn || !user) return;
     const token = getIdToken();
@@ -251,11 +255,23 @@ export default function ModulePage({
   }
 
   // Handle quiz completion
-  function handleQuizComplete(topicId: number, score: number, total: number) {
+  function handleQuizComplete(
+    topicId: number,
+    score: number,
+    total: number,
+    bloomStats?: Partial<Record<string, { correct: number; total: number }>>,
+    confidenceStats?: { rated: number; confidentWrong: number; humbleRight: number }
+  ) {
     setMcqScores((prev) => ({ ...prev, [topicId]: { score, total } }));
 
     if (isLoggedIn) {
-      saveToSupabase({ topicId, mcqScore: score, mcqTotal: total });
+      saveToSupabase({
+        topicId,
+        mcqScore: score,
+        mcqTotal: total,
+        bloomStats,
+        confidenceStats,
+      });
     } else {
       // Delay slightly so quiz result screen renders first
       setTimeout(() => {
@@ -548,7 +564,9 @@ export default function ModulePage({
                     topicId={activeTab}
                     moduleNumber={moduleNumber}
                     questions={mcqData[activeTab]}
-                    onComplete={(score, total) => handleQuizComplete(activeTab, score, total)}
+                    onComplete={(score, total, bloomStats, confidenceStats) =>
+                      handleQuizComplete(activeTab, score, total, bloomStats, confidenceStats)
+                    }
                     onAnswerCountChange={(answered, total) => {
                       setMcqAnswerCounts(prev => ({ ...prev, [activeTab]: { answered, total } }));
                     }}
