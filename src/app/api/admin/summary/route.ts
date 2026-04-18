@@ -15,13 +15,17 @@ export async function GET(req: NextRequest) {
 
   const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // All four queries run in parallel.
-  // - Total students: count query on students (head: true = no rows returned)
-  // - Active this week: count student_sessions updated in last 7d (unique emails)
-  // - Completion + MCQ: we still need progress rows to aggregate, but only
-  //   the columns used for the math (completed, mcq_score, mcq_total).
-  const [studentsCountRes, sessionsRes, progressRes] = await Promise.all([
-    supabase.from("students").select("*", { count: "exact", head: true }),
+  // All queries run in parallel.
+  // - Registered students: emails from `students` table (finished registration)
+  // - Active sessions: student_sessions updated in last 7d (unique emails)
+  // - Completion + MCQ: progress rows for the aggregates
+  //
+  // IMPORTANT: "Active this week" must intersect with registered students.
+  // Otherwise signed-in-but-unregistered users (students who saw the modal
+  // and bailed) inflate the count — producing the nonsense state where
+  // Active > Total, which makes the whole dashboard look broken.
+  const [studentsRes, sessionsRes, progressRes] = await Promise.all([
+    supabase.from("students").select("email"),
     supabase
       .from("student_sessions")
       .select("student_email, last_active_at")
@@ -31,12 +35,18 @@ export async function GET(req: NextRequest) {
       .select("student_email, completed, mcq_score, mcq_total"),
   ]);
 
-  const totalStudents = studentsCountRes.count ?? 0;
+  const registeredEmails = new Set<string>();
+  for (const s of studentsRes.data || []) {
+    if (s.email) registeredEmails.add(s.email);
+  }
+  const totalStudents = registeredEmails.size;
 
-  // Unique active emails in the last 7 days
+  // Unique active emails in the last 7 days, filtered to registered only.
   const activeSet = new Set<string>();
   for (const s of sessionsRes.data || []) {
-    if (s.student_email) activeSet.add(s.student_email);
+    if (s.student_email && registeredEmails.has(s.student_email)) {
+      activeSet.add(s.student_email);
+    }
   }
   const activeThisWeek = activeSet.size;
 
