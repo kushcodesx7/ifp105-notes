@@ -77,7 +77,18 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Batch not found" }, { status: 404 });
   }
 
-  // Check enrollment number is in roll list for THIS specific section
+  // Roll-list validation is a TWO-STEP check so students aren't blocked when
+  // the teacher hasn't imported their section's roll list yet.
+  //
+  // Step 1: look for the student's enrollment in roll_list for the chosen
+  //         section. If found → great, proceed.
+  // Step 2: if not found, check whether the section has ANY roll_list entries.
+  //         - Section has entries: the student's roll is genuinely missing →
+  //           block them (prevents typos and impersonation for sections that
+  //           ARE imported).
+  //         - Section is empty: teacher hasn't imported it yet → allow
+  //           registration as a graceful fallback (teacher reconciles later
+  //           via /admin/batches).
   const { data: roll } = await supabase
     .from("roll_list")
     .select("id")
@@ -87,11 +98,26 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!roll) {
-    return Response.json(
-      {
-        error: `Roll number ${enrollmentNo.toUpperCase()} is not in ${section} of ${batchId}. Please check your section and enrollment number.`,
-      },
-      { status: 403 }
+    // Step 2: does this section have any roll_list entries at all?
+    const { count: sectionRollCount } = await supabase
+      .from("roll_list")
+      .select("id", { count: "exact", head: true })
+      .eq("batch_id", batchId)
+      .eq("section", section);
+
+    if ((sectionRollCount || 0) > 0) {
+      // Section is populated but this roll isn't in it → real mismatch
+      return Response.json(
+        {
+          error: `Roll number ${enrollmentNo.toUpperCase()} is not in ${section} of ${batchId}. Please double-check your section and enrollment number with your teacher.`,
+        },
+        { status: 403 }
+      );
+    }
+    // Section has zero roll_list entries — roll list hasn't been imported yet.
+    // Allow registration; teacher can verify/reconcile later.
+    console.log(
+      `[register] Allowing registration for ${enrollmentNo.toUpperCase()} in ${section} of ${batchId} — section has no roll_list entries yet.`
     );
   }
 

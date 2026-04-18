@@ -13,6 +13,7 @@ interface Batch {
 interface Section {
   name: string;
   studentCount: number;
+  pending?: boolean; // true when teacher hasn't imported the roll list yet
 }
 
 interface RegistrationModalProps {
@@ -291,19 +292,32 @@ export default function RegistrationModal({
                   ) : sections.length === 0 ? (
                     <p className="text-xs text-amber-400">No sections available in this batch.</p>
                   ) : (
-                    <select
-                      value={selectedSection}
-                      onChange={(e) => setSelectedSection(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
-                      required
-                    >
-                      <option value="">Select your section...</option>
-                      {sections.map((s) => (
-                        <option key={s.name} value={s.name}>
-                          {s.name} ({s.studentCount} students)
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        value={selectedSection}
+                        onChange={(e) => setSelectedSection(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
+                        required
+                      >
+                        <option value="">Select your section...</option>
+                        {sections.map((s) => (
+                          <option key={s.name} value={s.name}>
+                            {s.name}
+                            {s.pending
+                              ? " (roll list pending)"
+                              : ` (${s.studentCount} students)`}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedSection &&
+                        sections.find((s) => s.name === selectedSection)?.pending && (
+                          <p className="text-[10px] text-amber-400 mt-1.5 leading-relaxed">
+                            Your teacher hasn&apos;t uploaded {selectedSection}&apos;s roll list
+                            yet. You can still register — your instructor will verify your
+                            enrollment later.
+                          </p>
+                        )}
+                    </>
                   )}
                 </motion.div>
               )}

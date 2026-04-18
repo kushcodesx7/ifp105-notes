@@ -1,8 +1,17 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { CANONICAL_SECTIONS, compareSections } from "@/lib/sections";
 
 // GET /api/batches/sections?batchId=2025-2026
-// Returns list of distinct sections in a batch with student counts
+// Returns the list of sections in a batch with student counts from roll_list.
+//
+// CRITICAL: we ALWAYS return every canonical section (Section 1–6), even if
+// the teacher hasn't imported roll_list entries for it yet. Otherwise
+// students whose section hasn't been imported can't even pick it from the
+// dropdown — which is exactly the bug that was blocking registration.
+//
+// Additional sections that exist in roll_list but are not in the canonical
+// list (e.g., a teacher-added "Section 7") are also returned.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("batchId");
@@ -11,27 +20,40 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "batchId required" }, { status: 400 });
   }
 
-  // Get all roll entries for this batch
+  // Get all roll entries for this batch to compute real counts
   const { data: rolls, error } = await supabase
     .from("roll_list")
-    .select("section, enrollment_no")
+    .select("section")
     .eq("batch_id", batchId);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  // Group by section
-  const sectionMap: Record<string, number> = {};
+  // Count per section (null/empty section treated as Section 1 — legacy behaviour)
+  const countMap: Record<string, number> = {};
   for (const r of rolls || []) {
-    const sec = r.section || "Section 1";
-    sectionMap[sec] = (sectionMap[sec] || 0) + 1;
+    const sec = (r as { section?: string | null }).section || "Section 1";
+    countMap[sec] = (countMap[sec] || 0) + 1;
   }
 
-  // Sort sections naturally (Section 1, Section 2, etc)
-  const sections = Object.entries(sectionMap)
-    .map(([name, count]) => ({ name, studentCount: count }))
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  // Start with the canonical list so every section is always offered
+  const seen = new Set<string>(CANONICAL_SECTIONS);
+  const sections = CANONICAL_SECTIONS.map((name) => ({
+    name,
+    studentCount: countMap[name] || 0,
+    pending: !countMap[name], // true when roll list hasn't been imported
+  }));
+
+  // Append any non-canonical sections that exist in the DB (custom sections
+  // a teacher added), so we don't hide real data.
+  for (const [name, count] of Object.entries(countMap)) {
+    if (seen.has(name)) continue;
+    sections.push({ name, studentCount: count, pending: false });
+    seen.add(name);
+  }
+
+  sections.sort((a, b) => compareSections(a.name, b.name));
 
   return Response.json({ sections });
 }
