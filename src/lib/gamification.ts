@@ -1,62 +1,40 @@
-// XP, Streaks, and Badges — all localStorage-based, no backend needed
+// Streak counter — the ONLY gamification mechanic.
+//
+// Phase 1 (2026-04-18): XP + badges were dropped per product decision.
+// Streak stays because "days studied in a row" is a useful learning
+// signal, not a hollow-dopamine number. XP was abstract ("100 points
+// for … what?") and badges required per-course configuration we don't
+// want to build.
+//
+// Legacy `ifp105_xp`, `ifp105_badges` keys in students' browsers are
+// left alone — no migration. They'll sit unread until cleaned by the
+// `storage-keys` namespace migration in a future phase.
+//
+// Streak is GLOBAL across courses (a student studying Python + ICT in
+// the same week gets one streak, not two).
 
-const LS_PREFIX = "ifp105_";
+import { STREAK_COUNT_KEY, STREAK_DATE_KEY } from "@/lib/storage-keys";
 
-// ── XP System ──
-export function getXP(): number {
-  return parseInt(localStorage.getItem(`${LS_PREFIX}xp`) || "0", 10);
-}
-
-export function addXP(amount: number): number {
-  const current = getXP();
-  const next = current + amount;
-  localStorage.setItem(`${LS_PREFIX}xp`, String(next));
-  return next;
-}
-
-// XP rewards
-export const XP_REWARDS = {
-  TOPIC_DONE: 50,
-  QUIZ_PERFECT: 100,
-  QUIZ_GOOD: 50, // 80%+
-  QUIZ_PASS: 25, // 60%+
-  STREAK_BONUS: 25, // per day of streak
-} as const;
-
-// Level from XP
-export function getLevel(xp: number): { level: number; title: string; nextLevelXP: number; progress: number } {
-  const levels = [
-    { xp: 0, title: "Beginner" },
-    { xp: 100, title: "Learner" },
-    { xp: 300, title: "Explorer" },
-    { xp: 600, title: "Scholar" },
-    { xp: 1000, title: "Expert" },
-    { xp: 1500, title: "Master" },
-    { xp: 2500, title: "Legend" },
-  ];
-
-  let level = 0;
-  for (let i = levels.length - 1; i >= 0; i--) {
-    if (xp >= levels[i].xp) { level = i; break; }
-  }
-
-  const currentLevelXP = levels[level].xp;
-  const nextLevelXP = level < levels.length - 1 ? levels[level + 1].xp : levels[level].xp;
-  const progress = nextLevelXP > currentLevelXP
-    ? (xp - currentLevelXP) / (nextLevelXP - currentLevelXP)
-    : 1;
-
-  return { level: level + 1, title: levels[level].title, nextLevelXP, progress };
-}
-
-// ── Streak System ──
+/** Current streak state for the user in this browser. */
 export function getStreak(): { count: number; lastDate: string | null } {
-  const count = parseInt(localStorage.getItem(`${LS_PREFIX}streak`) || "0", 10);
-  const lastDate = localStorage.getItem(`${LS_PREFIX}streak_date`);
+  if (typeof window === "undefined") return { count: 0, lastDate: null };
+  const count = parseInt(
+    localStorage.getItem(STREAK_COUNT_KEY) || "0",
+    10
+  );
+  const lastDate = localStorage.getItem(STREAK_DATE_KEY);
   return { count, lastDate };
 }
 
+/**
+ * Bump the streak if today is a new day since the last update. Returns
+ * the new streak count and whether it changed. Handles the three cases:
+ *   - same day         → no change
+ *   - consecutive day  → count + 1
+ *   - gap > 1 day      → count resets to 1
+ */
 export function updateStreak(): { count: number; isNew: boolean } {
+  if (typeof window === "undefined") return { count: 0, isNew: false };
   const today = new Date().toISOString().split("T")[0];
   const { count, lastDate } = getStreak();
 
@@ -65,56 +43,9 @@ export function updateStreak(): { count: number; isNew: boolean } {
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
   const newCount = lastDate === yesterday ? count + 1 : 1;
 
-  localStorage.setItem(`${LS_PREFIX}streak`, String(newCount));
-  localStorage.setItem(`${LS_PREFIX}streak_date`, today);
-
-  // Streak bonus XP
-  if (newCount > 1) addXP(XP_REWARDS.STREAK_BONUS);
+  localStorage.setItem(STREAK_COUNT_KEY, String(newCount));
+  localStorage.setItem(STREAK_DATE_KEY, today);
 
   return { count: newCount, isNew: true };
 }
 
-// ── Badges ──
-export interface Badge {
-  id: string;
-  icon: string;
-  title: string;
-  description: string;
-  earned: boolean;
-}
-
-export function getBadges(): Badge[] {
-  const earned = JSON.parse(localStorage.getItem(`${LS_PREFIX}badges`) || "[]") as string[];
-
-  const all: Badge[] = [
-    { id: "first_topic", icon: "🎯", title: "First Steps", description: "Complete your first topic", earned: earned.includes("first_topic") },
-    { id: "perfect_quiz", icon: "💯", title: "Perfect Score", description: "Get 10/10 on any quiz", earned: earned.includes("perfect_quiz") },
-    { id: "module_done", icon: "🏆", title: "Module Master", description: "Complete all topics in a module", earned: earned.includes("module_done") },
-    { id: "streak_3", icon: "🔥", title: "On Fire", description: "Study 3 days in a row", earned: earned.includes("streak_3") },
-    { id: "streak_7", icon: "⚡", title: "Unstoppable", description: "Study 7 days in a row", earned: earned.includes("streak_7") },
-    { id: "html_coder", icon: "💻", title: "HTML Coder", description: "Use the HTML editor in Module 4", earned: earned.includes("html_coder") },
-    { id: "halfway", icon: "🌟", title: "Halfway There", description: "Complete 25 topics across all modules", earned: earned.includes("halfway") },
-    { id: "all_done", icon: "👑", title: "ICT Champion", description: "Complete all 47 topics", earned: earned.includes("all_done") },
-  ];
-
-  return all;
-}
-
-export function earnBadge(id: string): boolean {
-  const earned = JSON.parse(localStorage.getItem(`${LS_PREFIX}badges`) || "[]") as string[];
-  if (earned.includes(id)) return false;
-  earned.push(id);
-  localStorage.setItem(`${LS_PREFIX}badges`, JSON.stringify(earned));
-  return true; // newly earned
-}
-
-// ── Stats Summary ──
-export function getStats() {
-  const xp = getXP();
-  const level = getLevel(xp);
-  const streak = getStreak();
-  const badges = getBadges();
-  const earnedBadges = badges.filter((b) => b.earned).length;
-
-  return { xp, ...level, streak: streak.count, badges: earnedBadges, totalBadges: badges.length };
-}

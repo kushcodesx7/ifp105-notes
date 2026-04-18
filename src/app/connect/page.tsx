@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { SKILLS, getSkill } from "@/lib/skills";
 import { sizedAvatar } from "@/lib/avatar";
 import { sectionColor } from "@/lib/sectionColors";
+import { prettyName, initials } from "@/lib/names";
 
 interface Student {
   enrollmentNo: string;
@@ -28,25 +29,8 @@ interface Student {
 // home widgets, and the activity strip all share one source of truth.
 // Keeping `SECTION_COLORS` alias here so any inline references compile.
 
-// Parse a display name — strip leading "NNN_" numeric prefixes so "284_Muhammadaziz"
-// becomes "Muhammadaziz" and "221_IFS4_221_Sherzodbek" becomes "Sherzodbek"
-function prettyName(raw: string): string {
-  if (!raw) return "Unknown";
-  const parts = raw.split("_").filter(Boolean);
-  // Take parts that aren't purely numeric and aren't short tokens like "IFS4"
-  const nameParts = parts.filter((p) => !/^\d+$/.test(p) && !/^IFS\d*$/i.test(p));
-  return nameParts.length > 0 ? nameParts.join(" ") : raw;
-}
-
-function initials(name: string): string {
-  const pretty = prettyName(name);
-  return pretty
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || "")
-    .join("");
-}
+// prettyName + initials moved to @/lib/names (single source of truth
+// shared with HomeConnectGlimpse + HomeActivityStrip + admin views).
 
 function daysSince(dateStr: string): number {
   const t = new Date(dateStr).getTime();

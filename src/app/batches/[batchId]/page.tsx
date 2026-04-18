@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { sizedAvatar } from "@/lib/avatar";
+import { decodeJwt } from "@/lib/jwt";
 
 /* ─── Types ─── */
 
@@ -128,15 +129,6 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function decodeJwt(token: string) {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
 
 function getStatusLine(p: Profile): string {
   if (!p.status) return "";

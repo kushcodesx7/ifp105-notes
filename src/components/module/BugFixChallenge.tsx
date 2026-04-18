@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { addXP, XP_REWARDS } from "@/lib/gamification";
 import type { BugFixChallenge as BugFixData } from "@/data/module4-bugfix";
 
 interface BugFixChallengeProps {
@@ -39,10 +38,9 @@ export default function BugFixChallenge({
 
     if (isCorrect) {
       setResult("correct");
-      if (!xpAwarded) {
-        addXP(XP_REWARDS.TOPIC_DONE);
-        setXpAwarded(true);
-      }
+      // XP awards removed in Phase 1 — still track local state so
+      // downstream UI (success screen) knows this was a first-try win.
+      if (!xpAwarded) setXpAwarded(true);
     } else {
       const next = attempts + 1;
       setAttempts(next);
@@ -115,7 +113,7 @@ export default function BugFixChallenge({
             animate={{ scale: 1 }}
             className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30"
           >
-            +{XP_REWARDS.TOPIC_DONE} XP
+            ✓ Correct
           </motion.span>
         )}
       </div>

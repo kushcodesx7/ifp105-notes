@@ -1,46 +1,7 @@
-export interface TopicCard {
-  icon: string;
-  title: string;
-  description: string;
-  tag?: string;
-  tagColor?: string;
-}
-
-export interface EraCard {
-  icon: string;
-  period: string;
-  title: string;
-  description: string;
-  limitation: string;
-}
-
-export interface TableRow {
-  cells: string[];
-}
-
-export interface Step {
-  title: string;
-  description: string;
-}
-
-export type ContentBlock =
-  | { type: "text"; html: string }
-  | { type: "cards"; columns: 2 | 3 | 4; items: TopicCard[] }
-  | { type: "era-cards"; columns: 4; items: EraCard[] }
-  | { type: "callout"; variant?: "amber" | "blue" | "red" | "purple" | "dark"; html: string }
-  | { type: "analogy"; label: string; html: string }
-  | { type: "table"; headers: string[]; rows: TableRow[] }
-  | { type: "steps"; items: Step[] }
-  | { type: "image"; src?: string; description: string };
-
-export interface Topic {
-  id: number;
-  title: string;
-  time: string;
-  badges: { text: string; type: "star" | "hot" }[];
-  hook: string;
-  content: ContentBlock[];
-}
+// Canonical content types live in src/types/content.ts. Module 5 used
+// to redeclare them locally; all modules now share one source.
+import type { Topic } from "@/types/content";
+export type { Topic };
 
 export const topics: Topic[] = [
   // ─── Topic 1 ───

@@ -11,23 +11,19 @@
 // Dynamic template strings (e.g. \`./module${n}-mcq\`) would NOT split
 // cleanly, so keep the explicit switch.
 //
-// The returned type matches the existing \`mcqData: Record<number, Question[]>\`
-// shape so callers don't care whether it came from a static or dynamic
-// import.
+// The returned type matches the canonical `Question` interface in
+// src/types/content.ts so callers don't care whether the data came
+// from a static or dynamic import. `Question` used to be redeclared
+// here; it's now re-exported for backward-compat only — prefer
+// importing from "@/types/content" directly in new code.
 
-import type { BloomLevel } from "@/lib/blooms";
+import type { Question, ModuleMcqBank } from "@/types/content";
 
-export interface Question {
-  q: string;
-  opts: string[];
-  ans: number;
-  why: string;
-  bloom?: BloomLevel;
-}
+export type { Question };
 
 export async function loadMcqData(
   moduleNumber: number
-): Promise<Record<number, Question[]>> {
+): Promise<ModuleMcqBank> {
   switch (moduleNumber) {
     case 1:
       return (await import("@/data/module1-mcq")).mcqData;

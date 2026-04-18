@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { addXP, XP_REWARDS } from "@/lib/gamification";
 
 interface TagPair {
   tag: string;
@@ -65,7 +64,7 @@ export default function TagMatchGame() {
 
       if (newMatched.size === totalPairs) {
         setCompleted(true);
-        addXP(XP_REWARDS.TOPIC_DONE);
+        // XP reward removed in Phase 1 — game still shows completion state.
       }
     } else {
       // Wrong match - flash red
@@ -205,9 +204,9 @@ export default function TagMatchGame() {
                 className="mt-5 p-5 rounded-xl text-center"
                 style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}
               >
-                <div className="text-3xl mb-2">{"\uD83C\uDF89"}</div>
+                <div className="text-3xl mb-2" aria-hidden="true">{"\uD83C\uDF89"}</div>
                 <p className="text-sm font-bold text-emerald-400 mb-1">All tags matched! Amazing!</p>
-                <p className="text-xs text-zinc-500">+{XP_REWARDS.TOPIC_DONE} XP earned</p>
+                <p className="text-xs text-zinc-500">You remembered every tag — well done.</p>
               </motion.div>
             )}
           </AnimatePresence>

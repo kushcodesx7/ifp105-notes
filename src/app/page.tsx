@@ -583,34 +583,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── PRACTICE ZONE CTA — hidden until questions are verified ─── */}
-      {/*
-      <section className="relative px-6 pb-16">
-        <div className="max-w-5xl mx-auto">
-          <Link href="/practice">
-            <motion.div
-              whileHover={{ y: -2 }}
-              className="relative overflow-hidden rounded-2xl p-8 card-glass group cursor-pointer"
-            >
-              <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, #6366F1, #8B5CF6, #06B6D4)' }} />
-              <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl bg-indigo-500/20" />
-              <div className="relative flex flex-col sm:flex-row items-center gap-6">
-                <div className="text-5xl">🎯</div>
-                <div className="text-center sm:text-left flex-1">
-                  <h3 className="text-xl font-bold mb-1">Practice Zone</h3>
-                  <p className="text-sm text-zinc-400">50 practice questions across all 5 modules. Test your knowledge, see your readiness score, and find out where to improve.</p>
-                </div>
-                <div className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-indigo-400">
-                    <path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              </div>
-            </motion.div>
-          </Link>
-        </div>
-      </section>
-      */}
+      {/* Practice Zone CTA removed in Phase 1 (route + bank deleted). Future
+           per-course practice will be re-introduced via the course editor. */}
 
       {/* ─── FEATURES ─── */}
       <section className="relative py-20 px-6 border-t border-white/[0.04]">

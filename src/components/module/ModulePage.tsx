@@ -10,7 +10,7 @@ import AccordionRenderer from "@/components/module/AccordionRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
 import XpBar from "@/components/XpBar";
 import LoginPrompt from "@/components/module/LoginPrompt";
-import { addXP, XP_REWARDS, earnBadge, updateStreak } from "@/lib/gamification";
+import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 
@@ -98,12 +98,12 @@ export default function ModulePage({
   const [scrollProgress, setScrollProgress] = useState(0);
   const [useAccordion, setUseAccordion] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [mcqScores, setMcqScores] = useState<Record<number, { score: number; total: number }>>({});
   const [showCertificate, setShowCertificate] = useState(false);
   const [bookmarkedTopics, setBookmarkedTopics] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
   const [mcqAnswerCounts, setMcqAnswerCounts] = useState<Record<number, { answered: number; total: number }>>({});
-  const hasShownLoginPrompt = useRef(false);
+  // `mcqScores` state + `hasShownLoginPrompt` ref removed in Phase 1 —
+  // written to but never read; dead state flagged by the audit.
   const supabaseLoaded = useRef(false);
 
   // MCQ data — either eagerly supplied by the caller (legacy / tests)
@@ -227,14 +227,9 @@ export default function ModulePage({
         }
         setDone(remoteDone);
 
-        // MCQ scores: replace, not merge, for the same reason as `done`.
-        const scores: Record<number, { score: number; total: number }> = {};
-        for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
-          if (tp.mcqScore !== null && tp.mcqTotal !== null) {
-            scores[Number(topicIdStr)] = { score: tp.mcqScore, total: tp.mcqTotal };
-          }
-        }
-        setMcqScores(scores);
+        // (Phase 1: `mcqScores` local state removed — it was never
+        // read for rendering. MCQ scores still save to Supabase via
+        // handleQuizComplete below.)
 
         // Detected reset: server came back empty but we previously had
         // local progress. Purge the per-quiz localStorage keys for this
@@ -358,8 +353,8 @@ export default function ModulePage({
     bloomStats?: Partial<Record<string, { correct: number; total: number }>>,
     confidenceStats?: { rated: number; confidentWrong: number; humbleRight: number }
   ) {
-    setMcqScores((prev) => ({ ...prev, [topicId]: { score, total } }));
-
+    // Score persists to Supabase — not mirrored in local state since
+    // no UI reads from it (Phase 1 cleanup).
     if (isLoggedIn) {
       saveToSupabase({
         topicId,
@@ -379,13 +374,10 @@ export default function ModulePage({
   function markDone(topicId: number) {
     setDone((prev) => {
       const next = new Set([...prev, topicId]);
-      // XP rewards
-      addXP(XP_REWARDS.TOPIC_DONE);
+      // Phase 1 gamification: streak only. XP and badges were dropped
+      // per product decision; `updateStreak()` is now the single
+      // side-effect on every topic completion.
       updateStreak();
-      // Badges
-      if (next.size === 1) earnBadge("first_topic");
-      if (next.size === TOTAL_TOPICS) earnBadge("module_done");
-      if (next.size >= 25) earnBadge("halfway");
       return next;
     });
     setConfettiTrigger((prev) => prev + 1);

@@ -40,7 +40,6 @@ export default function Flashcards({
   const cards = resolved;
 
   const card = cards[current];
-  const remaining = cards.length - known.size;
 
   function flip() { setFlipped(!flipped); }
 
