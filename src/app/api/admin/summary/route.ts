@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { TOTAL_TOPICS } from "@/lib/course-registry";
+import { TOTAL_TOPICS, MODULES } from "@/lib/course-registry";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { compareSections } from "@/lib/sections";
@@ -42,7 +42,9 @@ export async function GET(req: NextRequest) {
       supabase.from("student_sessions").select("student_email, last_active_at"),
       supabase
         .from("student_progress")
-        .select("student_email, completed, mcq_score, mcq_total"),
+        .select(
+          "student_email, module_number, completed, mcq_score, mcq_total"
+        ),
     ]);
 
   type Student = {
@@ -97,6 +99,9 @@ export async function GET(req: NextRequest) {
     mcqCount: number;
   };
   const byStudent = new Map<string, Agg>();
+  // Also aggregate per-module MCQ averages for the weak-module alert.
+  // Module number → sum of pct + count of graded attempts.
+  const byModule = new Map<number, { mcqPctSum: number; mcqCount: number }>();
   for (const row of progressRes.data || []) {
     if (!row.student_email || !registeredEmails.has(row.student_email)) continue;
     let agg = byStudent.get(row.student_email);
@@ -110,8 +115,21 @@ export async function GET(req: NextRequest) {
       row.mcq_total !== null &&
       row.mcq_total > 0
     ) {
-      agg.mcqSum += (row.mcq_score / row.mcq_total) * 100;
+      const pct = (row.mcq_score / row.mcq_total) * 100;
+      agg.mcqSum += pct;
       agg.mcqCount += 1;
+
+      // Per-module aggregation for the weak-module alert.
+      const modNum = Number(row.module_number);
+      if (Number.isFinite(modNum)) {
+        let modAgg = byModule.get(modNum);
+        if (!modAgg) {
+          modAgg = { mcqPctSum: 0, mcqCount: 0 };
+          byModule.set(modNum, modAgg);
+        }
+        modAgg.mcqPctSum += pct;
+        modAgg.mcqCount += 1;
+      }
     }
   }
 
@@ -221,6 +239,28 @@ export async function GET(req: NextRequest) {
     lastActive: lastActiveMap[email] || null,
   }));
 
+  // ─── Weak modules: average MCQ < 55% with ≥5 graded attempts ─────
+  // Threshold tuned for ~220 students: a module with fewer than 5
+  // graded attempts across the whole class has too little signal to
+  // flag. 55% is the "re-teach" line — below this, something in the
+  // content isn't landing for the class as a whole.
+  const weakModules = MODULES.map((m) => {
+    const agg = byModule.get(m.id);
+    const avgMcqPct = agg && agg.mcqCount > 0
+      ? Math.round(agg.mcqPctSum / agg.mcqCount)
+      : null;
+    const attemptCount = agg?.mcqCount || 0;
+    return {
+      moduleNumber: m.id,
+      title: m.fullTitle ?? m.title,
+      avgMcqPct,
+      attemptCount,
+      // Exposed so the UI can style — "needs attention" is the hard
+      // line below which we surface as an alert.
+      needsAttention: avgMcqPct !== null && attemptCount >= 5 && avgMcqPct < 55,
+    };
+  });
+
   return Response.json(
     {
       kpis: {
@@ -235,6 +275,7 @@ export async function GET(req: NextRequest) {
       topPerformers,
       sectionHealth,
       pendingRegistration: pendingRegistration.slice(0, 100),
+      weakModules,
     },
     {
       headers: {
