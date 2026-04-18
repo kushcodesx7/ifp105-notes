@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
 import { useAuth } from "@/lib/auth-context";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 interface ProfileEditModalProps {
   open: boolean;
@@ -55,6 +56,11 @@ export default function ProfileEditModal({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // Trap Tab inside the dialog so keyboard focus can't wander to the
+  // page behind the backdrop.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, open);
 
   function toggleSkill(id: string) {
     setSkills((prev) => {
@@ -119,6 +125,7 @@ export default function ProfileEditModal({
           aria-labelledby="profile-edit-title"
         >
           <motion.div
+            ref={dialogRef}
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.97 }}

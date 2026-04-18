@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 // 4-step wizard for creating a new batch. Opens as a modal overlay.
 //
@@ -229,6 +230,10 @@ export default function CreateBatchWizard({ open, onClose, onCreated }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, submitting]);
 
+  // Focus-trap Tab inside the wizard while it's open.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, open);
+
   return (
     <AnimatePresence>
       {open && (
@@ -243,6 +248,7 @@ export default function CreateBatchWizard({ open, onClose, onCreated }: Props) {
           }}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
