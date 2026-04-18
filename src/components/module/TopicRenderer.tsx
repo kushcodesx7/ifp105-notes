@@ -2,22 +2,11 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-
-// Content block types
-interface TopicCard { icon: string; title: string; description: string; tag?: string; tagColor?: string; }
-interface EraCard { icon: string; period: string; title: string; description: string; limitation: string; }
-interface TableRow { cells: string[]; }
-interface Step { title: string; description: string; }
-
-type ContentBlock =
-  | { type: "text"; html: string }
-  | { type: "cards"; columns: 2 | 3 | 4; items: TopicCard[] }
-  | { type: "era-cards"; columns: 4; items: EraCard[] }
-  | { type: "callout"; variant?: "amber" | "blue" | "red" | "purple" | "dark"; html: string }
-  | { type: "analogy"; label: string; html: string }
-  | { type: "table"; headers: string[]; rows: TableRow[] }
-  | { type: "steps"; items: Step[] }
-  | { type: "image"; src?: string; description: string };
+// Use the canonical ContentBlock type instead of redeclaring it here —
+// renderers, editors, and API surfaces must all agree on the shape or
+// the hybrid DB/TS content pipeline silently drifts. One source of
+// truth lives in src/types/content.ts.
+import type { ContentBlock } from "@/types/content";
 
 const calloutColors: Record<string, { bg: string; border: string; text: string }> = {
   default: { bg: 'rgba(99,102,241,0.08)', border: '#4F46E5', text: '#818CF8' },

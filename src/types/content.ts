@@ -72,14 +72,18 @@ export interface Topic {
 
 // ── An MCQ question (shape stored in moduleN-mcq.ts + the DB in Phase 3) ──
 // `ans` is the 0-based index of the correct option in `opts`. `bloom`
-// tags where this question sits on Bloom's taxonomy ladder.
+// tags where this question sits on Bloom's taxonomy ladder and is
+// REQUIRED — every question that reaches a student should have been
+// authored with an intentional cognitive level. The DB-backed loader
+// defaults a null column value to "understand" so older rows still
+// satisfy the type; see src/lib/module-loader.ts.
 
 export interface Question {
   q: string;
   opts: string[];
   ans: number;
   why: string;
-  bloom?: BloomLevel;
+  bloom: BloomLevel;
 }
 
 // Convenience: a course's MCQ bank keyed by topic id within a module.
