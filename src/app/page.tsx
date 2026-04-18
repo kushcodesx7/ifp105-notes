@@ -313,15 +313,31 @@ export default function Home() {
             </a>
           </div>
 
-          <a
-            href="#modules"
-            data-tour="cta"
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus-glow"
-            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
-          >
-            Start Learning
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </a>
+          {/* Two-CTA split: primary "Try a Sample Question" drops first-time
+               visitors into the Quick Challenge so they can feel the value
+               before signing up. "Browse Modules" is the secondary path
+               for returners who already know what they want. */}
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <a
+              href="#quick-challenge"
+              data-tour="cta"
+              className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus-glow"
+              style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
+            >
+              ⚡ Try a sample question
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </a>
+            <a
+              href="#modules"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold text-zinc-300 transition-all hover:text-white hover:bg-white/[0.06]"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              Browse modules
+            </a>
+          </div>
         </motion.div>
       </section>
 
@@ -370,7 +386,7 @@ export default function Home() {
       )}
 
       {/* ─── QUICK CHALLENGE ─── */}
-      <section className="relative px-6 mb-12 z-10">
+      <section id="quick-challenge" className="relative px-6 mb-12 z-10 scroll-mt-20">
         <div className="max-w-2xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -435,6 +451,20 @@ export default function Home() {
                         <span className="text-red-400 font-semibold">&#x274C; Not quite — the answer is {currentQuiz.options[currentQuiz.answer]}.</span>
                       )}
                     </p>
+                    {/* Sign-up nudge for first-time visitors — only shown
+                         when not logged in. Turns the "aha" into a reason
+                         to register. */}
+                    {!isLoggedIn && (
+                      <div
+                        className="mb-4 p-3 rounded-lg text-[12px] text-zinc-300 leading-relaxed"
+                        style={{
+                          background: "rgba(99,102,241,0.08)",
+                          border: "1px solid rgba(99,102,241,0.2)",
+                        }}
+                      >
+                        👋 Sign in to track <strong className="text-white">540+ questions like this</strong> across all 5 modules, see your Bloom&apos;s thinking profile, and unlock your section&apos;s leaderboard.
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 flex-wrap">
                       <Link
                         href="/module/1"

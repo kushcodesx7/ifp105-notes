@@ -500,6 +500,88 @@ export default function IFSConnectPage() {
           </div>
         )}
 
+        {/* "Complete your profile" nudge — only shown for the current user
+             if they're registered but haven't filled in bio / skills / linkedin.
+             Clicking opens the edit modal. Gives them the single highest-
+             impact action for making Connect feel alive. */}
+        {isLoggedIn && user && (() => {
+          const me = students.find(
+            (s) => s.enrollmentNo === user.enrollmentNo
+          );
+          if (!me) return null;
+          const hasBio = !!(me.bio && me.bio.trim());
+          const hasSkills = (me.skills?.length ?? 0) > 0;
+          const hasLinkedIn = !!me.linkedinUrl;
+          const complete = hasBio && hasSkills && hasLinkedIn;
+          if (complete) return null;
+          return (
+            <div
+              className="mb-4 p-4 rounded-2xl"
+              style={{
+                background: "rgba(99,102,241,0.06)",
+                border: "1px solid rgba(99,102,241,0.2)",
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-indigo-200 mb-1">
+                    ✨ Your profile needs a few more things
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-[11px]">
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                      style={{
+                        background: hasBio
+                          ? "rgba(34,197,94,0.1)"
+                          : "rgba(255,255,255,0.04)",
+                        color: hasBio ? "#6ee7b7" : "#a1a1aa",
+                      }}
+                    >
+                      {hasBio ? "✓" : "○"} Bio
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                      style={{
+                        background: hasSkills
+                          ? "rgba(34,197,94,0.1)"
+                          : "rgba(255,255,255,0.04)",
+                        color: hasSkills ? "#6ee7b7" : "#a1a1aa",
+                      }}
+                    >
+                      {hasSkills ? "✓" : "○"} Interests
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                      style={{
+                        background: hasLinkedIn
+                          ? "rgba(34,197,94,0.1)"
+                          : "rgba(255,255,255,0.04)",
+                        color: hasLinkedIn ? "#6ee7b7" : "#a1a1aa",
+                      }}
+                    >
+                      {hasLinkedIn ? "✓" : "○"} LinkedIn
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1.5 leading-relaxed">
+                    Complete profiles show up first — classmates with interests
+                    in common can find each other.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full text-white active:scale-95 transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+                    boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
+                  }}
+                >
+                  Complete profile →
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Students grid */}
         {loading ? (
           <div className="flex justify-center py-16">

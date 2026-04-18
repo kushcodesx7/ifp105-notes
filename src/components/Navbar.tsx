@@ -6,6 +6,7 @@ import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
+import { MODULE_TOTALS } from "@/lib/modules";
 import RegistrationModal from "@/components/RegistrationModal";
 
 interface NavbarProps {
@@ -15,12 +16,34 @@ interface NavbarProps {
 }
 
 const MODULES = [
-  { number: 1, title: "Hardware & Software", href: "/module/1", accent: "#6366F1" },
-  { number: 2, title: "Office Automation", href: "/module/2", accent: "#10B981" },
-  { number: 3, title: "Social Media", href: "/module/3", accent: "#3B82F6" },
-  { number: 4, title: "HTML & Web Dev", href: "/module/4", accent: "#06B6D4" },
-  { number: 5, title: "Tech Trends", href: "/module/5", accent: "#8B5CF6" },
+  { number: 1, title: "Hardware & Software", href: "/module/1", accent: "#6366F1", lsKey: "ifp105_m1_progress" },
+  { number: 2, title: "Office Automation", href: "/module/2", accent: "#10B981", lsKey: "ifp105_m2_progress" },
+  { number: 3, title: "Social Media", href: "/module/3", accent: "#3B82F6", lsKey: "ifp105_m3_progress" },
+  { number: 4, title: "HTML & Web Dev", href: "/module/4", accent: "#06B6D4", lsKey: "ifp105_m4_progress" },
+  { number: 5, title: "Tech Trends", href: "/module/5", accent: "#8B5CF6", lsKey: "ifp105_m5_progress" },
 ];
+
+// Read per-module progress from localStorage. Returns {done, total, pct}
+// for each module id so the Navbar dropdown can show a compact bar.
+// Safe to call on first render — localStorage is gated by typeof window.
+function readProgressMap(): Record<number, { done: number; total: number; pct: number }> {
+  const out: Record<number, { done: number; total: number; pct: number }> = {};
+  if (typeof window === "undefined") return out;
+  for (const m of MODULES) {
+    const total = MODULE_TOTALS[m.number] || 0;
+    let done = 0;
+    try {
+      const raw = localStorage.getItem(m.lsKey);
+      if (raw) done = new Set(JSON.parse(raw)).size;
+    } catch {}
+    out[m.number] = {
+      done,
+      total,
+      pct: total > 0 ? Math.round((done / total) * 100) : 0,
+    };
+  }
+  return out;
+}
 
 function decodeJwt(token: string): Record<string, string> | null {
   try {
@@ -37,6 +60,14 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   const [showSignIn, setShowSignIn] = useState(false);
   const [showModules, setShowModules] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
+  // Per-module progress for the dropdown. Refreshed when the dropdown
+  // opens so it reflects any quiz completions since the page loaded.
+  const [progressMap, setProgressMap] = useState<
+    Record<number, { done: number; total: number; pct: number }>
+  >({});
+  useEffect(() => {
+    if (showModules) setProgressMap(readProgressMap());
+  }, [showModules]);
 
   // Check if user is registered (has enrollmentNo + batchId + section)
   const isRegistered = !!(user?.enrollmentNo && user?.batchId && user?.section);
@@ -189,40 +220,90 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                     className="absolute top-full left-0 mt-2 w-52 sm:w-56 max-w-[calc(100vw-2rem)] rounded-xl z-50 overflow-hidden"
                     style={{ background: "rgba(15,15,25,0.95)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", boxShadow: "0 16px 48px rgba(0,0,0,0.5)" }}
                   >
-                    {MODULES.map((mod) => (
-                      mod.href ? (
+                    {MODULES.map((mod) => {
+                      const prog = progressMap[mod.number];
+                      const inProgress = prog && prog.done > 0;
+                      const complete = prog && prog.done >= prog.total && prog.total > 0;
+                      return mod.href ? (
                         <Link
                           key={mod.number}
                           href={mod.href}
                           onClick={() => setShowModules(false)}
-                          className={`flex items-center gap-3 px-4 py-3 text-xs font-medium transition-colors ${
+                          className={`block px-4 py-2.5 text-xs font-medium transition-colors ${
                             mod.number === moduleNumber
                               ? "text-white bg-white/[0.06]"
                               : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
                           }`}
                         >
-                          <span className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                            style={{ background: mod.accent }}>
-                            {mod.number}
-                          </span>
-                          <span className="truncate">{mod.title}</span>
-                          {mod.number === moduleNumber && (
-                            <span className="ml-auto text-[10px] text-zinc-500">Current</span>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+                              style={{ background: mod.accent }}
+                            >
+                              {mod.number}
+                            </span>
+                            <span className="truncate flex-1">{mod.title}</span>
+                            {mod.number === moduleNumber ? (
+                              <span className="text-[9px] text-zinc-500 shrink-0">Current</span>
+                            ) : complete ? (
+                              <span className="text-[10px] text-emerald-400 shrink-0">✓</span>
+                            ) : inProgress ? (
+                              <span
+                                className="text-[9px] font-semibold tabular-nums shrink-0"
+                                style={{ color: mod.accent }}
+                              >
+                                {prog.done}/{prog.total}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-zinc-600 shrink-0">0/{prog?.total ?? 0}</span>
+                            )}
+                          </div>
+                          {/* Thin progress bar under each module row so students
+                               see at a glance which one they should continue. */}
+                          {prog && prog.total > 0 && (
+                            <div
+                              className="mt-1.5 ml-8 h-0.5 rounded-full overflow-hidden"
+                              style={{ background: "rgba(255,255,255,0.06)" }}
+                            >
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${prog.pct}%`,
+                                  background: mod.accent,
+                                }}
+                              />
+                            </div>
                           )}
                         </Link>
                       ) : (
-                        <div key={mod.number} className="flex items-center gap-3 px-4 py-3 text-xs font-medium text-zinc-600 cursor-not-allowed">
-                          <span className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-zinc-600 shrink-0"
-                            style={{ background: "rgba(255,255,255,0.05)" }}>
+                        <div
+                          key={mod.number}
+                          className="flex items-center gap-3 px-4 py-3 text-xs font-medium text-zinc-600 cursor-not-allowed"
+                        >
+                          <span
+                            className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-zinc-600 shrink-0"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
                             {mod.number}
                           </span>
                           <span className="truncate">{mod.title}</span>
-                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="ml-auto shrink-0">
-                            <path d="M4 7V5a4 4 0 118 0v2m-9 0h10a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            className="ml-auto shrink-0"
+                          >
+                            <path
+                              d="M4 7V5a4 4 0 118 0v2m-9 0h10a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
                           </svg>
                         </div>
-                      )
-                    ))}
+                      );
+                    })}
                   </motion.div>
                 </>
               )}
