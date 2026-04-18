@@ -11,6 +11,7 @@ import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
 import { useAuth } from "@/lib/auth-context";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { setEditSaveStatus, markSaved } from "@/lib/edit-save-status";
+import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import type { ContentBlock } from "@/types/content";
 
 // Inline module editor — the "edit this page" view of a module.
@@ -185,7 +186,12 @@ export default function InlineModuleEditor({
       </div>
 
       {isLoading && !moduleData && (
-        <div className="pt-10 text-center text-sm text-zinc-500">Loading…</div>
+        <div className="max-w-3xl mx-auto px-5 pt-10 space-y-4">
+          <Skeleton height={28} width="40%" radius={8} />
+          <SkeletonText lines={2} />
+          <Skeleton height={200} radius={16} />
+          <Skeleton height={120} radius={16} />
+        </div>
       )}
 
       {module_ && (

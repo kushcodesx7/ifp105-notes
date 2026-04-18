@@ -12,6 +12,7 @@ import AdminAuthGate, {
 import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 
 // /admin/courses/[slug] — edit a single course.
 //
@@ -107,7 +108,13 @@ export default function CourseEditPage({
           ]}
         />
 
-        {isLoading && !data && <p className="text-sm text-zinc-500">Loading…</p>}
+        {isLoading && !data && (
+          <div className="space-y-4">
+            <Skeleton height={32} width="40%" radius={8} />
+            <SkeletonText lines={2} />
+            <Skeleton height={180} radius={16} />
+          </div>
+        )}
 
         {course && (
           <>
