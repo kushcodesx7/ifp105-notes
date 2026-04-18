@@ -14,6 +14,20 @@ interface ShortcutTrainerProps {
   title?: string;
 }
 
+// SSR-safe touch check. `navigator` isn't defined on the server, so we
+// gate the whole thing and default to desktop. The real value is picked
+// up on the client's first render — no setState-in-effect needed.
+function detectMobile(): boolean {
+  if (typeof window === "undefined") return false;
+  return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+}
+
+// Fisher-Yates-ish shuffle used as the lazy initializer below. Pure
+// function of its input (plus Math.random); safe to call from useState.
+function shuffleShortcuts(list: Shortcut[]): Shortcut[] {
+  return [...list].sort(() => Math.random() - 0.5);
+}
+
 export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut Trainer" }: ShortcutTrainerProps) {
   const [current, setCurrent] = useState(0);
   const [userInput, setUserInput] = useState<string[]>([]);
@@ -21,17 +35,16 @@ export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut 
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
-  const [shuffled, setShuffled] = useState<Shortcut[]>([]);
-
-  // Shuffle on mount
-  useEffect(() => {
-    setShuffled([...shortcuts].sort(() => Math.random() - 0.5));
-  }, [shortcuts]);
+  // Lazy init instead of useEffect+setState — the previous pattern fired
+  // a cascade render on every mount. React 19's purity lint flags it.
+  const [isMobile] = useState(detectMobile);
+  // Shuffled copy of the prop list. Initialized lazily (no effect needed)
+  // and mutated via `setShuffled` only from user-triggered event handlers
+  // like `next()` when the deck runs out — both of which are safe and
+  // don't cascade renders on mount.
+  const [shuffled, setShuffled] = useState<Shortcut[]>(() =>
+    shuffleShortcuts(shortcuts)
+  );
 
   const shortcut = shuffled[current];
 
@@ -106,7 +119,7 @@ export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut 
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-zinc-600 mt-3">Memorize these — they'll appear on your exam!</p>
+        <p className="text-[10px] text-zinc-600 mt-3">Memorize these — they&apos;ll appear on your exam!</p>
       </div>
     );
   }

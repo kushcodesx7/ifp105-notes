@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   useRef,
   type ReactNode,
@@ -47,21 +46,29 @@ export function useAuth() {
 
 const SESSION_KEY = "ifp105_user";
 
+// Read the saved user from localStorage, SSR-safe. Returns null on the
+// server and on any parse/read failure. Used as the lazy initializer for
+// `useState` so we avoid the classic setState-in-effect pattern that
+// React 19's purity lint flags.
+function readSavedUser(): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = window.localStorage.getItem(SESSION_KEY);
+    return saved ? (JSON.parse(saved) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  // Lazy init avoids setState-in-effect. SSR still sees null on the
+  // server pass; the client hydration runs this initializer fresh and
+  // picks up the persisted session — identical outcome to the old
+  // useEffect+setUser, without the cascading render.
+  const [user, setUser] = useState<User | null>(readSavedUser);
   // ID token in a ref — not state — so it doesn't trigger re-renders and
   // never ends up in localStorage/sessionStorage.
   const idTokenRef = useRef<string | null>(null);
-
-  // Restore user (but not the token) on mount.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(SESSION_KEY);
-      if (saved) {
-        setUser(JSON.parse(saved));
-      }
-    } catch {}
-  }, []);
 
   const login = useCallback((u: User) => {
     setUser(u);

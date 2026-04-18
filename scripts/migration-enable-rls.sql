@@ -13,6 +13,7 @@ ALTER TABLE IF EXISTS student_sessions  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS roll_list         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS batches           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS student_profiles  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS admin_actions     ENABLE ROW LEVEL SECURITY;
 
 -- With RLS on but no policies, nothing is visible to the anon key.
 -- The service-role key used server-side bypasses RLS, so the app
