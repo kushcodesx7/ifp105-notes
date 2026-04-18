@@ -3,8 +3,16 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
+import {
+  BLOOM_META,
+  BLOOM_ORDER,
+  CONFIDENCE_META,
+  CONFIDENCE_ORDER,
+  type BloomLevel,
+  type ConfidenceLevel,
+} from "@/lib/blooms";
 
-export type BloomLevel = "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create";
+export type { BloomLevel };
 
 interface Question {
   q: string;
@@ -41,6 +49,10 @@ function shuffleQuestions(questions: Question[], seed: number): { opts: string[]
 
 interface SavedQuizState {
   answers: (number | null)[];
+  // Bloom's metacognition: capture self-rated confidence per question BEFORE
+  // the reveal. Null for questions that haven't been answered yet, or for
+  // state saved by an older app version (v1). Backward compatible.
+  confidences?: (ConfidenceLevel | null)[];
   score: number;
   shuffleSeed: number;
   completed: boolean;
@@ -70,6 +82,21 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
       if (saved) {
         const parsed: SavedQuizState = JSON.parse(saved);
         if (parsed.answers.length === total) return parsed.answers;
+      }
+    } catch {}
+    return new Array(total).fill(null);
+  });
+
+  // Per-question confidence (null until the student rates themselves).
+  // Stored alongside answers so calibration stats can be computed at the end.
+  const [confidences, setConfidences] = useState<(ConfidenceLevel | null)[]>(() => {
+    if (typeof window === "undefined") return new Array(total).fill(null);
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed: SavedQuizState = JSON.parse(saved);
+        if (parsed.confidences && parsed.confidences.length === total)
+          return parsed.confidences;
       }
     } catch {}
     return new Array(total).fill(null);
@@ -124,8 +151,13 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
   const answeredCount = answered.filter((a) => a !== null).length;
   const allAnswered = answeredCount === total;
 
-  // showFeedback is derived: true whenever the current question has been answered
-  const showFeedback = answered[currentQ] !== null;
+  // Feedback (correct/wrong + explanation) only reveals after the student has
+  // BOTH picked an answer AND rated their confidence. The forced pause
+  // between pick and reveal is the metacognition beat — "was I actually
+  // sure, or just guessing?" — that makes the calibration stat meaningful.
+  const confidenceRated = confidences[currentQ] !== null;
+  const showFeedback = answered[currentQ] !== null && confidenceRated;
+  const awaitingConfidence = answered[currentQ] !== null && !confidenceRated;
 
   // If returning to a completed quiz, show review mode
   const [showResult, setShowResult] = useState(() => {
@@ -154,12 +186,18 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     onAnswerCountChangeRef.current?.(answeredCount, total);
   }, [answeredCount, total]);
 
-  // Save state to localStorage whenever answers change
+  // Save state to localStorage whenever answers or confidences change
   const saveState = useCallback(
-    (newAnswers: (number | null)[], newScore: number, isCompleted: boolean) => {
+    (
+      newAnswers: (number | null)[],
+      newScore: number,
+      isCompleted: boolean,
+      newConfidences: (ConfidenceLevel | null)[]
+    ) => {
       try {
         const state: SavedQuizState = {
           answers: newAnswers,
+          confidences: newConfidences,
           score: newScore,
           shuffleSeed,
           completed: isCompleted,
@@ -198,7 +236,17 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     }
 
     // Save immediately
-    saveState(newAnswered, newScore, isNowCompleted);
+    saveState(newAnswered, newScore, isNowCompleted, confidences);
+  }
+
+  // Called AFTER the student has picked an answer but BEFORE the reveal.
+  // This forces a metacognitive pause: "how sure was I?"
+  function handleConfidence(level: ConfidenceLevel) {
+    if (confidences[currentQ] !== null) return; // already rated
+    const next = [...confidences];
+    next[currentQ] = level;
+    setConfidences(next);
+    saveState(answered, score, completed, next);
   }
 
   function handleNext() {
@@ -222,6 +270,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     const newSeed = Date.now();
     setCurrentQ(0);
     setAnswered(new Array(total).fill(null));
+    setConfidences(new Array(total).fill(null));
     setScore(0);
     setShowResult(false);
     setCompleted(false);
@@ -236,6 +285,49 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
 
   const pct = total > 0 ? (score / total) * 100 : 0;
   const progressWidth = (answeredCount / total) * 100;
+
+  // ─── Bloom's breakdown + calibration stats ─────────────────────────
+  // Computed from the final answers + confidences so they're accurate both
+  // during the results screen and the review screen.
+  const bloomBreakdown = useMemo(() => {
+    const stats: Partial<Record<BloomLevel, { correct: number; total: number }>> = {};
+    for (let i = 0; i < questions.length; i++) {
+      const lvl = questions[i].bloom;
+      if (!lvl) continue;
+      const a = answered[i];
+      if (a === null) continue;
+      const bucket = stats[lvl] ?? { correct: 0, total: 0 };
+      bucket.total += 1;
+      if (a === shuffled[i].ans) bucket.correct += 1;
+      stats[lvl] = bucket;
+    }
+    // Return in canonical ladder order, filtering out levels absent from the quiz
+    return BLOOM_ORDER.filter((lvl) => stats[lvl]).map((lvl) => ({
+      level: lvl,
+      meta: BLOOM_META[lvl],
+      ...stats[lvl]!,
+    }));
+  }, [questions, answered, shuffled]);
+
+  // Calibration: how well did confidence match correctness?
+  // - "confident but wrong" = rated pretty-sure/certain AND answered wrong
+  // - "humble but right" = rated guessing AND answered right (luck OR
+  //   underselling themselves — either way, informative feedback)
+  const calibration = useMemo(() => {
+    let confidentWrong = 0;
+    let humbleRight = 0;
+    let ratedCount = 0;
+    for (let i = 0; i < total; i++) {
+      const a = answered[i];
+      const c = confidences[i];
+      if (a === null || c === null) continue;
+      ratedCount++;
+      const correct = a === shuffled[i].ans;
+      if (!correct && (c === "pretty-sure" || c === "certain")) confidentWrong++;
+      if (correct && c === "guessing") humbleRight++;
+    }
+    return { confidentWrong, humbleRight, ratedCount };
+  }, [answered, confidences, shuffled, total]);
 
   // ─── REVIEW MODE: Show all questions with results ───
   if (viewMode === "review" && completed) {
@@ -280,9 +372,38 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                   }`}>
                     {wasCorrect ? '✓' : '✗'}
                   </span>
-                  <span className="text-[13px] font-medium text-zinc-300 leading-relaxed">
-                    {question.q}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2 mb-1">
+                      {question.bloom && BLOOM_META[question.bloom] && (
+                        <span
+                          className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1"
+                          style={{
+                            background: BLOOM_META[question.bloom].bgTint,
+                            borderColor: BLOOM_META[question.bloom].borderTint,
+                            color: BLOOM_META[question.bloom].color,
+                          }}
+                        >
+                          <span aria-hidden="true">{BLOOM_META[question.bloom].icon}</span>
+                          {BLOOM_META[question.bloom].label}
+                        </span>
+                      )}
+                      {confidences[qi] && (
+                        <span
+                          className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                          style={{
+                            background: 'rgba(255,255,255,0.04)',
+                            color: CONFIDENCE_META[confidences[qi]!].color,
+                          }}
+                          title="Your confidence before the reveal"
+                        >
+                          {CONFIDENCE_META[confidences[qi]!].emoji} {CONFIDENCE_META[confidences[qi]!].label}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[13px] font-medium text-zinc-300 leading-relaxed">
+                      {question.q}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Show options with indicators */}
@@ -425,22 +546,34 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
           />
         </div>
 
-        {/* Question dot indicators */}
+        {/* Question dot indicators — colour only reveals after confidence
+             is rated, otherwise they'd leak correct/wrong before the reveal. */}
         <div className="flex gap-1 mt-2">
-          {answered.map((a, i) => (
-            <button
-              key={i}
-              onClick={() => { setCurrentQ(i); }}
-              className="w-2 h-2 rounded-full transition-all cursor-pointer hover:scale-125"
-              style={{
-                background: a === null
-                  ? (i === currentQ ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)')
-                  : (a === shuffled[i].ans ? '#22c55e' : '#ef4444'),
-                boxShadow: i === currentQ ? '0 0 4px rgba(255,255,255,0.3)' : 'none',
-              }}
-              title={`Question ${i + 1}${a !== null ? (a === shuffled[i].ans ? ' ✓' : ' ✗') : ''}`}
-            />
-          ))}
+          {answered.map((a, i) => {
+            const rated = confidences[i] !== null;
+            const revealed = a !== null && rated;
+            const picked = a !== null;
+            let dotBg: string;
+            if (revealed) {
+              dotBg = a === shuffled[i].ans ? '#22c55e' : '#ef4444';
+            } else if (picked) {
+              dotBg = '#6366F1'; // answered but awaiting confidence
+            } else {
+              dotBg = i === currentQ ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)';
+            }
+            return (
+              <button
+                key={i}
+                onClick={() => { setCurrentQ(i); }}
+                className="w-2 h-2 rounded-full transition-all cursor-pointer hover:scale-125"
+                style={{
+                  background: dotBg,
+                  boxShadow: i === currentQ ? '0 0 4px rgba(255,255,255,0.3)' : 'none',
+                }}
+                title={`Question ${i + 1}${revealed ? (a === shuffled[i].ans ? ' ✓' : ' ✗') : picked ? ' (rate confidence)' : ''}`}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -455,22 +588,24 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              {/* Question counter + Bloom's badge */}
-              <div className="flex items-center justify-between mb-2">
+              {/* Question counter + Bloom's badge (shown for every level so
+                   students learn to recognise the ladder, not just the hard ones) */}
+              <div className="flex items-center justify-between mb-2 gap-2">
                 <div className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">
                   Question {currentQ + 1} of {total}
                 </div>
-                {q.bloom && !["remember", "understand"].includes(q.bloom) && (
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                    q.bloom === "apply" ? "bg-emerald-500/15 text-emerald-400" :
-                    q.bloom === "analyze" ? "bg-violet-500/15 text-violet-400" :
-                    q.bloom === "evaluate" ? "bg-amber-500/15 text-amber-400" :
-                    q.bloom === "create" ? "bg-yellow-400/15 text-yellow-300" : ""
-                  }`}>
-                    {q.bloom === "apply" && "🔧 Apply"}
-                    {q.bloom === "analyze" && "🔍 Analyze"}
-                    {q.bloom === "evaluate" && "⚖️ Evaluate"}
-                    {q.bloom === "create" && "✨ Create"}
+                {q.bloom && BLOOM_META[q.bloom] && (
+                  <span
+                    className="text-[9px] font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1"
+                    style={{
+                      background: BLOOM_META[q.bloom].bgTint,
+                      borderColor: BLOOM_META[q.bloom].borderTint,
+                      color: BLOOM_META[q.bloom].color,
+                    }}
+                    title={BLOOM_META[q.bloom].description}
+                  >
+                    <span aria-hidden="true">{BLOOM_META[q.bloom].icon}</span>
+                    {BLOOM_META[q.bloom].label}
                   </span>
                 )}
               </div>
@@ -492,9 +627,22 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                   let icon = '';
 
                   if (isAnswered) {
-                    if (isPicked && isCorrect) { bg = 'rgba(34,197,94,0.1)'; border = '#22c55e'; color = '#4ade80'; icon = '✓'; }
-                    else if (isPicked && !isCorrect) { bg = 'rgba(239,68,68,0.1)'; border = '#ef4444'; color = '#f87171'; icon = '✗'; }
-                    else if (isCorrectOpt) { bg = 'rgba(34,197,94,0.06)'; border = '#22c55e'; color = '#4ade80'; icon = '✓'; }
+                    if (!showFeedback) {
+                      // Pick recorded but confidence not rated yet — show the
+                      // picked option in neutral "selected" style; do NOT
+                      // reveal which option is correct.
+                      if (isPicked) {
+                        bg = 'rgba(99,102,241,0.12)';
+                        border = '#6366F1';
+                        color = '#c7d2fe';
+                      } else {
+                        color = '#52525b'; // dim unpicked options
+                      }
+                    } else {
+                      if (isPicked && isCorrect) { bg = 'rgba(34,197,94,0.1)'; border = '#22c55e'; color = '#4ade80'; icon = '✓'; }
+                      else if (isPicked && !isCorrect) { bg = 'rgba(239,68,68,0.1)'; border = '#ef4444'; color = '#f87171'; icon = '✗'; }
+                      else if (isCorrectOpt) { bg = 'rgba(34,197,94,0.06)'; border = '#22c55e'; color = '#4ade80'; icon = '✓'; }
+                    }
                   }
 
                   return (
@@ -511,17 +659,79 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                       <span
                         className="w-6 h-6 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5 transition-all"
                         style={{
-                          background: isAnswered && (isPicked || isCorrectOpt) ? (isCorrectOpt ? '#22c55e' : '#ef4444') : '#222230',
-                          color: isAnswered && (isPicked || isCorrectOpt) ? 'white' : '#71717a',
+                          // Only paint green/red after confidence is rated.
+                          // Before that, the picked option gets an indigo
+                          // highlight and unpicked options stay neutral.
+                          background: showFeedback && (isPicked || isCorrectOpt)
+                            ? (isCorrectOpt ? '#22c55e' : '#ef4444')
+                            : isAnswered && isPicked && !showFeedback
+                              ? '#6366F1'
+                              : '#222230',
+                          color: (showFeedback && (isPicked || isCorrectOpt)) || (isAnswered && isPicked && !showFeedback)
+                            ? 'white'
+                            : '#71717a',
                         }}
                       >
-                        {isAnswered && icon ? icon : letters[oi]}
+                        {showFeedback && icon ? icon : letters[oi]}
                       </span>
                       <span className="leading-relaxed pt-0.5">{opt}</span>
                     </motion.button>
                   );
                 })}
               </div>
+
+              {/* Confidence meter — appears after pick, blocks reveal */}
+              <AnimatePresence>
+                {awaitingConfidence && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.25 }}
+                    className="mt-4 p-4 rounded-xl"
+                    style={{
+                      background: 'rgba(99,102,241,0.06)',
+                      border: '1px solid rgba(99,102,241,0.2)',
+                    }}
+                  >
+                    <div className="text-[11px] text-zinc-400 mb-3">
+                      Before we reveal the answer —{" "}
+                      <span className="text-white font-semibold">how sure are you?</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {CONFIDENCE_ORDER.map((lvl) => {
+                        const meta = CONFIDENCE_META[lvl];
+                        return (
+                          <motion.button
+                            key={lvl}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => handleConfidence(lvl)}
+                            className="flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg transition-all focus-glow"
+                            style={{
+                              background: 'rgba(255,255,255,0.03)',
+                              border: `1px solid rgba(255,255,255,0.08)`,
+                            }}
+                          >
+                            <span className="text-xl" aria-hidden="true">
+                              {meta.emoji}
+                            </span>
+                            <span
+                              className="text-[10px] font-semibold"
+                              style={{ color: meta.color }}
+                            >
+                              {meta.label}
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                    <div className="text-[10px] text-zinc-600 mt-3 text-center italic">
+                      We track this to show you calibration — how often your confidence matched your correctness.
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Feedback */}
               <AnimatePresence>
@@ -601,6 +811,86 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                pct >= 60 ? 'Good effort! Re-read the bits you missed 📖' :
                'Keep going — re-read the topic and try again 💪'}
             </p>
+
+            {/* Bloom's breakdown — shows how the student performed at each
+                 cognitive level, not just the raw score. This is the whole
+                 point of the Bloom's-laddered questions: surfacing where
+                 thinking is strong vs weak. */}
+            {bloomBreakdown.length > 0 && (
+              <div className="max-w-md mx-auto mb-6 text-left">
+                <div className="text-[11px] font-bold text-zinc-500 tracking-widest uppercase mb-3 text-center">
+                  Your thinking by level
+                </div>
+                <div className="space-y-2">
+                  {bloomBreakdown.map(({ level, meta, correct, total: levelTotal }) => {
+                    const levelPct = levelTotal > 0 ? (correct / levelTotal) * 100 : 0;
+                    return (
+                      <div key={level} className="flex items-center gap-3">
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 shrink-0"
+                          style={{
+                            background: meta.bgTint,
+                            borderColor: meta.borderTint,
+                            color: meta.color,
+                            minWidth: '110px',
+                          }}
+                          title={meta.description}
+                        >
+                          <span aria-hidden="true">{meta.icon}</span>
+                          {meta.label}
+                        </span>
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-white/[0.06]">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${levelPct}%` }}
+                            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                            className="h-full rounded-full"
+                            style={{ background: meta.color }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-semibold text-zinc-400 tabular-nums shrink-0 w-10 text-right">
+                          {correct}/{levelTotal}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Calibration stat — only shown if student rated at least one
+                 question. \"confident-but-wrong\" is the single most powerful
+                 signal for self-awareness. */}
+            {calibration.ratedCount > 0 && (calibration.confidentWrong > 0 || calibration.humbleRight > 0) && (
+              <div
+                className="max-w-md mx-auto mb-6 p-3 rounded-xl text-left"
+                style={{
+                  background: 'rgba(99,102,241,0.06)',
+                  border: '1px solid rgba(99,102,241,0.18)',
+                }}
+              >
+                <div className="text-[11px] font-bold text-indigo-300 tracking-widest uppercase mb-2">
+                  Confidence calibration
+                </div>
+                <div className="space-y-1.5 text-[12px] text-zinc-300 leading-relaxed">
+                  {calibration.confidentWrong > 0 && (
+                    <div>
+                      <span className="text-amber-300 font-semibold">⚠ {calibration.confidentWrong}</span>{' '}
+                      time{calibration.confidentWrong > 1 ? 's' : ''} you were{' '}
+                      <em className="text-white">sure</em> — and wrong. Worth re-reading those bits.
+                    </div>
+                  )}
+                  {calibration.humbleRight > 0 && (
+                    <div>
+                      <span className="text-emerald-300 font-semibold">✓ {calibration.humbleRight}</span>{' '}
+                      time{calibration.humbleRight > 1 ? 's' : ''} you called it a{' '}
+                      <em className="text-white">guess</em> — and got it right. You know more than you think.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setViewMode("review")}
