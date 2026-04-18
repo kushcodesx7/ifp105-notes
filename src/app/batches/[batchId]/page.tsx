@@ -29,7 +29,9 @@ interface Batch {
 
 interface Profile {
   id: number;
-  studentEmail: string;
+  // studentEmail is ONLY populated on the self-lookup path (?email=<me>);
+  // for multi-row batch listings the API strips it to prevent scraping.
+  studentEmail?: string;
   name: string;
   enrollmentNo: string;
   batchId: string;
@@ -169,7 +171,7 @@ function getDetailLine(p: Profile): string | null {
 export default function BatchDetailPage() {
   const params = useParams();
   const batchId = params.batchId as string;
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getIdToken } = useAuth();
 
   const [batch, setBatch] = useState<Batch | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -202,8 +204,17 @@ export default function BatchDetailPage() {
       .catch(() => setBatch(null));
   }
 
+  // /api/profiles now requires a signed-in caller. Build the auth
+  // headers lazily at call-time so we pick up a fresh token after login.
+  function profileAuthHeaders(): Record<string, string> {
+    const token = getIdToken();
+    return token ? { "x-id-token": token } : {};
+  }
+
   function fetchProfiles() {
-    fetch(`/api/profiles?batchId=${batchId}`)
+    fetch(`/api/profiles?batchId=${batchId}`, {
+      headers: profileAuthHeaders(),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("Failed");
         return r.json();
@@ -215,7 +226,9 @@ export default function BatchDetailPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/batches").then((r) => r.json()),
-      fetch(`/api/profiles?batchId=${batchId}`).then((r) => r.json()),
+      fetch(`/api/profiles?batchId=${batchId}`, {
+        headers: profileAuthHeaders(),
+      }).then((r) => (r.ok ? r.json() : { profiles: [] })),
     ])
       .then(([batchData, profileData]) => {
         const found = batchData.batches.find((b: Batch) => b.id === batchId);
@@ -228,7 +241,7 @@ export default function BatchDetailPage() {
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [batchId]);
+  }, [batchId, isLoggedIn]);
 
   /* ─── Filtering ─── */
 
@@ -255,8 +268,10 @@ export default function BatchDetailPage() {
   /* ─── User profile check ─── */
 
   const userHasProfile = useMemo(() => {
-    if (!user?.email) return false;
-    return profiles.some((p) => p.studentEmail === user.email);
+    // Match on enrollmentNo — the batch-listing response no longer
+    // echoes student email, but enrollment number is unique per student.
+    if (!user?.enrollmentNo) return false;
+    return profiles.some((p) => p.enrollmentNo === user.enrollmentNo);
   }, [profiles, user]);
 
   /* ─── Add Profile Modal Handlers ─── */

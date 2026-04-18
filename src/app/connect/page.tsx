@@ -331,7 +331,7 @@ export default function IFSConnectPage() {
               </span>
               <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1"
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scroll-fade-x"
               style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
             >
               {recentlyJoined.map((s, i) => {
@@ -404,6 +404,11 @@ export default function IFSConnectPage() {
               <button
                 onClick={breakTheIce}
                 disabled={icebreakerPoolSize === 0}
+                aria-label={
+                  icebreakerPoolSize === 0
+                    ? "Random match — no LinkedIn-connected classmates match your filter yet"
+                    : "Spotlight a random LinkedIn-connected classmate"
+                }
                 title={
                   icebreakerPoolSize === 0
                     ? "No LinkedIn-connected classmates match your filter yet"
@@ -415,12 +420,13 @@ export default function IFSConnectPage() {
                   boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
                 }}
               >
-                🎯 <span className="hidden sm:inline">Random match</span>
+                <span aria-hidden="true">🎯</span>
+                <span className="hidden sm:inline"> Random match</span>
               </button>
             </div>
 
             {/* Section pills — horizontally scrollable on mobile */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-fade-x"
               style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
             >
               <button
@@ -431,7 +437,7 @@ export default function IFSConnectPage() {
                 style={{
                   background:
                     sectionFilter === "all"
-                      ? "linear-gradient(135deg, #4F46E5, #7C3AED)"
+                      ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
                       : "rgba(255,255,255,0.04)",
                   border: `1px solid ${
                     sectionFilter === "all" ? "transparent" : "rgba(255,255,255,0.06)"
@@ -470,7 +476,7 @@ export default function IFSConnectPage() {
 
             {/* Skill filter — only show if anyone has picked skills */}
             {availableSkills.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-fade-x"
                 style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 shrink-0 self-center">
@@ -649,7 +655,7 @@ export default function IFSConnectPage() {
                         setDetailStudent(student);
                       }
                     }}
-                    className="relative p-5 rounded-2xl card-glass group transition-shadow cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    className="relative p-5 rounded-2xl card-glass group transition-shadow cursor-pointer"
                     style={{
                       border: isMe
                         ? "1.5px solid rgba(250,204,21,0.45)"
@@ -793,7 +799,7 @@ export default function IFSConnectPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.99]"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.99]"
                           style={{
                             background: "#0A66C2",
                             boxShadow: "0 2px 10px rgba(10,102,194,0.35)",
@@ -810,7 +816,7 @@ export default function IFSConnectPage() {
                             e.stopPropagation();
                             setEditOpen(true);
                           }}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold transition-all hover:scale-[1.02]"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-xs font-bold transition-all hover:scale-[1.02]"
                           style={{
                             background: "linear-gradient(135deg, #FACC15, #F59E0B)",
                             color: "#422006",
@@ -821,7 +827,7 @@ export default function IFSConnectPage() {
                           + Add your LinkedIn
                         </button>
                       ) : (
-                        <div className="flex-1 px-3 py-2.5 rounded-lg text-[11px] text-zinc-500 text-center bg-white/[0.02] border border-white/[0.04] flex items-center justify-center gap-1.5">
+                        <div className="flex-1 px-3 py-3 rounded-lg text-[11px] text-zinc-500 text-center bg-white/[0.02] border border-white/[0.04] flex items-center justify-center gap-1.5">
                           <span className="opacity-50">🔗</span>
                           LinkedIn not added yet
                         </div>
@@ -834,11 +840,12 @@ export default function IFSConnectPage() {
                             e.stopPropagation();
                             setEditOpen(true);
                           }}
-                          className="px-3 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all shrink-0"
+                          // Meets WCAG 2.5.5: w-11 ≈ 44px on mobile.
+                          className="w-11 sm:w-auto px-3 py-3 sm:py-3 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all shrink-0 flex items-center justify-center"
                           title="Edit your profile"
                           aria-label="Edit profile"
                         >
-                          ✏️
+                          <span aria-hidden="true">✏️</span>
                         </button>
                       )}
                     </div>

@@ -113,7 +113,8 @@ export default function StudentDrawer({
               boxShadow: "-20px 0 60px rgba(0,0,0,0.5)",
             }}
             role="dialog"
-            aria-label={`Student details for ${student.name}`}
+            aria-modal="true"
+            aria-label={`Student details for ${student.rollListName || student.name}`}
           >
             {/* Header */}
             <div className="shrink-0 px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -225,7 +226,7 @@ function Avatar({ student, size }: { student: AdminStudent; size: number }) {
       style={{
         width: size,
         height: size,
-        background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+        background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
         fontSize: size * 0.35,
         fontWeight: 700,
       }}

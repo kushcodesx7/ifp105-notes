@@ -414,10 +414,13 @@ export default function ModulePage({
       <XpBar />
       <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
-      {/* Reading progress bar */}
+      {/* Reading progress bar — pinned directly under the 56px navbar.
+           Lower z than the sticky tab bar's background so the bar sits
+           between them visually instead of bleeding into the tab pills. */}
       <motion.div
-        className="fixed top-14 left-0 h-[2px] z-50 pointer-events-none"
+        className="fixed left-0 h-[2px] z-30 pointer-events-none"
         style={{
+          top: "3.5rem",
           width: `${scrollProgress * 100}%`,
           background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})`,
           boxShadow: `0 0 8px ${accentFrom}60`,

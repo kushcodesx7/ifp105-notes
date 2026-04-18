@@ -370,9 +370,17 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               </span>
               <button
                 onClick={logout}
-                className="text-[11px] font-medium text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10 whitespace-nowrap shrink-0"
+                aria-label="Log out"
+                className="text-[11px] font-medium text-zinc-500 hover:text-red-400 transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10 whitespace-nowrap shrink-0 inline-flex items-center gap-1"
               >
-                Logout
+                {/* Icon-only on narrow viewports so admin accounts don't
+                    push the navbar past the right edge at 360px. */}
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </>
           ) : (

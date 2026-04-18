@@ -1,6 +1,10 @@
-// Practice Questions — 50 questions (10 per module)
-// These are placeholder questions matching real exam patterns.
-// Replace with actual questions when ready.
+// Practice Questions — 50 questions (10 per module).
+//
+// Mirror real exam patterns across the 5 modules and tag each with a
+// Bloom's level so the Practice Zone readiness dashboard can reflect
+// thinking-depth not just hit rate. The Practice Zone surface is
+// currently hidden from the main navigation — keep the bank up to date
+// so it's ready to re-enable without another content sweep.
 
 export interface PracticeQuestion {
   q: string;

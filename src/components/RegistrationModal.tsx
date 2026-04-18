@@ -210,6 +210,18 @@ export default function RegistrationModal({
     onClose();
   }
 
+  // Esc closes the modal (matches every other dialog in the app). Only
+  // active when `closable` — the post-sign-in forced-registration path
+  // passes closable={false} so Esc doesn't bail them out.
+  useEffect(() => {
+    if (!open || !closable) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, closable, onClose]);
+
   if (!user) return null;
 
   return (
@@ -219,9 +231,12 @@ export default function RegistrationModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
           onClick={closable ? onClose : undefined}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="registration-modal-title"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -229,7 +244,10 @@ export default function RegistrationModal({
             exit={{ scale: 0.9, opacity: 0, y: 10 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl p-6 relative my-8"
+            // max-h + inner scroll so the dialog can't be scrolled out
+            // past the edges on short mobile viewports (iPhone SE at
+            // 667px with keyboard open).
+            className="w-full max-w-md rounded-2xl p-6 relative my-8 max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
             style={{
               background: "linear-gradient(135deg, rgba(15,15,25,0.98), rgba(12,12,20,0.98))",
               border: "1px solid rgba(255,255,255,0.08)",
@@ -242,7 +260,7 @@ export default function RegistrationModal({
                 className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 transition-colors"
                 aria-label="Close"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
@@ -250,8 +268,8 @@ export default function RegistrationModal({
 
             {/* Header */}
             <div className="mb-5">
-              <div className="text-3xl mb-3">🎓</div>
-              <h2 className="text-xl font-bold text-white mb-1">Complete Registration</h2>
+              <div aria-hidden="true" className="text-3xl mb-3">🎓</div>
+              <h2 id="registration-modal-title" className="text-xl font-bold text-white mb-1">Complete Registration</h2>
               <p className="text-sm text-zinc-400">
                 Hi <span className="text-white font-semibold">{firstName(user.name)}</span>! Link your account
                 to your section so your progress syncs across devices.

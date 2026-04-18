@@ -188,6 +188,26 @@ select:focus-visible,
   box-shadow: 0 0 0 2px #09090F, 0 0 0 4px rgba(99,102,241,0.5);
 }
 
+/* Horizontal-scroll fade — used on pill rows that overflow on 360px
+   viewports so the user can see there's more content off-screen.
+   Pairs with overflow-x-auto + scrollbar-hidden. */
+.scroll-fade-x {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+}
+
 /* CSS fade-up animation (no Framer Motion needed) */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(20px); }

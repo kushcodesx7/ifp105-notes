@@ -45,6 +45,17 @@ export default function ProfileEditModal({
     }
   }, [open, initialBio, initialSkills, initialLinkedIn]);
 
+  // Esc closes (matches every other dialog). Gated on `open` so we don't
+  // fight other modals' keydown listeners when closed.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   function toggleSkill(id: string) {
     setSkills((prev) => {
       if (prev.includes(id)) return prev.filter((s) => s !== id);
@@ -103,6 +114,9 @@ export default function ProfileEditModal({
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
           style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-edit-title"
         >
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
@@ -119,7 +133,7 @@ export default function ProfileEditModal({
             <div className="p-6 pb-4">
               <div className="flex items-start justify-between mb-1">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Edit your profile</h2>
+                  <h2 id="profile-edit-title" className="text-lg font-bold text-white">Edit your profile</h2>
                   <p className="text-xs text-zinc-500">
                     Make your card stand out on IFS Connect
                   </p>
@@ -129,7 +143,7 @@ export default function ProfileEditModal({
                   className="text-zinc-500 hover:text-zinc-300 transition-colors -mr-1 -mt-1 p-1"
                   aria-label="Close"
                 >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   </svg>
                 </button>

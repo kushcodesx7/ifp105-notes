@@ -97,7 +97,11 @@ export default function AdminBatchesPage() {
       await Promise.all(
         data.batches.map(async (b: Batch) => {
           try {
-            const pRes = await fetch(`/api/profiles?batchId=${b.id}`);
+            // /api/profiles now requires auth — send the same admin
+            // credentials the outer /api/batches/admin call uses.
+            const pRes = await fetch(`/api/profiles?batchId=${b.id}`, {
+              headers: authHeaders(),
+            });
             if (pRes.ok) {
               const pData = await pRes.json();
               const profiles = pData.profiles || [];
