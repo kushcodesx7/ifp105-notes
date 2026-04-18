@@ -110,7 +110,7 @@ export default function Module2() {
       stats={[
         { n: "9", l: "Topics" },
         { n: "~45", l: "Minutes" },
-        { n: "90", l: "Practice Qs" },
+        { n: "63", l: "Practice Qs" },
       ]}
       renderAfterContent={(topicId) => (
         <>
