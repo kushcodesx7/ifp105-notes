@@ -3,7 +3,7 @@ import ModulePage from "@/components/module/ModulePage";
 import ExcelSimulator from "@/components/module/ExcelSimulator";
 import ShortcutTrainer from "@/components/module/ShortcutTrainer";
 import { topics } from "@/data/module2-topics";
-import { mcqData } from "@/data/module2-mcq";
+// mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 
 // Excel challenges for topics 4, 5, 6
 const excelChallenges: Record<number, any[]> = {
@@ -106,7 +106,6 @@ export default function Module2() {
       orbColor1="rgba(16,185,129,0.15)"
       orbColor2="rgba(5,150,105,0.1)"
       topics={topics}
-      mcqData={mcqData}
       stats={[
         { n: "9", l: "Topics" },
         { n: "~45", l: "Minutes" },
