@@ -3,14 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Pill-tab navigation shown on every /admin/* page so the teacher can hop
-// between admin sections without going back to the dashboard each time.
+// Pill-tab navigation shown on every /admin/* page.
+//
+// Phase 1 of the admin rebuild: 4 clear tabs mapping to 4 distinct mental
+// modes so there's never confusion about where to go for a given task.
+//
+//   Home   — daily status check (overview, alerts, at-risk)
+//   People — find / inspect / fix any student
+//   Roster — batches · sections · rolls · wizard
+//   Tools  — destructive / sensitive actions (reset, unlink, export, audit log)
+//
+// Previous structure (Dashboard / Students / Batches / Enrollments) was
+// confusing because "Batches" meant analytics and "Enrollments" meant
+// roster management — backwards from what the words suggest.
 
 const TABS = [
-  { href: "/admin", label: "Dashboard", icon: "🏠", exact: true },
-  { href: "/admin/progress", label: "Students", icon: "📊" },
-  { href: "/admin/batch-progress", label: "Batches", icon: "🎯" },
-  { href: "/admin/batches", label: "Enrollments", icon: "🎓" },
+  { href: "/admin", label: "Home", icon: "📊", exact: true },
+  { href: "/admin/people", label: "People", icon: "👥", alts: ["/admin/progress"] },
+  { href: "/admin/roster", label: "Roster", icon: "🎓", alts: ["/admin/batches", "/admin/batch-progress"] },
+  { href: "/admin/tools", label: "Tools", icon: "🛠" },
 ];
 
 export default function AdminSubNav() {
@@ -18,13 +29,19 @@ export default function AdminSubNav() {
 
   function isActive(tab: (typeof TABS)[number]): boolean {
     if (tab.exact) return pathname === tab.href;
-    return pathname === tab.href || pathname.startsWith(tab.href + "/");
+    if (pathname === tab.href || pathname.startsWith(tab.href + "/")) return true;
+    // Match legacy URLs so admins landing on /admin/progress see People highlighted
+    if (tab.alts) {
+      for (const alt of tab.alts) {
+        if (pathname === alt || pathname.startsWith(alt + "/")) return true;
+      }
+    }
+    return false;
   }
 
   return (
     <div
-      // mt-14 pushes it below the fixed top Navbar (which doesn't take flow
-      // space). sticky top-14 then pins it right under the Navbar on scroll.
+      // mt-14 pushes below the fixed top Navbar. sticky top-14 pins here on scroll.
       className="sticky top-14 mt-14 z-30 backdrop-blur-xl border-b"
       style={{
         background: "rgba(9,9,15,0.7)",
@@ -32,7 +49,7 @@ export default function AdminSubNav() {
       }}
     >
       <nav
-        className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center gap-1.5 overflow-x-auto py-2"
+        className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center gap-1.5 overflow-x-auto py-2"
         style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
         aria-label="Admin sections"
       >
@@ -42,7 +59,7 @@ export default function AdminSubNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap shrink-0 ${
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap shrink-0 active:scale-95 ${
                 active
                   ? "text-white"
                   : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
