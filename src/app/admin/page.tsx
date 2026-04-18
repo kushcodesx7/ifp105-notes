@@ -42,12 +42,21 @@ interface PendingStudent {
   lastActive: string | null;
 }
 
+interface WeakModule {
+  moduleNumber: number;
+  title: string;
+  avgMcqPct: number | null;
+  attemptCount: number;
+  needsAttention: boolean;
+}
+
 interface SummaryResponse {
   kpis: KPIs;
   needsAttention: StudentScore[];
   topPerformers: StudentScore[];
   sectionHealth: SectionHealth[];
   pendingRegistration: PendingStudent[];
+  weakModules: WeakModule[];
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -207,6 +216,14 @@ export default function AdminHomePage() {
             ➕ Create new batch
           </Link>
         </div>
+
+        {/* ─── Alerts row ──────────────────────────────────────
+             Surfaces actionable items that would otherwise only show
+             up scrolling through People / Roster. Each card is a link
+             to a pre-filtered list so the teacher can act in one more
+             click. "All quiet today" shows when nothing warrants
+             attention — a daily "you're good" reassurance. */}
+        <AlertsRow data={data} loading={fetchLoading} />
 
         {/* ─── KPI row ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -431,6 +448,180 @@ export default function AdminHomePage() {
 }
 
 // ─── Subcomponents ───────────────────────────────────────────────────
+
+// Alerts row — surfaces actionable items at the top of admin home so
+// the teacher doesn't have to scroll through every section to spot
+// today's problems. Each alert is a link to a filtered list.
+function AlertsRow({
+  data,
+  loading,
+}: {
+  data: SummaryResponse | undefined;
+  loading: boolean;
+}) {
+  if (loading && !data) {
+    return (
+      <div className="mb-6 h-[88px] rounded-2xl animate-pulse"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+        aria-busy="true"
+        aria-label="Loading alerts"
+      />
+    );
+  }
+  if (!data) return null;
+
+  // Build alert cards from the summary payload. Each item includes a
+  // count + link + severity so the UI can render consistently.
+  const alerts: {
+    key: string;
+    severity: "danger" | "warning" | "info";
+    icon: string;
+    count: number;
+    title: string;
+    href: string;
+    cta: string;
+  }[] = [];
+
+  // At-risk students (0% progress or 14d+ inactive)
+  const atRisk = data.needsAttention.length;
+  if (atRisk > 0) {
+    alerts.push({
+      key: "at-risk",
+      severity: atRisk >= 10 ? "danger" : "warning",
+      icon: "🚨",
+      count: atRisk,
+      title: atRisk === 1 ? "student needs attention" : "students need attention",
+      href: "/admin/people?filter=atRisk",
+      cta: "Review",
+    });
+  }
+
+  // Pending registrations (signed in but didn't finish)
+  const pending = data.kpis.pendingRegistration;
+  if (pending > 0) {
+    alerts.push({
+      key: "pending",
+      severity: pending >= 5 ? "warning" : "info",
+      icon: "⏳",
+      count: pending,
+      title: pending === 1 ? "pending registration" : "pending registrations",
+      href: "/admin/people?filter=all",
+      cta: "Chase",
+    });
+  }
+
+  // Weak modules (class-wide MCQ avg below threshold)
+  const weak = data.weakModules.filter((m) => m.needsAttention);
+  if (weak.length > 0) {
+    const worst = weak.reduce((a, b) =>
+      (a.avgMcqPct ?? 100) <= (b.avgMcqPct ?? 100) ? a : b
+    );
+    alerts.push({
+      key: "weak-module",
+      severity: "warning",
+      icon: "📉",
+      count: weak.length,
+      title:
+        weak.length === 1
+          ? `Module ${worst.moduleNumber} MCQ avg ${worst.avgMcqPct}%`
+          : `weak modules (worst: M${worst.moduleNumber} @ ${worst.avgMcqPct}%)`,
+      href: `/admin/people?filter=mcqLow`,
+      cta: "Investigate",
+    });
+  }
+
+  // All-quiet state — genuinely reassuring on a good day
+  if (alerts.length === 0) {
+    return (
+      <div
+        className="mb-6 rounded-2xl p-5 flex items-center gap-3"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(20,184,166,0.04))",
+          border: "1px solid rgba(16,185,129,0.2)",
+        }}
+      >
+        <span className="text-2xl" aria-hidden="true">☀️</span>
+        <div>
+          <div className="text-sm font-bold text-emerald-300">
+            All quiet today
+          </div>
+          <p className="text-[12px] text-zinc-400 mt-0.5">
+            No at-risk students, no pending registrations, no weak
+            modules flagged. Class is healthy — go teach.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const palette = {
+    danger: {
+      bg: "linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.04))",
+      border: "rgba(239,68,68,0.3)",
+      accent: "#F87171",
+    },
+    warning: {
+      bg: "linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))",
+      border: "rgba(245,158,11,0.25)",
+      accent: "#FBBF24",
+    },
+    info: {
+      bg: "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(99,102,241,0.03))",
+      border: "rgba(99,102,241,0.25)",
+      accent: "#A5B4FC",
+    },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="mb-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+    >
+      {alerts.map((a) => {
+        const p = palette[a.severity];
+        return (
+          <Link
+            key={a.key}
+            href={a.href}
+            className="group rounded-xl p-4 flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99]"
+            style={{
+              background: p.bg,
+              border: `1px solid ${p.border}`,
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
+              style={{
+                background: `${p.accent}14`,
+                border: `1px solid ${p.accent}30`,
+              }}
+              aria-hidden="true"
+            >
+              {a.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-base font-bold"
+                style={{ color: p.accent }}
+              >
+                {a.count} {a.title}
+              </div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">
+                Click to {a.cta.toLowerCase()} →
+              </div>
+            </div>
+          </Link>
+        );
+      })}
+    </motion.div>
+  );
+}
 
 function KpiCard({
   label,
