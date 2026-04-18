@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { cleanupCourseImages } from "@/lib/storage-cleanup";
 
 // /api/admin/courses/[slug]
 //   GET    — course detail + modules list (for the course-edit page)
@@ -201,7 +202,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "update_course" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "update_course",
     subjectEmail: null,
     details: { slug, patch },
   });
@@ -242,15 +243,28 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const hard = url.searchParams.get("hard") === "true";
 
   if (hard) {
+    // Before the DB cascade, resolve course_id and sweep orphan images
+    // from every topic under every module in this course. Soft-delete
+    // (below) skips this — the rows stick around and so do the files.
+    const { data: courseRow } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    const courseId = (courseRow as { id: string } | null)?.id ?? null;
+    const cleanedImages = courseId
+      ? await cleanupCourseImages(courseId)
+      : 0;
+
     const { error } = await supabase.from("courses").delete().eq("slug", slug);
     if (error) return Response.json({ error: error.message }, { status: 500 });
     await logAdminAction({
       actorEmail: actorFromAuth(admin),
-      action: "delete_course" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+      action: "delete_course",
       subjectEmail: null,
-      details: { slug, hard: true },
+      details: { slug, hard: true, cleanedImages },
     });
-    return Response.json({ ok: true, hard: true });
+    return Response.json({ ok: true, hard: true, cleanedImages });
   }
 
   const { error } = await supabase
@@ -262,7 +276,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "delete_course" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "delete_course",
     subjectEmail: null,
     details: { slug, hard: false, softDelete: true },
   });

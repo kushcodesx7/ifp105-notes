@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 // missing until the migration is applied.
 
 export type AdminActionKind =
+  // ── People / roster (Phase 1-2) ──
   | "change_section"
   | "change_roll"
   | "change_email"
@@ -21,7 +22,22 @@ export type AdminActionKind =
   | "add_rolls"
   | "remove_rolls"
   | "rename_section"
-  | "delete_section";
+  | "delete_section"
+  // ── Course CMS (Phase 4) ──
+  | "create_course"
+  | "update_course"
+  | "delete_course"
+  | "create_module"
+  | "update_module"
+  | "delete_module"
+  | "create_topic"
+  | "update_topic"
+  | "delete_topic"
+  | "create_question"
+  | "update_question"
+  | "delete_question"
+  // ── Content migration / one-shot actions (Phase 5.5) ──
+  | "seed_ict";
 
 export interface LogAdminActionInput {
   actorEmail: string;

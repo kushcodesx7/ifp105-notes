@@ -182,7 +182,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "create_topic" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "create_topic",
     subjectEmail: null,
     details: { courseSlug: slug, moduleNumber: parseInt(num, 10), topicNumber: number, title },
   });

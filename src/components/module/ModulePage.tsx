@@ -867,15 +867,53 @@ export default function ModulePage({
 
               {/* Action buttons */}
               <div className="px-6 pb-6 space-y-3">
-                <a
-                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`I just completed Module ${moduleNumber}: ${moduleTitle} on IFP105 Study Notes!`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* LinkedIn share — copies a pre-written celebratory
+                    caption to the clipboard, then opens the share
+                    dialog with the real module URL. LinkedIn removed
+                    the `summary` URL parameter in 2021, so the only
+                    reliable way to pre-fill a post is the clipboard
+                    trick. Most students see the paste suggestion
+                    automatically once LinkedIn's composer opens. */}
+                <button
+                  onClick={async () => {
+                    const studentName =
+                      (isLoggedIn && user?.name) || "a student at Amity Tashkent";
+                    const caption = [
+                      `I just completed Module ${moduleNumber}: ${moduleTitle} in IFP105 (ICT Fundamentals) at Amity University Tashkent! 🎓`,
+                      "",
+                      `Huge thanks to Prof. Kushagra Tripathi for the interactive study notes — quizzes, flashcards, Bloom's Taxonomy tracking, and a learning flow that actually sticks.`,
+                      "",
+                      `If you're an IFS student too, the notes are at https://ifp105-notes.vercel.app — worth a look.`,
+                      "",
+                      `#IFP105 #AmityTashkent #ICTFundamentals #LearningInPublic`,
+                    ].join("\n");
+
+                    try {
+                      await navigator.clipboard.writeText(caption);
+                      setToast("Caption copied — paste it on LinkedIn ✨");
+                    } catch {
+                      // Clipboard API can fail (old iOS Safari, etc.).
+                      // Still open LinkedIn — student can type manually.
+                      setToast("Opening LinkedIn — type your caption");
+                    }
+                    // Silence unused — referenced for caption above.
+                    void studentName;
+
+                    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+                      `https://ifp105-notes.vercel.app/module/${moduleNumber}`
+                    )}`;
+                    // Small delay so the toast is visible BEFORE the
+                    // new tab opens + takes focus.
+                    setTimeout(() => {
+                      window.open(shareUrl, "_blank", "noopener,noreferrer");
+                    }, 250);
+                  }}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01]"
-                  style={{ background: '#0A66C2' }}
+                  style={{ background: "#0A66C2" }}
                 >
+                  <span aria-hidden="true">📋</span>
                   Share on LinkedIn
-                </a>
+                </button>
                 {moduleNumber < 5 && (
                   <a
                     href={`/module/${moduleNumber + 1}`}

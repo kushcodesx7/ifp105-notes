@@ -271,7 +271,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "update_question" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "update_question",
     subjectEmail: null,
     details: {
       courseSlug: slug,
@@ -299,7 +299,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "delete_question" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "delete_question",
     subjectEmail: null,
     details: {
       courseSlug: slug,

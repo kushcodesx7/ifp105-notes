@@ -173,7 +173,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "create_module" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "create_module",
     subjectEmail: null,
     details: { courseSlug: slug, moduleNumber: number, title },
   });
