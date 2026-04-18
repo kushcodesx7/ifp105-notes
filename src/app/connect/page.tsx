@@ -7,6 +7,7 @@ import ProfileEditModal from "@/components/ProfileEditModal";
 import StudentDetailModal from "@/components/StudentDetailModal";
 import { useAuth } from "@/lib/auth-context";
 import { SKILLS, getSkill } from "@/lib/skills";
+import { sizedAvatar } from "@/lib/avatar";
 
 interface Student {
   enrollmentNo: string;
@@ -355,7 +356,14 @@ export default function IFSConnectPage() {
                   >
                     {s.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={s.photoUrl} alt={prettyName(s.name)} referrerPolicy="no-referrer"
+                      <img
+                        src={sizedAvatar(s.photoUrl, 48)}
+                        alt={prettyName(s.name)}
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
+                        width={24}
+                        height={24}
                         className="w-6 h-6 rounded-full object-cover"
                       />
                     ) : (
@@ -675,15 +683,15 @@ export default function IFSConnectPage() {
                         {student.photoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={student.photoUrl}
+                            src={sizedAvatar(student.photoUrl, 112)}
                             alt={prettyName(student.name)}
                             loading="lazy"
                             decoding="async"
+                            referrerPolicy="no-referrer"
                             width={56}
                             height={56}
                             className="w-14 h-14 rounded-full object-cover"
                             style={{ border: `2px solid ${col.dot}50` }}
-                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <div

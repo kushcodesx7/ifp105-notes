@@ -149,7 +149,7 @@ export const cheatsheets: ModuleCheatSheet[] = [
         items: [
           { term: "Facebook", definition: "Largest network (3B users). Groups, Pages, Marketplace. Best for 25-55+ age group." },
           { term: "Instagram", definition: "Visual-first — photos, Reels, Stories. Best for 18-34, fashion/food/travel brands." },
-          { term: "Twitter/X", definition: "Microblogging, 280 characters. Real-time news, trends, public conversations." },
+          { term: "X (formerly Twitter)", definition: "Microblogging. 280 characters on free accounts; Premium accounts can post longer. Real-time news, trends, public conversations." },
           { term: "LinkedIn", definition: "Professional networking. Resumes, B2B marketing, job posts. The conference, not the party." },
           { term: "TikTok", definition: "Short vertical video. Algorithm-driven discovery. Dominated by Gen Z." },
           { term: "YouTube", definition: "World's 2nd largest search engine. Long & short video. All ages." },

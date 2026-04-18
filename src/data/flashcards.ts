@@ -200,7 +200,7 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "What type of platform is Instagram and who is its key audience?", back: "Media sharing (visual-first: photos, Reels, Stories). Key audience: 18-34 years old." },
       { front: "What type of platform is LinkedIn?", back: "Professional networking -- resumes, job posts, industry articles. Best for B2B marketing." },
       { front: "What makes TikTok unique among social platforms?", back: "Short-form vertical video, algorithm-driven discovery, dominated by Gen Z (16-30), fastest-growing platform in history." },
-      { front: "What is Twitter/X best used for?", back: "Real-time microblogging, breaking news, trending topics, and public conversations. Posts limited to 280 characters." },
+      { front: "What is X (formerly Twitter) best used for?", back: "Real-time microblogging, breaking news, trending topics, and public conversations. Free accounts post up to 280 characters; Premium accounts can post longer." },
       { front: "What is Facebook's key demographic?", back: "25-55+ years old. 3 billion users. Best for community building with groups, pages, marketplace, and events." },
     ],
 
@@ -238,12 +238,12 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "What is the Facebook Pixel?", back: "A tiny code added to your website that tracks what visitors do after clicking a Facebook ad. It helps Facebook find more people likely to convert." },
     ],
 
-    // Topic 7: Twitter/X Marketing
+    // Topic 7: X (formerly Twitter) Marketing
     7: [
-      { front: "What is a hashtag and what does it do?", back: "A word prefixed with # that categorizes content (e.g., #Marketing). Makes tweets discoverable by people searching that topic." },
-      { front: "What is a Twitter Thread?", back: "A chain of connected tweets telling a longer story. Threads get massive engagement because each tweet acts as a hook." },
-      { front: "Name 3 types of Twitter/X paid ads.", back: "Promoted Tweets (wider reach), Promoted Accounts (gain followers), Promoted Trends (top of trending topics)." },
-      { front: "What is 'newsjacking' on Twitter?", back: "Brands jumping on currently trending topics for massive visibility -- riding the wave of what's already hot." },
+      { front: "What is a hashtag and what does it do?", back: "A word prefixed with # that categorizes content (e.g., #Marketing). Makes posts discoverable by people searching that topic." },
+      { front: "What is an X Thread (formerly a Twitter Thread)?", back: "A chain of connected posts telling a longer story. Threads get strong engagement because each post acts as a hook." },
+      { front: "Name 3 types of X paid ads.", back: "Promoted Posts (wider reach), Promoted Accounts (gain followers), Promoted Trends (top of trending topics)." },
+      { front: "What is 'newsjacking' on X?", back: "Brands jumping on currently trending topics for massive visibility -- riding the wave of what's already hot." },
     ],
   },
 

@@ -2,43 +2,59 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
 
-// GET — return all batches with students (public)
+// GET — return all batches with public student listings.
+//
+// Public endpoint (no auth). So we must NOT expose student emails — those
+// go through /api/connect which strips/controls PII. Emails are harvestable
+// spam fuel and also the key to impersonation elsewhere.
+//
+// Also: was N+1 (per-batch student query). Collapsed to a single query that
+// groups in-memory. Monday load = 218 × first-page hit, so this matters.
 export async function GET() {
-  const { data: batches, error } = await supabase
-    .from("batches")
-    .select("id, name, accent")
-    .order("created_at", { ascending: false });
+  // One query for batches + one for ALL students. O(batches + students).
+  const [batchRes, studentsRes] = await Promise.all([
+    supabase
+      .from("batches")
+      .select("id, name, accent, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("students")
+      .select("enrollment_no, name, linkedin_url, added_at, batch_id")
+      .order("added_at", { ascending: true }),
+  ]);
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  if (batchRes.error) {
+    return Response.json({ error: batchRes.error.message }, { status: 500 });
   }
 
-  // Fetch students for each batch
-  const result = await Promise.all(
-    batches.map(async (batch) => {
-      const { data: students } = await supabase
-        .from("students")
-        .select("enrollment_no, name, email, linkedin_url, added_at")
-        .eq("batch_id", batch.id)
-        .order("added_at", { ascending: true });
+  const byBatch = new Map<string, typeof studentsRes.data>();
+  for (const s of studentsRes.data || []) {
+    const key = s.batch_id as string;
+    if (!byBatch.has(key)) byBatch.set(key, []);
+    byBatch.get(key)!.push(s);
+  }
 
-      return {
-        id: batch.id,
-        name: batch.name,
-        accent: batch.accent,
-        studentCount: students?.length || 0,
-        students: (students || []).map((s) => ({
-          enrollmentNo: s.enrollment_no,
-          name: s.name,
-          email: s.email,
-          linkedinUrl: s.linkedin_url,
-          addedAt: s.added_at,
-        })),
-      };
-    })
+  const result = (batchRes.data || []).map((batch) => {
+    const students = byBatch.get(batch.id) || [];
+    return {
+      id: batch.id,
+      name: batch.name,
+      accent: batch.accent,
+      studentCount: students.length,
+      students: students.map((s) => ({
+        enrollmentNo: s.enrollment_no,
+        name: s.name,
+        // email intentionally omitted — see /api/connect for auth'd feed
+        linkedinUrl: s.linkedin_url,
+        addedAt: s.added_at,
+      })),
+    };
+  });
+
+  return Response.json(
+    { batches: result },
+    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
   );
-
-  return Response.json({ batches: result });
 }
 
 // POST — student registers (batch + section + roll number + name + linkedin)
@@ -115,10 +131,7 @@ export async function POST(req: NextRequest) {
       );
     }
     // Section has zero roll_list entries — roll list hasn't been imported yet.
-    // Allow registration; teacher can verify/reconcile later.
-    console.log(
-      `[register] Allowing registration for ${enrollmentNo.toUpperCase()} in ${section} of ${batchId} — section has no roll_list entries yet.`
-    );
+    // Allow registration; teacher can verify/reconcile later via /admin/roster.
   }
 
   // Check if this email is already registered with a DIFFERENT roll number
@@ -133,6 +146,22 @@ export async function POST(req: NextRequest) {
     return Response.json(
       {
         error: `This email is already registered with roll ${existing.enrollment_no}. Roll number is locked and cannot be changed. Contact your instructor if this is a mistake.`,
+      },
+      { status: 409 }
+    );
+  }
+
+  // Also block silent batch/section changes via re-registration. If someone
+  // already registered their email to BatchA/Section2, don't let them quietly
+  // re-run the flow and move themselves to BatchB/Section1. The onConflict
+  // upsert below would do that silently otherwise.
+  if (
+    existing &&
+    (existing.batch_id !== batchId || existing.section !== section)
+  ) {
+    return Response.json(
+      {
+        error: `Your account is already registered in ${existing.batch_id} / ${existing.section}. Contact your instructor to change batch or section.`,
       },
       { status: 409 }
     );

@@ -15,6 +15,7 @@ export type AdminActionKind =
   | "change_email"
   | "reset_progress"
   | "unlink"
+  | "delete_student"
   | "create_batch"
   | "add_rolls"
   | "remove_rolls"

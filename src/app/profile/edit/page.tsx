@@ -57,11 +57,16 @@ function decodeJwt(token: string) {
 }
 
 export default function EditProfilePage() {
-  const { user, isLoggedIn, login } = useAuth();
+  const { user, isLoggedIn, login, getIdToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<ProfileData>(EMPTY_PROFILE);
-  const [loading, setLoading] = useState(true);
+  // Derived loading: true until EITHER the user is signed in OR the 500ms
+  // grace window passes (so signed-out visitors don't see a flash of the
+  // skeleton before the sign-in card paints). Replacing the old
+  // useEffect+setLoading pattern that React 19's purity lint flags.
+  const [minWaitDone, setMinWaitDone] = useState(false);
+  const loading = !isLoggedIn && !minWaitDone;
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -81,14 +86,13 @@ export default function EditProfilePage() {
     }).catch(() => {});
   }, []);
 
-  // If already logged in, load profile
+  // Flip the grace window off after 500ms so visitors who aren't signed in
+  // finally see the sign-in card. setState-in-effect for an external timer
+  // is the canonical use of useEffect — not a flagged anti-pattern.
   useEffect(() => {
-    if (isLoggedIn) setLoading(false);
-    else {
-      const timer = setTimeout(() => setLoading(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoggedIn]);
+    const timer = setTimeout(() => setMinWaitDone(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const loadProfile = useCallback(async () => {
     if (!user?.email) return;
@@ -125,7 +129,13 @@ export default function EditProfilePage() {
     } catch {}
   }, [user]);
 
+  // Load the saved profile when the user becomes available. Intentionally
+  // allowed setState-in-effect: loadProfile() reaches out to the /api/profiles
+  // endpoint (a genuine external system) and writes the response back into
+  // local state — the standard data-fetching pattern. Lint would prefer a
+  // framework like SWR here; that's a bigger refactor than this pass.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) loadProfile();
   }, [user, loadProfile]);
 
@@ -152,7 +162,12 @@ export default function EditProfilePage() {
     formData.append("email", user?.email || "unknown");
 
     try {
-      const res = await fetch("/api/profiles/upload", { method: "POST", body: formData });
+      const token = getIdToken() || "";
+      const res = await fetch("/api/profiles/upload", {
+        method: "POST",
+        headers: { "x-id-token": token },
+        body: formData,
+      });
       const data = await res.json();
       if (res.ok && data.url) {
         updateField("photoUrl", data.url);
@@ -174,9 +189,10 @@ export default function EditProfilePage() {
 
     setSaving(true);
     try {
+      const token = getIdToken() || "";
       const res = await fetch("/api/profiles", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-id-token": token },
         body: JSON.stringify({
           studentEmail: user!.email,
           name: profile.name,

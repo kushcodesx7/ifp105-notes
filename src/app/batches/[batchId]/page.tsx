@@ -7,13 +7,14 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { sizedAvatar } from "@/lib/avatar";
 
 /* ─── Types ─── */
 
 interface Student {
   enrollmentNo: string;
   name: string;
-  email: string;
+  // email intentionally omitted from the public /api/batches response
   linkedinUrl: string;
   addedAt: string;
 }
@@ -743,8 +744,13 @@ function ProfileCard({
               {p.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={p.photoUrl}
+                  src={sizedAvatar(p.photoUrl, 96)}
                   alt={p.name}
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                  decoding="async"
+                  width={48}
+                  height={48}
                   className="w-full h-full object-cover"
                 />
               ) : (

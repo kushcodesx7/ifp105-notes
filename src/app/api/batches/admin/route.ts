@@ -133,15 +133,36 @@ export async function POST(req: NextRequest) {
 
     case "delete-student": {
       const { batchId: bid, enrollmentNo } = body;
+      const roll = String(enrollmentNo).toUpperCase();
+      // Fetch the victim's email FIRST so we can record it in the audit trail.
+      // Without this step the audit log can't answer "who was deleted?".
+      const { data: victim } = await supabase
+        .from("students")
+        .select("email, name, section")
+        .eq("batch_id", bid)
+        .eq("enrollment_no", roll)
+        .maybeSingle();
+
       const { error } = await supabase
         .from("students")
         .delete()
         .eq("batch_id", bid)
-        .eq("enrollment_no", enrollmentNo.toUpperCase());
+        .eq("enrollment_no", roll);
 
       if (error) {
         return Response.json({ error: error.message }, { status: 500 });
       }
+      await logAdminAction({
+        actorEmail: actor,
+        action: "delete_student",
+        subjectEmail: victim?.email ?? null,
+        subjectBatchId: bid,
+        subjectSection: victim?.section ?? null,
+        details: {
+          enrollmentNo: roll,
+          name: victim?.name ?? null,
+        },
+      });
       return Response.json({ success: true });
     }
 

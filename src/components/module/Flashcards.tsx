@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+// Flashcards data (~42KB) lands in this lazy chunk, not in the main
+// module bundle. ModulePage wraps this component in next/dynamic so the
+// data only loads when a student actually scrolls into a topic.
+import { flashcardData } from "@/data/flashcards";
 
 interface FlashcardData {
   front: string;
@@ -9,14 +13,31 @@ interface FlashcardData {
 }
 
 interface FlashcardsProps {
-  cards: FlashcardData[];
+  // Legacy direct prop.
+  cards?: FlashcardData[];
+  // Preferred: let the component resolve its own cards from module+topic id.
+  moduleNumber?: number;
+  topicId?: number;
   title?: string;
 }
 
-export default function Flashcards({ cards, title = "Quick Review Flashcards" }: FlashcardsProps) {
+export default function Flashcards({
+  cards: cardsProp,
+  moduleNumber,
+  topicId,
+  title = "Quick Review Flashcards",
+}: FlashcardsProps) {
+  const resolved =
+    cardsProp ??
+    (moduleNumber != null && topicId != null
+      ? flashcardData[moduleNumber]?.[topicId]
+      : undefined);
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<number>>(new Set());
+
+  if (!resolved || resolved.length === 0) return null;
+  const cards = resolved;
 
   const card = cards[current];
   const remaining = cards.length - known.size;

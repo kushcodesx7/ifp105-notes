@@ -188,11 +188,20 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     return false;
   });
 
+  // Mount-only restore of review mode. We deliberately run this once:
+  // `completed`/`allAnswered` are derived from lazy-init state reading
+  // localStorage, so the values on the first render are already the
+  // final source of truth. Re-running on changes would incorrectly
+  // re-open the review screen every time a student answers a question.
+  const didRestoreRef = useRef(false);
   useEffect(() => {
+    if (didRestoreRef.current) return;
+    didRestoreRef.current = true;
     if (completed && allAnswered) {
       setViewMode("review");
       setShowResult(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Notify parent about answer count changes (use ref to avoid infinite loop)
@@ -451,7 +460,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                       <div key={oi} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px]"
                         style={{ background: optBg, border: `1px solid ${optBorder}`, color: optColor }}>
                         <span className="font-bold text-[10px] w-4">{letters[oi]}</span>
-                        <span>{opt}</span>
+                        <span className="whitespace-pre-wrap break-words">{opt}</span>
                         {isCorrectOpt && <span className="ml-auto text-[10px]">✓ correct</span>}
                         {isPicked && !wasCorrect && <span className="ml-auto text-[10px]">✗ your answer</span>}
                       </div>
@@ -703,7 +712,10 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                       >
                         {showFeedback && icon ? icon : letters[oi]}
                       </span>
-                      <span className="leading-relaxed pt-0.5">{opt}</span>
+                      {/* pre-wrap preserves newlines in options that
+                          contain multi-line code samples (HTML skeletons,
+                          etc.) without affecting plain-text options. */}
+                      <span className="leading-relaxed pt-0.5 whitespace-pre-wrap break-words">{opt}</span>
                     </motion.button>
                   );
                 })}

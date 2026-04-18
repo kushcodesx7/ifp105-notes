@@ -2,21 +2,36 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import AccordionRenderer from "@/components/module/AccordionRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
-import Confetti from "@/components/module/Confetti";
 import XpBar from "@/components/XpBar";
-import CheatSheet from "@/components/module/CheatSheet";
-import Flashcards from "@/components/module/Flashcards";
 import LoginPrompt from "@/components/module/LoginPrompt";
 import { addXP, XP_REWARDS, earnBadge, updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
-import { cheatsheets } from "@/data/cheatsheets";
-import { flashcardData } from "@/data/flashcards";
+
+// Heavy widgets split out of the main bundle. Each carries its own data
+// (cheatsheets ~22KB, flashcards ~42KB, confetti ~framer-motion use). By
+// loading on demand we shave ~70KB off the initial module load — the
+// single biggest perf win for 4G mobile in Tashkent.
+const CheatSheet = dynamic(() => import("@/components/module/CheatSheet"), {
+  ssr: false,
+  loading: () => (
+    <div className="text-center py-12 text-sm text-zinc-500">
+      Loading cheat sheet…
+    </div>
+  ),
+});
+const Flashcards = dynamic(() => import("@/components/module/Flashcards"), {
+  ssr: false,
+});
+const Confetti = dynamic(() => import("@/components/module/Confetti"), {
+  ssr: false,
+});
 
 interface Topic {
   id: number;
@@ -141,8 +156,11 @@ export default function ModulePage({
 
     async function loadProgress() {
       try {
+        const token = getIdToken();
+        if (!token) return;
         const res = await fetch(
-          `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}`
+          `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}`,
+          { headers: { "x-id-token": token } }
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -471,15 +489,11 @@ export default function ModulePage({
         <AnimatePresence mode="wait">
           {isCheatSheet ? (
             <motion.div key="cheatsheet" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
-              {cheatsheets.find(c => c.moduleId === moduleNumber) ? (
-                <CheatSheet data={cheatsheets.find(c => c.moduleId === moduleNumber)!} accentFrom={accentFrom} accentTo={accentTo} />
-              ) : (
-                <div className="text-center py-16">
-                  <div className="text-4xl mb-4">📋</div>
-                  <h2 className="text-2xl font-bold mb-2">Cheat Sheet</h2>
-                  <p className="text-zinc-500">Coming soon!</p>
-                </div>
-              )}
+              <CheatSheet
+                moduleNumber={moduleNumber}
+                accentFrom={accentFrom}
+                accentTo={accentTo}
+              />
             </motion.div>
           ) : activeTopic ? (
             <motion.div
@@ -550,10 +564,13 @@ export default function ModulePage({
                 </ErrorBoundary>
               </div>
 
-              {/* Flashcards */}
-              {flashcardData[moduleNumber]?.[activeTab] && (
-                <Flashcards cards={flashcardData[moduleNumber][activeTab]} title={`Quick Review — ${activeTopic.title.substring(0, 30)}`} />
-              )}
+              {/* Flashcards — component is lazy-loaded via next/dynamic above,
+                   and it resolves its own cards from the (module, topic) pair. */}
+              <Flashcards
+                moduleNumber={moduleNumber}
+                topicId={activeTab}
+                title={`Quick Review — ${activeTopic.title.substring(0, 30)}`}
+              />
 
               {renderAfterContent && renderAfterContent(activeTab)}
 

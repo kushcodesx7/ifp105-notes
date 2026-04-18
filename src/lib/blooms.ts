@@ -114,11 +114,14 @@ export interface ConfidenceMeta {
   weight: number; // 1..4, used for calibration math
 }
 
+// Emojis map to the *process* (chance / think / check / aim) rather than
+// feelings — an earlier 😟/🤩 pair was shaming students who guessed and
+// over-celebrating certainty. Audit-flagged pre-launch (Apr 2026).
 export const CONFIDENCE_META: Record<ConfidenceLevel, ConfidenceMeta> = {
-  guessing: { level: "guessing", label: "Guessing", emoji: "😟", color: "#EF4444", weight: 1 },
-  maybe: { level: "maybe", label: "Maybe", emoji: "😐", color: "#F59E0B", weight: 2 },
-  "pretty-sure": { level: "pretty-sure", label: "Pretty sure", emoji: "😊", color: "#10B981", weight: 3 },
-  certain: { level: "certain", label: "Certain", emoji: "🤩", color: "#6366F1", weight: 4 },
+  guessing: { level: "guessing", label: "Guessing", emoji: "🎲", color: "#EF4444", weight: 1 },
+  maybe: { level: "maybe", label: "Maybe", emoji: "🤔", color: "#F59E0B", weight: 2 },
+  "pretty-sure": { level: "pretty-sure", label: "Pretty sure", emoji: "✅", color: "#10B981", weight: 3 },
+  certain: { level: "certain", label: "Certain", emoji: "🎯", color: "#6366F1", weight: 4 },
 };
 
 export const CONFIDENCE_ORDER: ConfidenceLevel[] = [
