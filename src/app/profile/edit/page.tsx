@@ -57,7 +57,7 @@ function decodeJwt(token: string) {
 }
 
 export default function EditProfilePage() {
-  const { user, isLoggedIn, login } = useAuth();
+  const { user, isLoggedIn, login, getIdToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<ProfileData>(EMPTY_PROFILE);
@@ -152,7 +152,12 @@ export default function EditProfilePage() {
     formData.append("email", user?.email || "unknown");
 
     try {
-      const res = await fetch("/api/profiles/upload", { method: "POST", body: formData });
+      const token = getIdToken() || "";
+      const res = await fetch("/api/profiles/upload", {
+        method: "POST",
+        headers: { "x-id-token": token },
+        body: formData,
+      });
       const data = await res.json();
       if (res.ok && data.url) {
         updateField("photoUrl", data.url);
@@ -174,9 +179,10 @@ export default function EditProfilePage() {
 
     setSaving(true);
     try {
+      const token = getIdToken() || "";
       const res = await fetch("/api/profiles", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-id-token": token },
         body: JSON.stringify({
           studentEmail: user!.email,
           name: profile.name,

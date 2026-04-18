@@ -16,6 +16,20 @@
   --font-serif: var(--font-dm-serif);
 }
 
+/* Accessibility — lift the two darkest Tailwind grays to at least
+   WCAG AA (4.5:1) against our near-black background. text-zinc-500/600
+   are used in ~250 spots across the app as secondary/helper copy; the
+   default Tailwind values (#71717A / #52525B) measure 4.0:1 and 3.1:1
+   on #09090F, which fails AA for small body text.
+
+   Overriding the CSS custom properties that Tailwind emits for these
+   utilities is the one-line fix — every existing `text-zinc-500` and
+   `text-zinc-600` class picks up the brighter value automatically. */
+:root {
+  --color-zinc-500: #A1A1AA;
+  --color-zinc-600: #8C8C99;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

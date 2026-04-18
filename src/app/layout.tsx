@@ -16,14 +16,39 @@ const dmSerif = DM_Serif_Display({
   subsets: ["latin"],
 });
 
+// metadataBase silences Next 16 warnings and makes absolute URLs work for
+// OG cards on LinkedIn/Telegram/etc. Override via NEXT_PUBLIC_SITE_URL
+// if we ever move off Vercel.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://ifp105-notes.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "IFP105 — ICT Study Notes",
-  description: "Interactive study notes for Information & Communication Technology. Built for IFS students at Amity Tashkent.",
+  description:
+    "Interactive study notes for Information & Communication Technology. Built for IFS students at Amity Tashkent.",
   openGraph: {
     title: "IFP105 — ICT Study Notes",
-    description: "Interactive modules with quizzes, analogies, cheat sheets, and progress tracking. Built for IFS students at Amity Tashkent.",
+    description:
+      "Interactive modules with quizzes, analogies, cheat sheets, and progress tracking. Built for IFS students at Amity Tashkent.",
     type: "website",
     siteName: "IFP105",
+    url: SITE_URL,
+    images: [
+      {
+        url: "/og-cover.png",
+        width: 1200,
+        height: 630,
+        alt: "IFP105 — ICT Study Notes",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "IFP105 — ICT Study Notes",
+    description:
+      "Interactive modules with quizzes, cheat sheets, and a Bloom's Taxonomy thinking profile.",
+    images: ["/og-cover.png"],
   },
   robots: "index, follow",
 };

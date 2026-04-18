@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getSkill } from "@/lib/skills";
+import { sizedAvatar } from "@/lib/avatar";
 import HomeActivityStrip from "@/components/HomeActivityStrip";
 
 interface RecentJoiner {
@@ -199,9 +200,13 @@ export default function HomeConnectGlimpse() {
                     {j.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={j.photoUrl}
+                        src={sizedAvatar(j.photoUrl, 64)}
                         alt={prettyName(j.name)}
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
+                        width={32}
+                        height={32}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -273,9 +278,13 @@ export default function HomeConnectGlimpse() {
                     {s.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={s.photoUrl}
+                        src={sizedAvatar(s.photoUrl, 80)}
                         alt={prettyName(s.name)}
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                         style={{ border: `2px solid ${col.dot}50` }}
                       />

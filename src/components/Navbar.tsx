@@ -77,8 +77,13 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   useEffect(() => {
     if (isAdmin) return;
     if (isLoggedIn && user && !isRegistered) {
-      // Check DB to see if they're actually registered (maybe auth context is stale)
-      fetch(`/api/students/check?email=${encodeURIComponent(user.email)}`)
+      // Check DB to see if they're actually registered (maybe auth context is stale).
+      // Endpoint is auth'd — send the caller's Google ID token.
+      const token = getIdToken();
+      if (!token) return;
+      fetch(`/api/students/check?email=${encodeURIComponent(user.email)}`, {
+        headers: { "x-id-token": token },
+      })
         .then(async (r) => {
           // Only treat an explicit 404 (or data.registered === false) as "not registered".
           // Network/5xx errors should NOT pop the modal for already-registered users.
@@ -99,8 +104,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               section: data.section,
             });
             // Silently update the DB if the Google photo changed
-            const token = getIdToken();
-            if (user.photo && user.photo !== data.photoUrl && token) {
+            if (user.photo && user.photo !== data.photoUrl) {
               fetch("/api/students/sync", {
                 method: "POST",
                 headers: {
@@ -200,17 +204,26 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
             <div className="relative">
               <button
                 onClick={() => setShowModules(!showModules)}
+                aria-haspopup="menu"
+                aria-expanded={showModules}
+                aria-label={`Module menu — current module: ${title}`}
                 className="flex items-center gap-1 text-xs sm:text-sm font-medium text-zinc-400 hover:text-white transition-colors truncate max-w-[140px] sm:max-w-none"
               >
                 {title}
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className={`shrink-0 transition-transform ${showModules ? "rotate-180" : ""}`}>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" className={`shrink-0 transition-transform ${showModules ? "rotate-180" : ""}`}>
                   <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
 
               {showModules && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowModules(false)} />
+                  {/* Backdrop closes the menu — named for screen readers. */}
+                  <button
+                    type="button"
+                    aria-label="Close module menu"
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setShowModules(false)}
+                  />
                   <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -321,7 +334,8 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
             aria-label="IFS Connect"
             className="text-[11px] font-medium px-2.5 sm:px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04] whitespace-nowrap shrink-0"
           >
-            🤝<span className="hidden sm:inline"> Connect</span>
+            <span aria-hidden="true">🤝</span>
+            <span className="hidden sm:inline"> Connect</span>
           </Link>
           {/* Practice link hidden until content is verified — uncomment to re-enable
           <Link
@@ -339,7 +353,8 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                   className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors border border-indigo-400/30 whitespace-nowrap shrink-0"
                   title="Admin panel"
                 >
-                  🛡<span className="hidden sm:inline"> Admin</span>
+                  <span aria-hidden="true">🛡</span>
+                  <span className="hidden sm:inline"> Admin</span>
                 </Link>
               ) : !isRegistered ? (
                 <button
@@ -379,6 +394,13 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           className="fixed inset-0 z-[100] flex items-center justify-center px-4"
           style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
           onClick={(e: React.MouseEvent) => { if (e.target === e.currentTarget) setShowSignIn(false); }}
+          // Esc closes, matching every other dialog in the app.
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setShowSignIn(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="signin-modal-title"
         >
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -393,16 +415,17 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           >
             <button
               onClick={() => setShowSignIn(false)}
+              aria-label="Close sign-in"
               className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 transition-colors"
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
 
             <div className="text-center mb-6">
-              <div className="text-3xl mb-3">🚀</div>
-              <h2 className="text-lg font-bold text-white mb-1.5">Sign In</h2>
+              <div className="text-3xl mb-3" aria-hidden="true">🚀</div>
+              <h2 id="signin-modal-title" className="text-lg font-bold text-white mb-1.5">Sign In</h2>
               <p className="text-sm text-zinc-400">Save your progress across all devices</p>
             </div>
 

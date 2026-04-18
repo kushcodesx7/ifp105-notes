@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Compress responses
   compress: true,
+  poweredByHeader: false,
+
+  // Tree-shake deep imports from framer-motion + the OAuth libs. Saves
+  // ~20% of framer's transferred bytes and trims the initial bundle.
+  experimental: {
+    optimizePackageImports: [
+      "framer-motion",
+      "@react-oauth/google",
+      "swr",
+    ],
+  },
 
   // Cache static assets aggressively
   headers: async () => [

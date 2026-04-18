@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { sizedAvatar } from "@/lib/avatar";
 
 interface ActivityEvent {
   id: string;
@@ -161,10 +162,11 @@ export default function HomeActivityStrip() {
           {evt.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={evt.photoUrl}
+              src={sizedAvatar(evt.photoUrl, 40)}
               alt={prettyName(evt.who)}
               referrerPolicy="no-referrer"
               loading="lazy"
+              decoding="async"
               width={20}
               height={20}
               className="w-5 h-5 rounded-full object-cover shrink-0"

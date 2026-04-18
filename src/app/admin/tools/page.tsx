@@ -171,6 +171,7 @@ const ACTION_META: Record<
   change_email: { icon: "✉", label: "Email changed", color: "#818CF8" },
   reset_progress: { icon: "🔄", label: "Progress reset", color: "#F87171" },
   unlink: { icon: "🔗", label: "Account unlinked", color: "#F87171" },
+  delete_student: { icon: "🗑", label: "Student deleted", color: "#F87171" },
   create_batch: { icon: "🎓", label: "Batch created", color: "#34D399" },
   add_rolls: { icon: "➕", label: "Rolls added", color: "#34D399" },
   remove_rolls: { icon: "➖", label: "Rolls removed", color: "#F59E0B" },

@@ -1,7 +1,14 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireAuth } from "@/lib/verify-google-token";
 
+// SECURITY: signed-in students only. Anonymous upload would let anyone fill
+// our Supabase storage bucket with arbitrary files. Audit-flagged CRITICAL
+// pre-launch (Apr 2026).
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth.response;
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
 

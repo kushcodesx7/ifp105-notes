@@ -1,17 +1,44 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ModuleCheatSheet } from "@/data/cheatsheets";
+// Bring in the cheatsheets data here (not in ModulePage) so this ~22KB
+// payload only lands in the bundle when a student opens the cheat sheet
+// tab. With next/dynamic in the parent, this becomes its own lazy chunk.
+import { cheatsheets, type ModuleCheatSheet } from "@/data/cheatsheets";
 
 interface CheatSheetProps {
-  data: ModuleCheatSheet;
+  // Legacy prop: if supplied, use as-is.
+  data?: ModuleCheatSheet;
+  // Preferred: let the component resolve its own data from the module id.
+  moduleNumber?: number;
   accentFrom: string;
   accentTo: string;
 }
 
 const vp = { once: true, margin: "-40px" as const };
 
-export default function CheatSheet({ data, accentFrom, accentTo }: CheatSheetProps) {
+export default function CheatSheet({
+  data,
+  moduleNumber,
+  accentFrom,
+  accentTo,
+}: CheatSheetProps) {
+  const resolved =
+    data ??
+    (moduleNumber != null
+      ? cheatsheets.find((c) => c.moduleId === moduleNumber)
+      : undefined);
+
+  if (!resolved) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-4xl mb-4">📋</div>
+        <h2 className="text-2xl font-bold mb-2">Cheat Sheet</h2>
+        <p className="text-zinc-500">Coming soon!</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -21,12 +48,12 @@ export default function CheatSheet({ data, accentFrom, accentTo }: CheatSheetPro
         className="text-center"
       >
         <div className="text-4xl mb-3">📋</div>
-        <h2 className="text-2xl font-bold tracking-tight mb-2">{data.title}</h2>
+        <h2 className="text-2xl font-bold tracking-tight mb-2">{resolved.title}</h2>
         <p className="text-sm text-zinc-500">Key terms, definitions, and exam tips — all in one place.</p>
       </motion.div>
 
       {/* Sections */}
-      {data.sections.map((section, si) => (
+      {resolved.sections.map((section, si) => (
         <motion.div
           key={section.title}
           initial={{ opacity: 0, y: 16 }}
@@ -69,7 +96,7 @@ export default function CheatSheet({ data, accentFrom, accentTo }: CheatSheetPro
       ))}
 
       {/* Confusion Pairs */}
-      {data.confusionPairs.length > 0 && (
+      {resolved.confusionPairs.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -81,8 +108,8 @@ export default function CheatSheet({ data, accentFrom, accentTo }: CheatSheetPro
             <h3 className="text-sm font-bold text-white">⚠️ Commonly Confused</h3>
           </div>
           <div className="px-5 py-3 space-y-3">
-            {data.confusionPairs.map((pair, i) => (
-              <div key={i} className="pb-3" style={{ borderBottom: i < data.confusionPairs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+            {resolved.confusionPairs.map((pair, i) => (
+              <div key={i} className="pb-3" style={{ borderBottom: i < resolved.confusionPairs.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
                     {pair.termA}

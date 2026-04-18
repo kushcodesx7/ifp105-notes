@@ -1,8 +1,13 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireSelf } from "@/lib/verify-google-token";
 
 // GET /api/students/check?email=user@example.com
-// Returns whether a student has completed registration
+// Returns whether a signed-in student has completed registration.
+//
+// SECURITY: auth'd via requireSelf. Anonymous access would let anyone
+// enumerate "is X registered" for any email (registration = PII signal +
+// reveals name/roll/section). Audit-flagged CRITICAL pre-launch (Apr 2026).
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
@@ -10,6 +15,9 @@ export async function GET(req: NextRequest) {
   if (!email) {
     return Response.json({ registered: false }, { status: 400 });
   }
+
+  const auth = await requireSelf(req, email);
+  if (!auth.ok) return auth.response;
 
   const { data } = await supabase
     .from("students")

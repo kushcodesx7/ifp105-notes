@@ -20,6 +20,10 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Invalid module number" }, { status: 400 });
   }
 
+  // Only a student can read their own progress. Audit-flagged pre-launch.
+  const auth = await requireSelf(req, email);
+  if (!auth.ok) return auth.response;
+
   const { data, error } = await supabase
     .from("student_progress")
     .select(

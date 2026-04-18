@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireSelf } from "@/lib/verify-google-token";
 
 // GET — load profiles for a batch
 export async function GET(req: NextRequest) {
@@ -48,6 +49,10 @@ export async function GET(req: NextRequest) {
 }
 
 // POST — create or update profile (upsert by student_email)
+// SECURITY: requireSelf ensures a signed-in student can only edit their own
+// profile. Without this, anyone could POST with any email and impersonate
+// another student — or overwrite their bio/photo/linkedin. Audit-flagged
+// CRITICAL pre-launch (Apr 2026).
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
@@ -80,6 +85,10 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  // Caller must own the profile they're editing
+  const auth = await requireSelf(req, studentEmail);
+  if (!auth.ok) return auth.response;
 
   if (
     status &&

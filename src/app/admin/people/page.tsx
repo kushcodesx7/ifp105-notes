@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
@@ -10,6 +10,7 @@ import { useAdminFetch } from "@/lib/useAdminFetch";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import { compareSections } from "@/lib/sections";
+import { sizedAvatar } from "@/lib/avatar";
 
 // ─── Page ───────────────────────────────────────────────────────────
 
@@ -54,7 +55,20 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "blendedDesc", label: "Top performers" },
 ];
 
-export default function PeoplePage() {
+// Next 16 requires pages that call useSearchParams() during render to
+// sit inside a Suspense boundary so the static-export step can bail out
+// cleanly into client-only rendering. Splitting the previous default
+// export into `PeoplePage` (the real UI) + `PeoplePageWrapper` (the
+// Suspense wrapper, now the default export) is the canonical fix.
+export default function PeoplePageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <PeoplePage />
+    </Suspense>
+  );
+}
+
+function PeoplePage() {
   const { user, isLoggedIn, getIdToken } = useAuth();
   const isAdmin = isLoggedIn && isAdminEmail(user?.email);
   const idToken = isAdmin ? getIdToken() : null;
@@ -549,7 +563,19 @@ export default function PeoplePage() {
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.15, delay: Math.min(i * 0.005, 0.08) }}
                       onClick={() => openStudent(s.email)}
-                      className="cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      // Keyboard: Enter / Space opens the drawer. Without
+                      // tabIndex + key handling, keyboard-only admins
+                      // couldn't navigate the roster at all.
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open details for ${s.name}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openStudent(s.email);
+                        }
+                      }}
+                      className="cursor-pointer hover:bg-white/[0.02] focus:outline-none focus-visible:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-indigo-500/60 transition-colors"
                       style={{
                         borderBottom: "1px solid rgba(255,255,255,0.03)",
                         background: checked ? "rgba(99,102,241,0.06)" : undefined,
@@ -714,8 +740,9 @@ function SmallAvatar({ student }: { student: AdminStudent }) {
       {student.photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={student.photoUrl}
+          src={sizedAvatar(student.photoUrl, 64)}
           alt={student.name}
+          referrerPolicy="no-referrer"
           width={32}
           height={32}
           loading="lazy"
