@@ -11,6 +11,7 @@ import AdminAuthGate, {
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import BlockEditor from "@/components/admin/BlockEditor";
+import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import TopicRenderer from "@/components/module/TopicRenderer";
 import type { ContentBlock } from "@/types/content";
 
@@ -511,23 +512,20 @@ function TopicEditorPanel({
     }
   }
 
-  async function deleteTopic() {
-    if (
-      !confirm(
-        `Delete topic ${topic.number} "${topic.title}"? Cascades to ${topic.questionCount} question(s).`
-      )
-    )
-      return;
-    try {
-      await adminWrite(
-        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
-        "DELETE",
-        { idToken, password }
-      );
-      onChange();
-    } catch (e) {
-      alert((e as Error).message);
-    }
+  // Two-step delete: opens DangerDeleteDialog, which collects a fresh
+  // admin password and calls runDeleteTopic below with it. Using the
+  // entered password as x-admin-password (not the OAuth token) forces
+  // the teacher to re-prove identity — friction is the point.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  async function runDeleteTopic(enteredPassword: string) {
+    await adminWrite(
+      `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
+      "DELETE",
+      { idToken: null, password: enteredPassword }
+    );
+    setDeleteOpen(false);
+    onChange();
   }
 
   return (
@@ -559,12 +557,26 @@ function TopicEditorPanel({
           {saving ? "Saving…" : "Save topic"}
         </button>
         <button
-          onClick={deleteTopic}
+          onClick={() => setDeleteOpen(true)}
           className="text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-3 py-1.5 rounded-lg transition-colors ml-auto"
         >
           Delete topic
         </button>
       </div>
+
+      <DangerDeleteDialog
+        open={deleteOpen}
+        title={`Delete topic ${topic.number}?`}
+        target={`Topic ${topic.number}: ${topic.title}`}
+        consequences={[
+          `${topic.questionCount} question${topic.questionCount === 1 ? "" : "s"} in this topic`,
+          `The topic body content (paragraphs, callouts, images, etc.)`,
+          `Any uploaded images attached to this topic`,
+        ]}
+        confirmLabel="Delete topic"
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={runDeleteTopic}
+      />
 
       {/* ── Topic body (content blocks) — Phase 5 ───────────── */}
       <div className="mt-5 border-t border-white/[0.05] pt-4">
