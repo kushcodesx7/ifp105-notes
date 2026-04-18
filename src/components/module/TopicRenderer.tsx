@@ -165,26 +165,31 @@ function RenderBlock({ block }: { block: ContentBlock }) {
           className="my-4 rounded-xl overflow-hidden inner-glow"
           style={{ border: '1px solid #2a2a33' }}
         >
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr style={{ background: 'linear-gradient(135deg, #4F46E5, #4338CA)' }}>
-                {block.headers.map((h, i) => (
-                  <th key={i} className="px-4 py-2.5 text-left font-semibold text-white/90 tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {block.rows.map((row, ri) => (
-                <tr key={ri} className="hover:bg-white/[0.02] transition-colors" style={{ borderTop: '1px solid #1e1e28' }}>
-                  {row.cells.map((cell, ci) => (
-                    <td key={ci} className="px-4 py-2.5 text-zinc-400" style={{ background: ri % 2 ? '#111116' : 'transparent' }}
-                      dangerouslySetInnerHTML={{ __html: cell }}
-                    />
+          {/* Horizontal scroll wrapper — tables with 3+ columns overflow on
+               375px. Keeping the outer rounded border while the inner div
+               handles the scroll. */}
+          <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+            <table className="w-full text-[12px] min-w-max">
+              <thead>
+                <tr style={{ background: 'linear-gradient(135deg, #4F46E5, #4338CA)' }}>
+                  {block.headers.map((h, i) => (
+                    <th key={i} className="px-4 py-2.5 text-left font-semibold text-white/90 tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {block.rows.map((row, ri) => (
+                  <tr key={ri} className="hover:bg-white/[0.02] transition-colors" style={{ borderTop: '1px solid #1e1e28' }}>
+                    {row.cells.map((cell, ci) => (
+                      <td key={ci} className="px-4 py-2.5 text-zinc-400 align-top" style={{ background: ri % 2 ? '#111116' : 'transparent' }}
+                        dangerouslySetInnerHTML={{ __html: cell }}
+                      />
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </motion.div>
       );
 
