@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/modules";
+import { verifyGoogleIdToken } from "@/lib/verify-google-token";
+import { isAdminEmail } from "@/lib/admins";
 
 // GET /api/connect — list of all registered students for IFS Connect
 // Optional query params:
@@ -11,6 +13,29 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("batchId");
   const section = searchParams.get("section");
+
+  // Hidden sections (e.g. "Test Section") are filtered out for the public
+  // feed so students never see test accounts. But the teacher (or any user
+  // who actually belongs to a hidden section) needs to see those profiles to
+  // test features against their own account. We include hidden sections when:
+  //   - caller is an admin, OR
+  //   - caller's own section is hidden
+  // Response becomes private-cached in those cases so a student's request
+  // can't hit a cached response that contains test profiles.
+  const idToken = req.headers.get("x-id-token");
+  const caller = idToken ? await verifyGoogleIdToken(idToken) : null;
+  let callerOwnSectionIsHidden = false;
+  if (caller) {
+    const { data: self } = await supabase
+      .from("students")
+      .select("section")
+      .eq("email", caller.email)
+      .maybeSingle();
+    const selfSection = (self as { section?: string | null } | null)?.section;
+    if (selfSection && isHiddenSection(selfSection)) callerOwnSectionIsHidden = true;
+  }
+  const includeHidden =
+    !!caller && (isAdminEmail(caller.email) || callerOwnSectionIsHidden);
 
   const studentQuery = supabase
     .from("students")
@@ -51,9 +76,10 @@ export async function GET(req: NextRequest) {
     doneByEmail[row.student_email] = (doneByEmail[row.student_email] || 0) + 1;
   }
 
-  // Filter out test/hidden sections before mapping
+  // Filter out test/hidden sections before mapping — unless the caller is
+  // an admin or belongs to a hidden section themselves.
   const visibleStudentRows = (studentsRes.data || []).filter(
-    (s) => !isHiddenSection(s.section)
+    (s) => includeHidden || !isHiddenSection(s.section)
   );
 
   // Map to public shape (email never leaves the server side).
@@ -80,7 +106,8 @@ export async function GET(req: NextRequest) {
   let visibleRollCount = 0;
   for (const r of rollRes.data || []) {
     const sec = (r as { section?: string }).section || "";
-    if (!sec || isHiddenSection(sec)) continue;
+    if (!sec) continue;
+    if (!includeHidden && isHiddenSection(sec)) continue;
     perSectionTotals[sec] = (perSectionTotals[sec] || 0) + 1;
     visibleRollCount += 1;
   }
@@ -93,8 +120,12 @@ export async function GET(req: NextRequest) {
     },
     {
       headers: {
-        // Public cache — profile + progress data. 2min fresh, 10min stale.
-        "Cache-Control": "public, max-age=120, stale-while-revalidate=600",
+        // Response contains personalized data (hidden sections) when a
+        // privileged caller is signed in → private cache so a student's
+        // request can't be served the admin's cached response.
+        "Cache-Control": includeHidden
+          ? "private, max-age=30"
+          : "public, max-age=120, stale-while-revalidate=600",
       },
     }
   );

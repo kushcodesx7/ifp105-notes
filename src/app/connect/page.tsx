@@ -79,7 +79,7 @@ function joinedLabel(dateStr: string): string {
 }
 
 export default function IFSConnectPage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getIdToken } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [totalRolls, setTotalRolls] = useState(0);
   const [perSectionTotals, setPerSectionTotals] = useState<Record<string, number>>({});
@@ -95,7 +95,13 @@ export default function IFSConnectPage() {
     let alive = true;
     async function loadConnect() {
       try {
-        const r = await fetch("/api/connect");
+        // Send the id token if available. The server includes hidden-section
+        // profiles (e.g. "Test Section") only when the caller is admin or
+        // themselves belongs to a hidden section. Others get the public feed.
+        const token = getIdToken();
+        const headers: Record<string, string> = {};
+        if (token) headers["x-id-token"] = token;
+        const r = await fetch("/api/connect", { headers });
         if (!r.ok) return;
         const data = await r.json();
         if (!alive) return;
