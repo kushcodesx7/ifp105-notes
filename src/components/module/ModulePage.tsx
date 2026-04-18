@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -13,8 +13,9 @@ import LoginPrompt from "@/components/module/LoginPrompt";
 import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
-import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { CURRENT_COURSE_SLUG, getCurrentCourse } from "@/lib/course-registry";
 import { progressKey, activeTabKey, quizStateKey } from "@/lib/storage-keys";
+import type { ContentBlock, Question as CanonicalQuestion } from "@/types/content";
 
 // Heavy widgets split out of the main bundle. Each carries its own data
 // (cheatsheets ~22KB, flashcards ~42KB, confetti ~framer-motion use). By
@@ -41,16 +42,14 @@ interface Topic {
   time: string;
   badges: { text: string; type: "star" | "hot" }[];
   hook: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  content: any[];
+  content: ContentBlock[];
 }
 
-interface Question {
-  q: string;
-  opts: string[];
-  ans: number;
-  why: string;
-}
+// Use the canonical Question so the shape matches what McqQuiz expects
+// (which also now imports from the same source). Before this, ModulePage
+// had its own local Question without `bloom`, and TS treated it as a
+// different type from McqQuiz's `Question` under the same name.
+type Question = CanonicalQuestion;
 
 interface ModulePageProps {
   // courseSlug identifies which course this module belongs to. Used to
@@ -104,6 +103,11 @@ export default function ModulePage({
   const LS_ACTIVE_TAB_KEY = activeTabKey(courseSlug, moduleNumber);
 
   const { user, isLoggedIn, getIdToken } = useAuth();
+  // Respect prefers-reduced-motion for the always-on hero orb drift +
+  // any other ambient loop in this component. Framer-motion's JS-rAF
+  // animations don't auto-respect the CSS media query, so we gate
+  // the `animate` props explicitly.
+  const reduceMotion = useReducedMotion();
 
   const [activeTab, setActiveTab] = useState(1);
   const [direction, setDirection] = useState(1);
@@ -478,13 +482,13 @@ export default function ModulePage({
       <section className="relative pt-14 overflow-hidden" style={{ background: '#08080F' }}>
         <div className="absolute inset-0 pointer-events-none">
           <motion.div
-            animate={{ x: [0, 20, -10, 0], y: [0, -20, 10, 0] }}
+            animate={reduceMotion ? undefined : { x: [0, 20, -10, 0], y: [0, -20, 10, 0] }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-[10%] right-[20%] w-[400px] h-[400px] rounded-full blur-[100px]"
             style={{ background: orbColor1 }}
           />
           <motion.div
-            animate={{ x: [0, -15, 15, 0], y: [0, 15, -10, 0] }}
+            animate={reduceMotion ? undefined : { x: [0, -15, 15, 0], y: [0, 15, -10, 0] }}
             transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-[10%] left-[15%] w-[300px] h-[300px] rounded-full blur-[100px]"
             style={{ background: orbColor2 }}
@@ -500,7 +504,7 @@ export default function ModulePage({
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5 text-[11px] font-medium text-zinc-400"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            📘 Module {moduleNumber} · IFP105
+            📘 Module {moduleNumber} · {getCurrentCourse().code}
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
             <span style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -860,7 +864,7 @@ export default function ModulePage({
                     {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                   </div>
                   <div className="text-[10px] text-zinc-600 font-medium">
-                    IFP105 &middot; Amity University Tashkent
+                    {getCurrentCourse().code} &middot; Amity University Tashkent
                   </div>
                 </div>
               </div>

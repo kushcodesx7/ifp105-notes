@@ -30,12 +30,17 @@ function hashString(s: string): number {
 
 export type { BloomLevel };
 
+// Local Question shape — mirrors the canonical one in src/types/content.ts
+// so McqQuiz can be tested in isolation without the whole type graph.
+// `bloom` is required now; every question flowing into the quiz comes
+// from either TS data (always tagged) or the DB loader (defaults nulls
+// to "understand").
 interface Question {
   q: string;
   opts: string[];
   ans: number;
   why: string;
-  bloom?: BloomLevel;
+  bloom: BloomLevel;
 }
 
 // JSON shapes sent to /api/progress on completion. Kept simple so the server

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect } from "react";
 
 const colors = ["#6366F1", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#06B6D4", "#F97316"];
@@ -37,13 +37,21 @@ function generateParticles(): Particle[] {
 
 export default function Confetti({ trigger }: { trigger: number }) {
   const [particles, setParticles] = useState<Particle[]>([]);
+  // Respect prefers-reduced-motion — 40 particles flinging across the
+  // viewport is exactly the kind of animation vestibular-sensitive
+  // users flag. When reduced motion is on, we skip the celebration
+  // entirely. Completion UX still works; only the confetti is gone.
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (trigger === 0) return;
+    if (reduceMotion) return;
     setParticles(generateParticles());
     const timer = setTimeout(() => setParticles([]), 2500);
     return () => clearTimeout(timer);
-  }, [trigger]);
+  }, [trigger, reduceMotion]);
+
+  if (reduceMotion) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">

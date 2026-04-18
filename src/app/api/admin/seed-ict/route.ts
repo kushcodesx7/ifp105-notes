@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { MODULES } from "@/lib/modules";
+import type { ContentBlock } from "@/types/content";
 
 // POST /api/admin/seed-ict
 //
@@ -33,8 +34,7 @@ interface TopicRow {
   title: string;
   time: string;
   hook: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  content: any[];
+  content: ContentBlock[];
 }
 
 interface McqRow {

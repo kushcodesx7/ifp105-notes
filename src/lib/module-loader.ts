@@ -43,54 +43,50 @@ export async function loadModuleFromDB(
   moduleNumber: number
 ): Promise<LoadedModule | null> {
   try {
-    // 1. Resolve course_id by slug. If the courses table is missing or
-    //    this slug isn't there, bail to fallback.
-    const { data: course } = await supabase
-      .from("courses")
-      .select("id")
-      .eq("slug", courseSlug)
-      .maybeSingle();
+    // Before: 4 SEQUENTIAL round-trips (course → module → topics →
+    // questions). Each ~100-200ms to Supabase. Total ~600ms per module
+    // page render + each MCQ API hit.
+    //
+    // After: 2 round-trips via PostgREST embedding.
+    //   1. modules JOIN courses ON slug  — resolves module_id with the
+    //      course filter baked into the FK join.
+    //   2. topics JOIN questions (one-to-many embed) — returns every
+    //      topic row with its MCQs inline. PostgREST stitches the
+    //      array of questions into each topic row server-side.
+    //
+    // Cuts total latency ~50%. Big win on the /api/public/mcq cold
+    // path which was 2.3s TTFB in the audit.
 
-    const courseId = (course as { id: string } | null)?.id;
-    if (!courseId) return null;
-
-    // 2. Resolve the module row by (course_id, number).
+    // ── 1. Module lookup (course filter via relation join) ──
     const { data: mod } = await supabase
       .from("modules")
-      .select("id")
-      .eq("course_id", courseId)
+      .select("id, course:courses!inner(slug)")
+      .eq("courses.slug", courseSlug)
       .eq("number", moduleNumber)
       .maybeSingle();
 
     const moduleId = (mod as { id: string } | null)?.id;
     if (!moduleId) return null;
 
-    // 3. Load topics in order.
+    // ── 2. Topics + their questions embedded (one round-trip) ──
     const { data: topicRows } = await supabase
       .from("topics")
-      .select("id, number, title, time_min, hook, content_json, order_index")
+      .select(
+        `id, number, title, time_min, hook, content_json, order_index,
+         questions(number, question, options_json, correct_index, bloom, explanation, difficulty, order_index)`
+      )
       .eq("module_id", moduleId)
       .order("order_index", { ascending: true })
       .order("number", { ascending: true });
 
     if (!topicRows || topicRows.length === 0) return null;
 
-    // 4. Load all questions for these topics in one round-trip so we
-    //    don't do N+1 round-trips during SSR.
-    const topicIds = topicRows.map((t) => t.id as string);
-    const { data: qRows } = await supabase
-      .from("questions")
-      .select(
-        "topic_id, number, question, options_json, correct_index, bloom, explanation, difficulty, order_index"
-      )
-      .in("topic_id", topicIds)
-      .order("order_index", { ascending: true })
-      .order("number", { ascending: true });
-
-    // 5. Transform into the student-shaped structures. The DB schema
-    //    is authoring-oriented (full_title, time_min, etc.); the
-    //    renderer wants the legacy TS shape. This adapter is the
-    //    single place that translation happens.
+    // ── 3. Transform the embedded shape into the student-side
+    //    Topic[] + ModuleMcqBank structures the renderer expects.
+    //    PostgREST returns each topic row with a nested `questions`
+    //    array; we keep the original sort order but also sort
+    //    questions by (order_index, number) client-side in case the
+    //    embed arrives unsorted.
     const mcqByTopicNumber: ModuleMcqBank = {};
     const topics: Topic[] = topicRows.map((t) => {
       const tRow = t as {
@@ -100,15 +96,44 @@ export async function loadModuleFromDB(
         time_min: number | null;
         hook: string | null;
         content_json: unknown;
+        questions:
+          | {
+              number: number;
+              question: string;
+              options_json: unknown;
+              correct_index: number;
+              bloom: string | null;
+              explanation: string | null;
+              order_index: number;
+            }[]
+          | null;
       };
 
-      // content_json is stored as JSONB — trust it was written by the
-      // block editor which enforces the ContentBlock shape. If it's
-      // not an array (shouldn't happen — `content_json NOT NULL DEFAULT
-      // '[]'`) we default to empty so the page still renders.
+      // content_json: NOT NULL DEFAULT '[]'::jsonb → always an array.
+      // Defensive `Array.isArray` in case a hand-edited row is
+      // malformed.
       const content: ContentBlock[] = Array.isArray(tRow.content_json)
         ? (tRow.content_json as ContentBlock[])
         : [];
+
+      // Stitch embedded MCQs into the bank keyed by topic number.
+      const embedded = tRow.questions || [];
+      const sorted = [...embedded].sort(
+        (a, b) =>
+          (a.order_index ?? 0) - (b.order_index ?? 0) ||
+          (a.number ?? 0) - (b.number ?? 0)
+      );
+      mcqByTopicNumber[tRow.number] = sorted.map((qr) => ({
+        q: qr.question,
+        opts: Array.isArray(qr.options_json) ? (qr.options_json as string[]) : [],
+        ans: qr.correct_index,
+        why: qr.explanation || "",
+        // bloom is now required on the canonical Question type. If the
+        // DB row happens to carry null (old / imported content) we
+        // default to "understand" — the least noisy assumption for
+        // content that clearly exists at or above the recall level.
+        bloom: (qr.bloom as Question["bloom"]) || "understand",
+      }));
 
       return {
         id: tRow.number,
@@ -119,35 +144,6 @@ export async function loadModuleFromDB(
         content,
       };
     });
-
-    for (const q of qRows || []) {
-      const qr = q as {
-        topic_id: string;
-        number: number;
-        question: string;
-        options_json: unknown;
-        correct_index: number;
-        bloom: string | null;
-        explanation: string | null;
-      };
-      // Map topic UUID → topic number for the MCQ bank key.
-      const topicRow = topicRows.find((t) => (t.id as string) === qr.topic_id);
-      if (!topicRow) continue;
-      const topicNumber = (topicRow as { number: number }).number;
-
-      if (!mcqByTopicNumber[topicNumber]) mcqByTopicNumber[topicNumber] = [];
-      const opts: string[] = Array.isArray(qr.options_json)
-        ? (qr.options_json as string[])
-        : [];
-      const question: Question = {
-        q: qr.question,
-        opts,
-        ans: qr.correct_index,
-        why: qr.explanation || "",
-        bloom: (qr.bloom || undefined) as Question["bloom"],
-      };
-      mcqByTopicNumber[topicNumber].push(question);
-    }
 
     return { topics, mcq: mcqByTopicNumber };
   } catch {

@@ -3,19 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TopicRenderer from "./TopicRenderer";
-
-interface ContentBlock {
-  type: string;
-  html?: string;
-  label?: string;
-  headers?: string[];
-  rows?: { cells: string[] }[];
-  items?: unknown[];
-  columns?: number;
-  variant?: string;
-  src?: string;
-  description?: string;
-}
+// Canonical block type — was redeclared loosely here, which meant this
+// file and TopicRenderer disagreed on optionality. Unified now.
+import type { ContentBlock } from "@/types/content";
 
 interface Section {
   title: string;
@@ -98,8 +88,7 @@ function getBlockTitle(block: ContentBlock, index: number): string {
 }
 
 interface AccordionRendererProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  content: any[];
+  content: ContentBlock[];
 }
 
 export default function AccordionRenderer({ content }: AccordionRendererProps) {
@@ -132,8 +121,7 @@ export default function AccordionRenderer({ content }: AccordionRendererProps) {
 
   // If content is very short (1-2 blocks), don't use accordion
   if (content.length <= 2) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return <TopicRenderer content={content as any} />;
+    return <TopicRenderer content={content} />;
   }
 
   return (
@@ -192,8 +180,7 @@ export default function AccordionRenderer({ content }: AccordionRendererProps) {
                     className="overflow-hidden"
                   >
                     <div className="px-4 pb-4">
-                      { /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
-                      <TopicRenderer content={section.blocks as any} />
+                      <TopicRenderer content={section.blocks} />
                     </div>
                   </motion.div>
                 )}
