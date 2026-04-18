@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { loadModuleFromDB } from "@/lib/module-loader";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/public/mcq/:module?course=ict
 //
@@ -25,6 +26,17 @@ export async function GET(
   if (Number.isNaN(moduleNumber)) {
     return Response.json({ error: "Invalid module number" }, { status: 400 });
   }
+
+  // Rate limit — public endpoint, no auth. 120 reqs/min per IP covers
+  // rapid topic-switching by a single student + some spare. Fail-open
+  // if Redis is unavailable (see rate-limit.ts).
+  const rl = await rateLimit({
+    bucket: "public:mcq",
+    id: ipFromRequest(_req),
+    limit: 120,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 120);
 
   // Course slug. Defaults to ICT — this endpoint will become course-aware
   // once Phase 6 ships dynamic URLs. Today every caller is ICT.

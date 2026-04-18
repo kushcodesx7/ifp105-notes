@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { parseBody, CreateCourseSchema } from "@/lib/schemas";
 
 // /api/admin/courses — list + create courses.
 //
@@ -34,15 +35,9 @@ export interface CourseRow {
   moduleCount: number;
 }
 
-const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
-
-function validateSlug(slug: string): string | null {
-  if (!slug) return "slug is required";
-  if (!SLUG_RE.test(slug)) {
-    return "slug must be 2–40 chars, lowercase letters, digits, and hyphens only (e.g. 'python-101')";
-  }
-  return null;
-}
+// Slug validation moved into CreateCourseSchema (src/lib/schemas/index.ts)
+// — the regex lives there as a single source of truth shared with any
+// future update-slug flow.
 
 // ─── GET — list courses (+ per-course module count) ───────────────
 export async function GET(req: NextRequest) {
@@ -115,35 +110,22 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
 
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return Response.json({ error: "JSON body required" }, { status: 400 });
-  }
-
-  const slug = String(body.slug || "").trim().toLowerCase();
-  const code = String(body.code || "").trim();
-  const name = String(body.name || "").trim();
-  const description =
-    typeof body.description === "string" ? body.description.trim() : null;
-  const accent =
-    typeof body.accent === "string" ? body.accent.trim() : null;
-  const icon = typeof body.icon === "string" ? body.icon.trim() : null;
-  const institution =
-    typeof body.institution === "string" ? body.institution.trim() : null;
-
-  const slugErr = validateSlug(slug);
-  if (slugErr) return Response.json({ error: slugErr }, { status: 400 });
-  if (!code) return Response.json({ error: "code is required" }, { status: 400 });
-  if (!name) return Response.json({ error: "name is required" }, { status: 400 });
+  // zod validates slug shape, required fields, length limits, hex
+  // accent colour, and trims whitespace in one pass. Replaces the
+  // hand-written typeof checks + validateSlug regex below.
+  const parsed = await parseBody(req, CreateCourseSchema);
+  if (!parsed.ok) return parsed.response;
+  const { slug, code, name, description, accent, icon, institution } =
+    parsed.data;
 
   const insertRow: Record<string, unknown> = {
     slug,
     code,
     name,
-    description,
-    accent,
-    icon,
-    institution,
+    description: description ?? null,
+    accent: accent ?? null,
+    icon: icon ?? null,
+    institution: institution ?? null,
     active: true,
   };
 

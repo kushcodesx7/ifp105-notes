@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
 import { getCourseIdBySlug, CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { parseBody, RegisterStudentSchema } from "@/lib/schemas";
 
 // GET — return all batches with public student listings.
 //
@@ -11,7 +13,19 @@ import { getCourseIdBySlug, CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 //
 // Also: was N+1 (per-batch student query). Collapsed to a single query that
 // groups in-memory. Monday load = 218 × first-page hit, so this matters.
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Public endpoint — rate limit by IP. 60 reqs/min is way more than
+  // any legitimate student needs (the home page fetches this once and
+  // caches). Set conservatively to throttle scrapers without impacting
+  // the Monday-morning class-joins surge (~50 concurrent students).
+  const rl = await rateLimit({
+    bucket: "public:batches",
+    id: ipFromRequest(req),
+    limit: 60,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 60);
+
   // One query for batches + one for ALL students. O(batches + students).
   const [batchRes, studentsRes] = await Promise.all([
     supabase
@@ -60,28 +74,28 @@ export async function GET() {
 
 // POST — student registers (batch + section + roll number + name + linkedin)
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { batchId, section, enrollmentNo, name, email, linkedinUrl, photoUrl } = body;
+  // Per-IP rate limit. Registration is a rare action per user but a
+  // common abuse target (spam accounts). 10/min is enough for a
+  // legitimate user retrying if the first attempt had a typo.
+  const rl = await rateLimit({
+    bucket: "public:register",
+    id: ipFromRequest(req),
+    limit: 10,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 10);
 
-  if (!batchId || !section || !enrollmentNo || !name || !email) {
-    return Response.json(
-      { error: "Missing required fields: batchId, section, enrollmentNo, name, email" },
-      { status: 400 }
-    );
-  }
+  // zod validates shape + types + LinkedIn URL format + field lengths
+  // in one pass. Replaces the manual `if (!x)` checks that used to
+  // live here.
+  const parsed = await parseBody(req, RegisterStudentSchema);
+  if (!parsed.ok) return parsed.response;
+  const { batchId, section, enrollmentNo, name, email, linkedinUrl, photoUrl } =
+    parsed.data;
 
   // Auth: registering student must own the email they claim
   const auth = await requireSelf(req, email);
   if (!auth.ok) return auth.response;
-
-  // LinkedIn URL is optional but if provided, validate it.
-  // Permissive: accepts query strings, trailing slashes, non-Latin handles.
-  if (linkedinUrl && !/^https?:\/\/(www\.)?linkedin\.com\/in\/[^/\s?#]+/i.test(linkedinUrl)) {
-    return Response.json(
-      { error: "Invalid LinkedIn URL. Use format: https://linkedin.com/in/yourname" },
-      { status: 400 }
-    );
-  }
 
   // Check batch exists
   const { data: batch } = await supabase

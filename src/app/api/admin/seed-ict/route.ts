@@ -103,6 +103,19 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
 
+  // Seeding is expensive (5 modules × up to 20 topics × up to 10
+  // questions = up to ~1000 upserts in one call). Rate-limit by the
+  // admin email so a button-mash doesn't stack concurrent runs. One
+  // seed per 30s is well below any legitimate need.
+  const { rateLimit, rateLimitResponse } = await import("@/lib/rate-limit");
+  const rl = await rateLimit({
+    bucket: "admin:seed-ict",
+    id: admin.email || "password-admin",
+    limit: 2,
+    windowSec: 30,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 2);
+
   // Resolve ICT course row. Phase 3 migration seeds it; bail if missing.
   const { data: course, error: courseErr } = await supabase
     .from("courses")

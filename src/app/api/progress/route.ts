@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
 import { getCourseIdBySlug } from "@/lib/course-registry";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { parseBody, ProgressSaveSchema } from "@/lib/schemas";
 
 // GET — Load student progress for a module in a specific course.
 //
@@ -104,7 +106,20 @@ export async function GET(req: NextRequest) {
 // run yet (`course_id` column missing) we fall back to the legacy
 // key and log a one-line warning.
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  // Rate limit per IP. Progress saves fire on every topic completion
+  // + MCQ answer — a legitimate student might hit this 50 times in a
+  // 45-minute module. 200/min is generous enough to never trigger for
+  // honest users while still bounding abuse. Fail-open on Redis outage.
+  const rl = await rateLimit({
+    bucket: "auth:progress",
+    id: ipFromRequest(req),
+    limit: 200,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 200);
+
+  const parsed = await parseBody(req, ProgressSaveSchema);
+  if (!parsed.ok) return parsed.response;
   const {
     email,
     name,
@@ -114,28 +129,22 @@ export async function POST(req: NextRequest) {
     mcqScore,
     mcqTotal,
     challengeAttempted,
-    // Phase 3: Bloom's per-level stats and confidence calibration from the
-    // quiz. Both are JSON-shaped payloads — the caller computes them so the
-    // server stays dumb. Safe to omit; older clients don't send them.
+    // Phase 3: Bloom's per-level stats and confidence calibration from
+    // the quiz. Both are JSON-shaped payloads — the caller computes
+    // them so the server stays dumb.
     bloomStats,
     confidenceStats,
-    // Optional course slug; client passes it via the ModulePage prop chain.
-    // Defaults to "ict" for pre-multi-course clients.
+    // Optional course slug; client passes it via the ModulePage prop
+    // chain. Defaults to "ict" for pre-multi-course clients.
     courseSlug,
-  } = body;
-
-  if (!email || !moduleNumber || !topicId) {
-    return Response.json(
-      { error: "email, moduleNumber, and topicId are required" },
-      { status: 400 }
-    );
-  }
+  } = parsed.data;
 
   // Auth: caller must own the email they're writing progress for
   const auth = await requireSelf(req, email);
   if (!auth.ok) return auth.response;
 
-  const slug = typeof courseSlug === "string" && courseSlug.trim() ? courseSlug.trim() : "ict";
+  // courseSlug passed through zod as optional — default to "ict".
+  const slug = courseSlug && courseSlug.trim() ? courseSlug.trim() : "ict";
   const courseId = await getCourseIdBySlug(slug);
 
   // Upsert progress row
