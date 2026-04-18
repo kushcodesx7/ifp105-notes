@@ -184,7 +184,9 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full left-0 mt-2 w-56 rounded-xl z-50 overflow-hidden"
+                    // max-w keeps the dropdown inside the viewport on 375px
+                    // where the module title takes up most of the navbar.
+                    className="absolute top-full left-0 mt-2 w-52 sm:w-56 max-w-[calc(100vw-2rem)] rounded-xl z-50 overflow-hidden"
                     style={{ background: "rgba(15,15,25,0.95)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", boxShadow: "0 16px 48px rgba(0,0,0,0.5)" }}
                   >
                     {MODULES.map((mod) => (
