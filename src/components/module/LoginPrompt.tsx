@@ -4,19 +4,10 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
+import { decodeJwt } from "@/lib/jwt";
 
 interface LoginPromptProps {
   onClose: () => void;
-}
-
-function decodeJwt(token: string): Record<string, string> | null {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
 }
 
 export default function LoginPrompt({ onClose }: LoginPromptProps) {

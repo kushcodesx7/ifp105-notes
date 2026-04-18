@@ -1,97 +1,64 @@
 "use client";
 
+// Streak pill — small floating counter shown while a student studies.
+//
+// Phase 1 rewrite: XP + level + badges were removed from the
+// gamification system, so this component now shows ONLY the streak.
+// The module page still imports this file as `XpBar`; keeping the
+// filename for minimal diff, but a future phase will rename it to
+// StreakBadge or drop the pill entirely if the teacher wants.
+
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getStats, updateStreak } from "@/lib/gamification";
+import { updateStreak } from "@/lib/gamification";
 
 export default function XpBar() {
-  const [stats, setStats] = useState<ReturnType<typeof getStats> | null>(null);
+  const [streakCount, setStreakCount] = useState(0);
   const [streakToast, setStreakToast] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const streak = updateStreak();
-    const s = getStats();
-    setStats(s);
-
+    setStreakCount(streak.count);
     if (streak.isNew && streak.count > 1) {
       setStreakToast(`🔥 ${streak.count}-day streak!`);
-      setTimeout(() => setStreakToast(null), 3000);
+      const t = setTimeout(() => setStreakToast(null), 3000);
+      return () => clearTimeout(t);
     }
   }, []);
 
-  if (!stats) return null;
+  // Hide entirely until we know we have a streak to show
+  if (streakCount <= 0) return null;
 
   return (
     <>
-      {/* Floating XP pill — minimized by default */}
-      <motion.button
+      {/* Floating streak pill */}
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.4 }}
         data-tour="xp-bar"
-        onClick={() => setExpanded(!expanded)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3 py-2 rounded-full backdrop-blur-xl cursor-pointer hover:scale-105 transition-transform max-sm:bottom-20 max-sm:right-3 max-sm:scale-90"
+        aria-label={`Current streak: ${streakCount} day${streakCount === 1 ? "" : "s"}`}
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3 py-2 rounded-full backdrop-blur-xl max-sm:bottom-20 max-sm:right-3 max-sm:scale-90"
         style={{
           background: "rgba(9,9,15,0.9)",
           border: "1px solid rgba(255,255,255,0.08)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
         }}
       >
-        {/* Always show level + XP */}
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-          style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
-        >
-          {stats.level}
-        </div>
-        <span className="text-[11px] font-bold text-indigo-400">
-          {stats.xp} XP
+        <span className="text-[11px] font-bold text-orange-400 whitespace-nowrap">
+          🔥 {streakCount}-day streak
         </span>
+      </motion.div>
 
-        {/* Expanded details */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "auto", opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center gap-2 overflow-hidden"
-            >
-              <div
-                className="w-px h-4 shrink-0"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              />
-              <span className="text-[10px] font-medium text-zinc-400 whitespace-nowrap">
-                {stats.title}
-              </span>
-              <div
-                className="w-px h-4 shrink-0"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              />
-              <span className="text-[11px] font-bold text-orange-400 whitespace-nowrap">
-                🔥 {stats.streak}
-              </span>
-              <div
-                className="w-px h-4 shrink-0"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              />
-              <span className="text-[11px] font-bold text-zinc-400 whitespace-nowrap">
-                🏅 {stats.badges}/{stats.totalBadges}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-
-      {/* Streak toast */}
+      {/* Streak-bump toast */}
       <AnimatePresence>
         {streakToast && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20 }}
+            role="status"
+            aria-live="polite"
             className="fixed bottom-20 right-5 z-50 px-5 py-2.5 rounded-full text-sm font-bold"
             style={{
               background: "linear-gradient(135deg, #F59E0B, #F97316)",

@@ -4,13 +4,12 @@
 // All distractors are Grade A: every option is plausible to a student who
 // hasn't studied the topic. No joke options, no monkey-solvable choices.
 
-export interface Question {
-  q: string;
-  opts: string[];
-  ans: number;
-  why: string;
-  bloom?: "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create";
-}
+// Canonical `Question` type lives in src/types/content.ts. Re-exporting
+// here for backward-compat with modules 2-5 (which do
+// `import type { Question } from "./module1-mcq"`). New code should
+// import directly from "@/types/content".
+import type { Question } from "@/types/content";
+export type { Question };
 
 export const mcqData: Record<number, Question[]> = {
   // ─── Topic 1: Why Computers Were Invented (Speed, Accuracy, Storage, Connectivity) ───

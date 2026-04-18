@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
+// Phase 1: XP + badges removed. Quiz completion no longer awards points.
 import { useAuth } from "@/lib/auth-context";
 import {
   BLOOM_META,
@@ -314,16 +314,11 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
   function handleNext() {
     if (currentQ < total - 1) {
       // Find next unanswered question, or just go to next
-      let next = currentQ + 1;
+      const next = currentQ + 1;
       setTimeout(() => setCurrentQ(next), 50);
     } else if (allAnswered || answered.filter((a) => a !== null).length === total) {
       // All questions answered — show results
       setShowResult(true);
-      // Award XP
-      const pct = (score / total) * 100;
-      if (pct === 100) { addXP(XP_REWARDS.QUIZ_PERFECT); earnBadge("perfect_quiz"); }
-      else if (pct >= 80) addXP(XP_REWARDS.QUIZ_GOOD);
-      else if (pct >= 60) addXP(XP_REWARDS.QUIZ_PASS);
 
       // Shape the Bloom + calibration payloads for the /api/progress save.
       // These are the same numbers shown on the results screen, just packaged

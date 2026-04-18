@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sizedAvatar } from "@/lib/avatar";
 import { sectionDot } from "@/lib/sectionColors";
+import { prettyName, initials } from "@/lib/names";
 
 interface ActivityEvent {
   id: string;
@@ -17,25 +18,7 @@ interface ActivityEvent {
   at: string;
 }
 
-// Use the shared palette from @/lib/sectionColors (single source of truth).
-// Activity strip only needs the dot hex, so wrap sectionDot().
-
-function prettyName(raw: string): string {
-  if (!raw) return "Someone";
-  const parts = raw.split("_").filter(Boolean);
-  const nameParts = parts.filter((p) => !/^\d+$/.test(p) && !/^IFS\d*$/i.test(p));
-  return nameParts.length > 0 ? nameParts[0] : raw;
-}
-
-function initials(name: string): string {
-  const pretty = prettyName(name);
-  return pretty
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || "")
-    .join("");
-}
+// Palette from @/lib/sectionColors; prettyName/initials from @/lib/names.
 
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();

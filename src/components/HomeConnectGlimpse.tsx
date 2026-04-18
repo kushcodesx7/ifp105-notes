@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getSkill } from "@/lib/skills";
 import { sizedAvatar } from "@/lib/avatar";
 import { sectionColor } from "@/lib/sectionColors";
+import { prettyName, initials } from "@/lib/names";
 import HomeActivityStrip from "@/components/HomeActivityStrip";
 
 interface RecentJoiner {
@@ -44,24 +45,7 @@ interface Glimpse {
   sectionLeader: SectionLeader | null;
 }
 
-// Section palette moved to @/lib/sectionColors.
-
-function prettyName(raw: string): string {
-  if (!raw) return "Unknown";
-  const parts = raw.split("_").filter(Boolean);
-  const nameParts = parts.filter((p) => !/^\d+$/.test(p) && !/^IFS\d*$/i.test(p));
-  return nameParts.length > 0 ? nameParts.join(" ") : raw;
-}
-
-function initials(name: string): string {
-  const pretty = prettyName(name);
-  return pretty
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || "")
-    .join("");
-}
+// Section palette moved to @/lib/sectionColors; prettyName/initials to @/lib/names.
 
 export default function HomeConnectGlimpse() {
   const { user, isLoggedIn } = useAuth();

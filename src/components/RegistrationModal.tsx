@@ -5,19 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { useFocusTrap } from "@/lib/use-focus-trap";
-
-// Decode a Google ID token's payload without verifying (client-side only).
-// The server-side endpoint still verifies properly; here we just need the
-// email/name to refresh the auth context after re-auth.
-function decodeJwt(token: string): Record<string, string> | null {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
+import { decodeJwt } from "@/lib/jwt";
+import { firstName } from "@/lib/names";
 
 interface Batch {
   id: string;
@@ -36,12 +25,6 @@ interface RegistrationModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   closable?: boolean;
-}
-
-// Extract first name from Google user name
-function firstName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/);
-  return parts[0] || fullName;
 }
 
 // Extract last 3 digits/chars of roll number

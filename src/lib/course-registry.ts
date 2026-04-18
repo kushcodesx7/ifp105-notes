@@ -1,0 +1,81 @@
+// Course registry — the SINGLE source of truth for which course(s)
+// this deployment is running and what they contain.
+//
+// Today (Phase 1): one course, ICT. Everything derives from here.
+// Navbar's module dropdown, the home page's module grid, API routes
+// that iterate module numbers, SEO metadata — all should eventually
+// read from `getCurrentCourse()` instead of hard-coding literals.
+//
+// Phase 3+: this file becomes a thin shim over a `courses` DB table
+// populated by the admin editor. `getCurrentCourse()` stays as the
+// same function signature; only the implementation changes.
+
+import { MODULES, TOTAL_TOPICS, MODULE_TOTALS } from "@/lib/modules";
+import type { Course, ModuleMeta } from "@/types/content";
+
+// The one and only course this app serves today. Editable display
+// strings (name, code, description) — when the editor lands in Phase 4
+// these will become DB fields the teacher can rename per semester.
+const ICT_COURSE: Course = {
+  slug: "ict",
+  code: "IFP105",
+  name: "ICT Fundamentals",
+  description:
+    "Everything your computer does — from Netflix to assignments — comes down to hardware and software working together.",
+  accent: "#6366F1",
+  modules: MODULES,
+};
+
+// ── Registry API ───────────────────────────────────────────────
+
+/** Every course currently served by this deployment. */
+export function listCourses(): Course[] {
+  return [ICT_COURSE];
+}
+
+/** Look up a course by slug. Returns undefined for unknown slugs. */
+export function getCourse(slug: string): Course | undefined {
+  return listCourses().find((c) => c.slug === slug);
+}
+
+/**
+ * The "current" course shown to logged-in and anonymous users.
+ *
+ * Phase 1: always ICT. Phase 2+: could become the student's most
+ * recently visited course, or the query-param course, or the
+ * course registered to the student's current batch.
+ */
+export function getCurrentCourse(): Course {
+  return ICT_COURSE;
+}
+
+/** Short convenience — the slug of the current course. */
+export const CURRENT_COURSE_SLUG = ICT_COURSE.slug;
+
+// ── Helpers around module metadata (forwarded from lib/modules) ──
+// Re-export so callers don't have to know whether a helper lives in
+// modules.ts or course-registry.ts.
+
+export type { ModuleMeta };
+export { MODULES, TOTAL_TOPICS, MODULE_TOTALS };
+
+/**
+ * Total topic count for a course. Accepts either a slug or a Course.
+ * Falls back to the current course if the slug is unknown.
+ */
+export function getCourseTotalTopics(slugOrCourse?: string | Course): number {
+  if (!slugOrCourse) return TOTAL_TOPICS;
+  const course =
+    typeof slugOrCourse === "string" ? getCourse(slugOrCourse) : slugOrCourse;
+  if (!course) return TOTAL_TOPICS;
+  return course.modules.reduce((sum, m) => sum + m.topicCount, 0);
+}
+
+/** Look up a module within a specific course. */
+export function getCourseModule(
+  slug: string,
+  moduleId: number
+): ModuleMeta | undefined {
+  const course = getCourse(slug);
+  return course?.modules.find((m) => m.id === moduleId);
+}

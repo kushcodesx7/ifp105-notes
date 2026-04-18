@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
+import { decodeJwt } from "@/lib/jwt";
 import { GoogleLogin } from "@react-oauth/google";
 
 type Status = "working" | "studying" | "freelancing" | "looking";
@@ -47,14 +48,6 @@ const EMPTY_PROFILE: ProfileData = {
   university: "", program: "", country: "", freelanceArea: "", lookingFor: "",
   skills: "", linkedinUrl: "", githubUrl: "", telegramUrl: "", portfolioUrl: "",
 };
-
-function decodeJwt(token: string) {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch { return null; }
-}
 
 export default function EditProfilePage() {
   const { user, isLoggedIn, login, getIdToken } = useAuth();

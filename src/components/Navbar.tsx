@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import { MODULE_TOTALS } from "@/lib/modules";
 import { useFocusTrap } from "@/lib/use-focus-trap";
+import { decodeJwt } from "@/lib/jwt";
 import RegistrationModal from "@/components/RegistrationModal";
 
 interface NavbarProps {
@@ -44,16 +45,6 @@ function readProgressMap(): Record<number, { done: number; total: number; pct: n
     };
   }
   return out;
-}
-
-function decodeJwt(token: string): Record<string, string> | null {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
 }
 
 export default function Navbar({ showBack = false, title, moduleNumber }: NavbarProps) {
@@ -343,14 +334,9 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
             <span aria-hidden="true">🤝</span>
             <span className="hidden sm:inline"> Connect</span>
           </Link>
-          {/* Practice link hidden until content is verified — uncomment to re-enable
-          <Link
-            href="/practice"
-            className="text-[11px] font-medium px-3 py-1.5 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]"
-          >
-            🎯 Practice
-          </Link>
-          */}
+          {/* Practice Zone removed in Phase 1 architecture cleanup (route + data
+               file gone). Future courses will add their own practice bank via the
+               course editor; re-enable with a new component when that lands. */}
           {isLoggedIn && user ? (
             <>
               {isAdmin ? (

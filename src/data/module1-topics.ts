@@ -1,46 +1,25 @@
-export interface TopicCard {
-  icon: string;
-  title: string;
-  description: string;
-  tag?: string;
-  tagColor?: string;
-}
+// Canonical content types live in src/types/content.ts. They used to
+// originate here and be re-exported by modules 2-4; now content.ts is
+// the source and this file re-exports for backward-compat.
+import type {
+  Topic,
+  ContentBlock,
+  TopicCard,
+  EraCard,
+  TableRow,
+  StepItem,
+} from "@/types/content";
 
-export interface EraCard {
-  icon: string;
-  period: string;
-  title: string;
-  description: string;
-  limitation: string;
-}
+export type {
+  Topic,
+  ContentBlock,
+  TopicCard,
+  EraCard,
+  TableRow,
+};
 
-export interface TableRow {
-  cells: string[];
-}
-
-export interface Step {
-  title: string;
-  description: string;
-}
-
-export type ContentBlock =
-  | { type: "text"; html: string }
-  | { type: "cards"; columns: 2 | 3 | 4; items: TopicCard[] }
-  | { type: "era-cards"; columns: 4; items: EraCard[] }
-  | { type: "callout"; variant?: "amber" | "blue" | "red" | "purple" | "dark"; html: string }
-  | { type: "analogy"; label: string; html: string }
-  | { type: "table"; headers: string[]; rows: TableRow[] }
-  | { type: "steps"; items: Step[] }
-  | { type: "image"; src?: string; description: string };
-
-export interface Topic {
-  id: number;
-  title: string;
-  time: string;
-  badges: { text: string; type: "star" | "hot" }[];
-  hook: string;
-  content: ContentBlock[];
-}
+// Legacy alias — the old name in this file was `Step`, canonical name is `StepItem`.
+export type Step = StepItem;
 
 export const topics: Topic[] = [
   // ─── Topic 1 ───
