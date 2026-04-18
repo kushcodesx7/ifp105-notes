@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Module1Client from "./ClientModule";
 import { topics as fallbackTopics } from "@/data/module1-topics";
 import { loadModuleFromDB } from "@/lib/module-loader";
@@ -14,9 +15,17 @@ import { loadModuleFromDB } from "@/lib/module-loader";
 // 30s, so teacher edits in /admin propagate to students within half a
 // minute. Between regenerations, the page is served from the Vercel
 // edge cache — no DB round-trip per page view.
+//
+// Phase 6: ClientModule calls `useSearchParams()` (to detect `?edit=1`),
+// which requires a Suspense boundary for the static-export path to
+// bail into CSR cleanly.
 export const revalidate = 30;
 
 export default async function Module1Page() {
   const db = await loadModuleFromDB("ict", 1);
-  return <Module1Client topics={db?.topics ?? fallbackTopics} />;
+  return (
+    <Suspense fallback={null}>
+      <Module1Client topics={db?.topics ?? fallbackTopics} />
+    </Suspense>
+  );
 }
