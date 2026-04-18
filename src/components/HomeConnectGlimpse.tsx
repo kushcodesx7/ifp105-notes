@@ -222,7 +222,13 @@ export default function HomeConnectGlimpse() {
 
         {/* Overall progress bar */}
         <div className="mb-5">
-          <div className="h-1.5 rounded-full overflow-hidden"
+          <div
+            role="progressbar"
+            aria-valuenow={data.totalRegistered}
+            aria-valuemin={0}
+            aria-valuemax={data.totalRolls}
+            aria-label={`Class registered: ${data.totalRegistered} of ${data.totalRolls} students`}
+            className="h-1.5 rounded-full overflow-hidden"
             style={{ background: "rgba(255,255,255,0.05)" }}
           >
             <motion.div

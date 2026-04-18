@@ -739,7 +739,15 @@ export default function IFSConnectPage() {
                               {pct}%
                             </span>
                           </div>
-                          <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                          <div
+                            role="progressbar"
+                            aria-valuenow={pct}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${isMe ? "Your progress" : "Progress"}: ${pct}% of the course complete`}
+                            className="h-1 rounded-full overflow-hidden"
+                            style={{ background: "rgba(255,255,255,0.06)" }}
+                          >
                             <div
                               className="h-full rounded-full transition-all"
                               style={{ width: `${pct}%`, background: col.dot }}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import { MODULE_TOTALS } from "@/lib/modules";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import RegistrationModal from "@/components/RegistrationModal";
 
 interface NavbarProps {
@@ -72,6 +73,11 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   // Check if user is registered (has enrollmentNo + batchId + section)
   const isRegistered = !!(user?.enrollmentNo && user?.batchId && user?.section);
   const isAdmin = isAdminEmail(user?.email);
+
+  // Focus trap for the sign-in modal (Tab / Shift+Tab cycles inside the
+  // dialog instead of escaping to content behind the backdrop).
+  const signInDialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(signInDialogRef, showSignIn);
 
   // After login, check if user needs to register (skip for admins)
   useEffect(() => {
@@ -411,6 +417,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           aria-labelledby="signin-modal-title"
         >
           <motion.div
+            ref={signInDialogRef}
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}

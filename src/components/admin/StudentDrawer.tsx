@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import BloomsRadar from "@/components/BloomsRadar";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -9,6 +9,7 @@ import { BLOOM_META, BLOOM_ORDER, type BloomLevel } from "@/lib/blooms";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import { compareSections } from "@/lib/sections";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -85,6 +86,11 @@ export default function StudentDrawer({
     return () => document.removeEventListener("keydown", onKey);
   }, [student, onClose]);
 
+  // Tab focus trap while drawer is open. Typed as HTMLElement (not
+  // HTMLDivElement) because the drawer is a <motion.aside>.
+  const drawerRef = useRef<HTMLElement>(null);
+  useFocusTrap(drawerRef, !!student);
+
   return (
     <AnimatePresence>
       {student && (
@@ -102,6 +108,7 @@ export default function StudentDrawer({
 
           {/* Drawer */}
           <motion.aside
+            ref={drawerRef}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}

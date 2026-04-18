@@ -557,7 +557,15 @@ export default function ModulePage({
           </button>
           <div data-tour="progress" className="flex items-center gap-2 px-4 shrink-0" style={{ borderLeft: '1px solid #1e1e28' }}>
             <span className="text-[11px] font-bold" style={{ color: accentFrom }}>{done.size}/{TOTAL_TOPICS}</span>
-            <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: '#1e1e28' }}>
+            <div
+              role="progressbar"
+              aria-valuenow={done.size}
+              aria-valuemin={0}
+              aria-valuemax={TOTAL_TOPICS}
+              aria-label={`Module ${moduleNumber} progress: ${done.size} of ${TOTAL_TOPICS} topics complete`}
+              className="w-16 h-1.5 rounded-full overflow-hidden"
+              style={{ background: '#1e1e28' }}
+            >
               <motion.div animate={{ width: `${progressPct}%` }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})` }} />
             </div>

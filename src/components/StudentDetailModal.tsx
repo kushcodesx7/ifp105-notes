@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SKILLS } from "@/lib/skills";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 interface Student {
   enrollmentNo: string;
@@ -57,6 +58,10 @@ export default function StudentDetailModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // Keep Tab focus inside the dialog.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, open);
+
   // Resolve skill IDs to skill objects (preserve pick order)
   const skillDetails = student?.skills
     ? student.skills
@@ -81,6 +86,7 @@ export default function StudentDetailModal({
           aria-label={`Profile details for ${name || "student"}`}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.97 }}
