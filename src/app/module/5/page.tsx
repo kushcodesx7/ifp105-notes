@@ -1,11 +1,13 @@
 "use client";
 import ModulePage from "@/components/module/ModulePage";
 import { topics } from "@/data/module5-topics";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 // mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 
 export default function Module5() {
   return (
     <ModulePage
+      courseSlug={CURRENT_COURSE_SLUG}
       moduleNumber={5}
       moduleTitle="Tech Trends"
       moduleSubtitle="AI, Cloud & Beyond"

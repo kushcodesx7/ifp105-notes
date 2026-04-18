@@ -13,6 +13,8 @@ import LoginPrompt from "@/components/module/LoginPrompt";
 import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { progressKey, activeTabKey, quizStateKey } from "@/lib/storage-keys";
 
 // Heavy widgets split out of the main bundle. Each carries its own data
 // (cheatsheets ~22KB, flashcards ~42KB, confetti ~framer-motion use). By
@@ -51,6 +53,12 @@ interface Question {
 }
 
 interface ModulePageProps {
+  // courseSlug identifies which course this module belongs to. Used to
+  // namespace localStorage keys so that a student studying ICT and
+  // Python in the same browser won't see their progress collide.
+  // Optional during Phase 2: callers that don't pass it default to
+  // the current course (CURRENT_COURSE_SLUG, which today is "ict").
+  courseSlug?: string;
   moduleNumber: number;
   moduleTitle: string;
   moduleSubtitle: string;
@@ -71,6 +79,7 @@ interface ModulePageProps {
 }
 
 export default function ModulePage({
+  courseSlug: courseSlugProp,
   moduleNumber,
   moduleTitle,
   moduleSubtitle,
@@ -84,9 +93,15 @@ export default function ModulePage({
   stats,
   renderAfterContent,
 }: ModulePageProps) {
+  const courseSlug = courseSlugProp ?? CURRENT_COURSE_SLUG;
   const TOTAL_TOPICS = topics.length;
-  const LS_KEY = `ifp105_m${moduleNumber}_progress`;
-  const LS_ACTIVE_TAB_KEY = `ifp105_m${moduleNumber}_active_tab`;
+  // LS keys derived via the central helper so adding a second course
+  // later is a one-line change (flip LEGACY_PREFIX in storage-keys.ts
+  // to use the slug). Today these still resolve to the exact
+  // `ifp105_m{N}_progress` / `ifp105_m{N}_active_tab` strings every
+  // existing student already has in their browser.
+  const LS_KEY = progressKey(courseSlug, moduleNumber);
+  const LS_ACTIVE_TAB_KEY = activeTabKey(courseSlug, moduleNumber);
 
   const { user, isLoggedIn, getIdToken } = useAuth();
 
@@ -238,11 +253,20 @@ export default function ModulePage({
         // the student's prior selections and "X/Y score" badge.
         if (remoteCount === 0) {
           try {
+            // Match all per-topic quiz blobs for this course+module.
+            // quizStateKey(slug, mod, topic) ends with `_quiz_t<topic>`;
+            // the prefix up to `_quiz_t` is stable across topic ids so
+            // we can strip the topic off the first quizStateKey we'd
+            // build and use that as the prefix to scan by.
+            const quizPrefix = quizStateKey(courseSlug, moduleNumber, 0).replace(
+              /0$/,
+              ""
+            );
             const keysToClear: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
               if (!key) continue;
-              if (key.startsWith(`ifp105_m${moduleNumber}_quiz_t`)) {
+              if (key.startsWith(quizPrefix)) {
                 keysToClear.push(key);
               }
             }

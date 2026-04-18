@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAuth } from "@/lib/verify-google-token";
-import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/modules";
+import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
 
 // GET /api/me/compare
 // Returns the caller's per-module completion counts + the section median

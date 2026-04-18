@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { TOTAL_TOPICS } from "@/lib/modules";
+import { TOTAL_TOPICS } from "@/lib/course-registry";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { compareSections } from "@/lib/sections";

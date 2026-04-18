@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
-import { MODULES } from "@/lib/modules";
+import { MODULES } from "@/lib/course-registry";
 
 interface ModuleCompare {
   id: number;

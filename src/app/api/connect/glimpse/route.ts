@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
-import { TOTAL_TOPICS } from "@/lib/modules";
+import { TOTAL_TOPICS } from "@/lib/course-registry";
 
 // GET /api/connect/glimpse
 // Tiny endpoint for the home-page IFS Connect teaser.

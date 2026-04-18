@@ -91,7 +91,13 @@ export type ModuleMcqBank = Record<number, Question[]>;
 
 export interface ModuleMeta {
   id: number;
+  // Short label used in admin grids and compact UIs (e.g. "Hardware").
   title: string;
+  // Optional full title shown to students in the Navbar dropdown and
+  // module hero ("Hardware & Software"). Falls back to `title` if not
+  // provided — callers doing `m.fullTitle ?? m.title` always get a
+  // usable string.
+  fullTitle?: string;
   subtitle: string;
   accent: string;
   topicCount: number;

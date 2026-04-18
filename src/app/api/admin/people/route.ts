@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/modules";
+import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import type { BloomLevel } from "@/lib/blooms";
