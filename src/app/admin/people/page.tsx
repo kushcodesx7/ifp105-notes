@@ -97,11 +97,12 @@ export default function PeoplePage() {
 
   // ─── Fetch ───────────────────────────────────────────────────
   const credential = idToken ? { idToken } : password;
-  const { data, error: fetchError, isLoading } = useAdminFetch<PeopleResponse>(
-    "/api/admin/people",
-    credential,
-    { enabled: authenticated, refreshInterval: 60_000 }
-  );
+  const { data, error: fetchError, isLoading, mutate } =
+    useAdminFetch<PeopleResponse>(
+      "/api/admin/people",
+      credential,
+      { enabled: authenticated, refreshInterval: 60_000 }
+    );
 
   useEffect(() => {
     if (
@@ -599,7 +600,12 @@ export default function PeoplePage() {
         )}
       </div>
 
-      <StudentDrawer student={selectedStudent} onClose={closeStudent} />
+      <StudentDrawer
+        student={selectedStudent}
+        onClose={closeStudent}
+        sections={sections}
+        onMutated={() => mutate()}
+      />
     </main>
   );
 }

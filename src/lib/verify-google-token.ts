@@ -120,11 +120,18 @@ export async function requireAuth(
  *  - a valid Google ID token whose email is in the admin allowlist
  *  - the legacy admin password header (x-admin-password)
  *
+ * On success returns the admin identity so endpoints can log actions
+ * with attribution. When auth came via password we report viaPassword=true
+ * and email=null; audit code turns that into a "password-admin" label.
+ *
  * The allowlist is imported lazily to avoid a circular dep with src/lib/admins.
  */
 export async function requireAdmin(
   req: Request
-): Promise<{ ok: true } | { ok: false; response: Response }> {
+): Promise<
+  | { ok: true; email: string | null; viaPassword: boolean }
+  | { ok: false; response: Response }
+> {
   // 1. Try Google ID token first
   const idToken = req.headers.get("x-id-token");
   if (idToken) {
@@ -132,7 +139,7 @@ export async function requireAdmin(
     if (verified) {
       const { isAdminEmail } = await import("./admins");
       if (isAdminEmail(verified.email)) {
-        return { ok: true };
+        return { ok: true, email: verified.email, viaPassword: false };
       }
     }
   }
@@ -141,7 +148,7 @@ export async function requireAdmin(
   const pw = req.headers.get("x-admin-password");
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (adminPassword && pw === adminPassword) {
-    return { ok: true };
+    return { ok: true, email: null, viaPassword: true };
   }
 
   return {
