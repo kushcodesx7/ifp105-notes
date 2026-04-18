@@ -48,7 +48,11 @@ export default function CoursePicker() {
   if (!courses || courses.length < 2) return null;
 
   return (
-    <section className="px-6 pt-20 pb-6">
+    <section className="relative px-6 pt-20 pb-6 z-10">
+      {/* pt-20 pushes below the 14-high fixed navbar (56px) + a small
+          breathing gap. z-10 lifts the picker above the animated orbs
+          that the hero paints behind — without it, glow from the
+          orbs bleeds over the card borders on Safari. */}
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
