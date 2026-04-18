@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SKILLS } from "@/lib/skills";
 
@@ -46,6 +47,16 @@ export default function StudentDetailModal({
   const joined = student ? joinedLabel(student.addedAt) : "";
   const hasLinkedIn = !!student?.linkedinUrl;
 
+  // Esc closes (matches every other dialog in the app).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   // Resolve skill IDs to skill objects (preserve pick order)
   const skillDetails = student?.skills
     ? student.skills
@@ -65,6 +76,9 @@ export default function StudentDetailModal({
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Profile details for ${name || "student"}`}
         >
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
@@ -90,7 +104,7 @@ export default function StudentDetailModal({
                 className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 text-white transition-colors backdrop-blur"
                 aria-label="Close"
               >
-                <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 18 18" fill="none">
                   <path
                     d="M5 5l8 8M13 5l-8 8"
                     stroke="currentColor"

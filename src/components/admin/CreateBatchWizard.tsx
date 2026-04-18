@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth-context";
@@ -215,6 +215,19 @@ export default function CreateBatchWizard({ open, onClose, onCreated }: Props) {
     setStep(1);
     onClose();
   }
+
+  // Esc closes, but only when not in the middle of submitting the
+  // create-batch RPC — we don't want the admin to accidentally abandon
+  // a half-finished save via a stray keypress.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) resetAndClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, submitting]);
 
   return (
     <AnimatePresence>
@@ -624,7 +637,7 @@ function Step3({
               }`}
               style={{
                 background: active
-                  ? "linear-gradient(135deg, #4F46E5, #7C3AED)"
+                  ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
                   : "rgba(255,255,255,0.04)",
                 border: `1px solid ${active ? "transparent" : "rgba(255,255,255,0.06)"}`,
               }}

@@ -27,7 +27,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <a
             href="/"
             className="px-6 py-2.5 rounded-full text-sm font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}
           >
             ← Back to Home
           </a>

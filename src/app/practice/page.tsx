@@ -257,7 +257,7 @@ export default function PracticePage() {
                 className="flex gap-4 p-5 rounded-xl card-glass"
               >
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg"
-                  style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+                  style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
                   {item.icon}
                 </div>
                 <div>
@@ -274,7 +274,7 @@ export default function PracticePage() {
             transition={{ delay: 0.8 }}
             onClick={dismissGuide}
             className="w-full py-4 rounded-xl text-sm font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
+            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
           >
             Let's Go! →
           </motion.button>
@@ -367,7 +367,7 @@ export default function PracticePage() {
             <button
               onClick={() => setShowResetConfirm(true)}
               className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+              style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}
             >
               Try Again
             </button>
@@ -396,7 +396,7 @@ export default function PracticePage() {
                   </button>
                   <button onClick={() => { resetSet(currentSet.moduleId); setView("quiz"); }}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
-                    style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+                    style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
                     Yes, Reset
                   </button>
                 </div>

@@ -108,7 +108,7 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               transition={{ duration: 0.4, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
               className="card-glass p-4 rounded-xl relative overflow-hidden"
             >
-              <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #4F46E5, #7C3AED)' }} />
+              <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #6366F1, #8B5CF6)' }} />
               <span className="text-xl mb-2 block">{card.icon}</span>
               <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1">{card.period}</div>
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>

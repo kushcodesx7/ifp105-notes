@@ -43,6 +43,16 @@ export async function verifyGoogleIdToken(
     });
     const payload = ticket.getPayload();
     if (!payload || !payload.email || !payload.sub) return null;
+    // Belt-and-braces: google-auth-library verifies the JWKS signature
+    // but doesn't explicitly enforce the issuer claim. Pin it to avoid
+    // accepting any other identity provider that happened to sign a
+    // JWT with a matching audience.
+    if (
+      payload.iss !== "https://accounts.google.com" &&
+      payload.iss !== "accounts.google.com"
+    ) {
+      return null;
+    }
     // Require the email to be verified by Google (not just claimed).
     if (payload.email_verified === false) return null;
     return {

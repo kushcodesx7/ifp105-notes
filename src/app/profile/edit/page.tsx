@@ -97,13 +97,19 @@ export default function EditProfilePage() {
   const loadProfile = useCallback(async () => {
     if (!user?.email) return;
     try {
-      // Try loading by email directly (not batch-dependent)
-      const res = await fetch(`/api/profiles?batchId=${user.batchId || "all"}`);
+      // Fetch just this student's row by email. /api/profiles now
+      // requires auth and strips student_email from multi-row responses,
+      // so we can't scan a batch list and filter anymore — and we don't
+      // need to: the email lookup is auth-gated (requireSelf) and returns
+      // a single row with the caller's own email echoed back.
+      const token = getIdToken() || "";
+      const res = await fetch(
+        `/api/profiles?email=${encodeURIComponent(user.email)}`,
+        { headers: { "x-id-token": token } }
+      );
       if (!res.ok) return;
       const data = await res.json();
-      const existing = data.profiles?.find(
-        (p: { studentEmail: string }) => p.studentEmail === user.email
-      );
+      const existing = data.profiles?.[0];
       if (existing) {
         setProfile({
           name: existing.name || user.name,

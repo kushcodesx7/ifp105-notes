@@ -368,9 +368,10 @@ function PeoplePage() {
             </span>
           </div>
 
-          {/* Filter chips */}
+          {/* Filter chips — scroll-fade shows users the row extends
+               past the viewport on 360px mobile. */}
           <div
-            className="flex items-center gap-1.5 overflow-x-auto pb-1"
+            className="flex items-center gap-1.5 overflow-x-auto pb-1 scroll-fade-x"
             style={{ scrollbarWidth: "none" }}
           >
             {FILTERS.map((f) => (
@@ -385,7 +386,7 @@ function PeoplePage() {
                 style={{
                   background:
                     filter === f.key
-                      ? "linear-gradient(135deg, #4F46E5, #7C3AED)"
+                      ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
                       : "rgba(255,255,255,0.04)",
                   border: `1px solid ${
                     filter === f.key
@@ -402,7 +403,7 @@ function PeoplePage() {
           {/* Section pills + sort */}
           <div className="flex flex-wrap items-center gap-3">
             <div
-              className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-1 min-w-0"
+              className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-1 min-w-0 scroll-fade-x"
               style={{ scrollbarWidth: "none" }}
             >
               <button
@@ -745,7 +746,7 @@ function SmallAvatar({ student }: { student: AdminStudent }) {
     <div
       className="shrink-0 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-bold"
       style={{
-        background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+        background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
       }}
     >
       {student.photoUrl ? (

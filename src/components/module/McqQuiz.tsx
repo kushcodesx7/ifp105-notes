@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addXP, XP_REWARDS, earnBadge } from "@/lib/gamification";
+import { useAuth } from "@/lib/auth-context";
 import {
   BLOOM_META,
   BLOOM_ORDER,
@@ -11,6 +12,19 @@ import {
   type BloomLevel,
   type ConfidenceLevel,
 } from "@/lib/blooms";
+
+// Tiny 32-bit string hash. Used to derive a per-student seed salt so the
+// shuffle mapping differs between students — without it, the index→option
+// assignment was the same for every student given the same (topic,module),
+// meaning one student's answer leak was everyone's leak.
+function hashString(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
 
 export type { BloomLevel };
 
@@ -77,6 +91,25 @@ interface SavedQuizState {
 export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComplete, onAnswerCountChange }: McqQuizProps) {
   const LS_KEY = `ifp105_m${moduleNumber}_quiz_t${topicId}`;
   const total = questions.length;
+  // Per-student salt: stable for this user across sessions and devices.
+  // Authenticated → hash(email). Anonymous → falls back to a per-browser
+  // random stashed in localStorage (still unique per device, but resets
+  // if the user clears their data).
+  const { user } = useAuth();
+  const userSalt = useMemo(() => {
+    if (user?.email) return hashString(user.email.toLowerCase());
+    if (typeof window === "undefined") return 0;
+    try {
+      let s = localStorage.getItem("ifp105_anon_salt");
+      if (!s) {
+        s = String(Math.floor(Math.random() * 0xffffffff));
+        localStorage.setItem("ifp105_anon_salt", s);
+      }
+      return Number(s) >>> 0;
+    } catch {
+      return 0;
+    }
+  }, [user?.email]);
 
   // Load saved state or create fresh
   const [shuffleSeed, setShuffleSeed] = useState(() => {
@@ -88,7 +121,11 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
         return parsed.shuffleSeed;
       }
     } catch {}
-    return topicId * 1000 + moduleNumber; // deterministic seed per topic
+    // Deterministic seed per (topic, module, student). The user salt
+    // breaks the authored "correct is always index 1" pattern across
+    // students — so one student's leaked mapping doesn't work for
+    // anyone else.
+    return (topicId * 1000 + moduleNumber) ^ userSalt;
   });
 
   const [answered, setAnswered] = useState<(number | null)[]>(() => {
@@ -489,7 +526,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
           <button
             onClick={() => setShowResetConfirm(true)}
             className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+            style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}
           >
             Reset & Try Again
           </button>
@@ -814,7 +851,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                         transition={{ delay: 0.2 }}
                         onClick={handleNext}
                         className={`${currentQ > 0 ? 'flex-1' : 'w-full'} py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 focus-glow`}
-                        style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
+                        style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
                       >
                         {currentQ < total - 1 ? `Next Question →` : allAnswered ? `See Results →` : `Next Question →`}
                       </motion.button>
@@ -947,7 +984,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowResetConfirm(true)}
                 className="px-8 py-3 rounded-full text-sm font-semibold text-white focus-glow"
-                style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
+                style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
               >
                 Try Again →
               </motion.button>
