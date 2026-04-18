@@ -9,6 +9,7 @@ import AdminAuthGate, {
   useAdminAuth,
   adminWrite,
 } from "@/components/admin/AdminAuthGate";
+import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 
@@ -68,25 +69,48 @@ export default function CoursesPage() {
     );
   }
 
-  async function handleDelete(slug: string, hard: boolean) {
-    const label = hard
-      ? `PERMANENTLY delete course "${slug}"? This cascades to modules, topics, and questions. Student progress rows keep a dangling course_id.`
-      : `Hide course "${slug}" from the student-facing course picker? (Soft delete — all data preserved, reversible.)`;
-    if (!confirm(label)) return;
+  // Track which course (if any) is being hard-deleted via the danger
+  // dialog. `null` means the dialog is closed.
+  const [hardDeleteTarget, setHardDeleteTarget] = useState<CourseRow | null>(
+    null
+  );
+
+  // Soft delete = "Hide" — reversible, low-blast-radius. Keeps the
+  // cheap confirm() path. Hard delete = cascades across modules,
+  // topics, questions, and orphans course_id references in
+  // student_progress — routed through DangerDeleteDialog with
+  // password re-auth.
+  async function handleSoftDelete(slug: string) {
+    if (
+      !confirm(
+        `Hide course "${slug}" from the student-facing course picker? (Soft delete — all data preserved, reversible.)`
+      )
+    )
+      return;
     try {
       await adminWrite(
-        `/api/admin/courses/${encodeURIComponent(slug)}${hard ? "?hard=true" : ""}`,
+        `/api/admin/courses/${encodeURIComponent(slug)}`,
         "DELETE",
         { idToken, password }
       );
-      toast({
-        kind: "success",
-        message: hard ? "Course permanently deleted." : "Course hidden.",
-      });
+      toast({ kind: "success", message: "Course hidden." });
       mutate();
     } catch (e) {
       toast({ kind: "error", message: (e as Error).message });
     }
+  }
+
+  // Hard delete runs ONLY through the DangerDeleteDialog. The dialog
+  // collects a fresh admin password and calls this function with it.
+  async function runHardDelete(slug: string, enteredPassword: string) {
+    await adminWrite(
+      `/api/admin/courses/${encodeURIComponent(slug)}?hard=true`,
+      "DELETE",
+      { idToken: null, password: enteredPassword }
+    );
+    setHardDeleteTarget(null);
+    toast({ kind: "success", message: "Course permanently deleted." });
+    mutate();
   }
 
   const courses = data?.courses || [];
@@ -165,12 +189,28 @@ export default function CoursesPage() {
             <CourseCard
               key={c.id}
               course={c}
-              onDelete={() => handleDelete(c.slug, false)}
-              onHardDelete={() => handleDelete(c.slug, true)}
+              onDelete={() => handleSoftDelete(c.slug)}
+              onHardDelete={() => setHardDeleteTarget(c)}
             />
           ))}
         </div>
       </div>
+
+      <DangerDeleteDialog
+        open={hardDeleteTarget !== null}
+        title={`Permanently delete "${hardDeleteTarget?.name ?? ""}"?`}
+        target={`Course: ${hardDeleteTarget?.code ?? ""} — ${hardDeleteTarget?.name ?? ""} (${hardDeleteTarget?.slug ?? ""})`}
+        consequences={[
+          `All ${hardDeleteTarget?.moduleCount ?? 0} module${(hardDeleteTarget?.moduleCount ?? 0) === 1 ? "" : "s"} in this course`,
+          `Every topic inside those modules`,
+          `Every MCQ inside those topics`,
+          `Uploaded images for this course (in Supabase Storage)`,
+          `Any existing student_progress rows that reference this course will be orphaned`,
+        ]}
+        confirmLabel="Delete course permanently"
+        onCancel={() => setHardDeleteTarget(null)}
+        onConfirm={(pw) => runHardDelete(hardDeleteTarget!.slug, pw)}
+      />
     </main>
   );
 }
