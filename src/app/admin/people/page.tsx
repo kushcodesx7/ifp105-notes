@@ -604,10 +604,21 @@ function PeoplePage() {
                         <div className="flex items-center gap-3">
                           <SmallAvatar student={s} />
                           <div className="min-w-0">
+                            {/* Teacher-verified roll-list name as primary
+                                identity; fall back to the student's chosen
+                                display name when no roll_list name is on
+                                file yet. The display name + roll + email
+                                go on a secondary line for disambiguation. */}
                             <div className="text-[13px] font-semibold text-zinc-200 truncate">
-                              {s.name}
+                              {s.rollListName || s.name}
                             </div>
                             <div className="text-[10px] text-zinc-500 truncate">
+                              {s.rollListName ? (
+                                <>
+                                  <span className="text-zinc-400">{s.name}</span>
+                                  {" · "}
+                                </>
+                              ) : null}
                               #{s.enrollmentNo} · {s.email}
                             </div>
                           </div>

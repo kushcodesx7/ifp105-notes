@@ -169,6 +169,7 @@ const ACTION_META: Record<
   change_section: { icon: "↔", label: "Section changed", color: "#818CF8" },
   change_roll: { icon: "#", label: "Roll changed", color: "#818CF8" },
   change_email: { icon: "✉", label: "Email changed", color: "#818CF8" },
+  change_name: { icon: "🪪", label: "Name changed", color: "#818CF8" },
   reset_progress: { icon: "🔄", label: "Progress reset", color: "#F87171" },
   unlink: { icon: "🔗", label: "Account unlinked", color: "#F87171" },
   delete_student: { icon: "🗑", label: "Student deleted", color: "#F87171" },

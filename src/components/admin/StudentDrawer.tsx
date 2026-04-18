@@ -22,7 +22,13 @@ interface ModuleStat {
 
 export interface AdminStudent {
   email: string;
+  // Student's chosen display name, e.g. "248_oysha". Used for the chip
+  // in the navbar / Connect; shown as a secondary line in admin tables.
   name: string;
+  // Teacher-verified name from the roll_list upload, e.g. "Oysha Abdullayeva".
+  // Primary identity surfaced in the admin People table and drawer. May be
+  // null for accounts registered before the teacher uploaded names.
+  rollListName: string | null;
   enrollmentNo: string;
   section: string;
   batchId: string;
@@ -249,6 +255,7 @@ type ActionKind =
   | "change-section"
   | "change-roll"
   | "change-email"
+  | "change-name"
   | "reset-progress"
   | "unlink";
 
@@ -275,6 +282,9 @@ function OverviewTab({
   const [newSection, setNewSection] = useState(student.section);
   const [newRoll, setNewRoll] = useState(student.enrollmentNo);
   const [newEmail, setNewEmail] = useState(student.email);
+  const [newRollListName, setNewRollListName] = useState(
+    student.rollListName || ""
+  );
 
   // Reset form state when student changes
   useEffect(() => {
@@ -282,7 +292,13 @@ function OverviewTab({
     setNewSection(student.section);
     setNewRoll(student.enrollmentNo);
     setNewEmail(student.email);
-  }, [student.email, student.section, student.enrollmentNo]);
+    setNewRollListName(student.rollListName || "");
+  }, [
+    student.email,
+    student.section,
+    student.enrollmentNo,
+    student.rollListName,
+  ]);
 
   // Auth headers: prefer ID token (attributed in audit log), fall back to
   // admin password in sessionStorage.
@@ -355,6 +371,24 @@ function OverviewTab({
       setPendingAction(null);
       onMutated?.();
       onClose(); // email change invalidates the current drawer's identity
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  async function confirmChangeName() {
+    const trimmed = newRollListName.trim();
+    try {
+      await callApi("/api/admin/students/update", {
+        email: student.email,
+        rollListName: trimmed,
+      });
+      toast({
+        kind: "success",
+        message: `Name: ${student.rollListName || "—"} → ${trimmed || "—"}`,
+      });
+      setPendingAction(null);
+      onMutated?.();
     } catch (e) {
       toast({ kind: "error", message: (e as Error).message });
     }
@@ -475,6 +509,32 @@ function OverviewTab({
         </ActionButton>
       </ActionBlock>
 
+      {/* ── Name change (writes to roll_list.name) ─────────────── */}
+      <ActionBlock
+        title="Change display name"
+        description={
+          student.rollListName
+            ? `The teacher-verified name shown everywhere in admin. Edit if "${student.rollListName}" is wrong.`
+            : "No roll-list name on file for this roll. Set one so the roster shows their real name."
+        }
+      >
+        <input
+          type="text"
+          value={newRollListName}
+          onChange={(e) => setNewRollListName(e.target.value)}
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg text-[12px] text-white bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-indigo-500/50"
+          placeholder="e.g. Oysha Abdullayeva"
+        />
+        <ActionButton
+          disabled={
+            newRollListName.trim() === (student.rollListName || "").trim()
+          }
+          onClick={() => setPendingAction("change-name")}
+        >
+          Save
+        </ActionButton>
+      </ActionBlock>
+
       {/* ── Email change ────────────────────────────────────────── */}
       <ActionBlock
         title="Change email"
@@ -574,6 +634,23 @@ function OverviewTab({
         loading={loading}
         onCancel={() => setPendingAction(null)}
         onConfirm={confirmChangeRoll}
+      />
+      <ConfirmDialog
+        open={pendingAction === "change-name"}
+        title="Change display name?"
+        description="Updates the teacher-verified name on this student's roll-list entry. Their own chosen display name (shown in Connect) is not affected."
+        diff={[
+          {
+            label: "Name",
+            from: student.rollListName || "—",
+            to: newRollListName.trim() || "—",
+          },
+        ]}
+        confirmLabel="Save name"
+        kind="primary"
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmChangeName}
       />
       <ConfirmDialog
         open={pendingAction === "change-email"}

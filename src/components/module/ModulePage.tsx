@@ -157,13 +157,16 @@ export default function ModulePage({
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Load Supabase progress on mount when logged in. Server is the source
-  // of truth: we REPLACE local state (not merge) so that an admin reset
-  // on the server actually removes completed topics from the user's
-  // view. The old merge-only-add logic left stale completions visible
-  // for days after a reset because localStorage won silently.
+  // Load Supabase progress when logged in. Server is the source of truth:
+  // we REPLACE local state (not merge) so that an admin reset on the
+  // server actually removes completed topics from the user's view.
+  //
+  // Fires on mount AND every time the tab regains focus — so an admin
+  // that resets a student's progress in one tab doesn't need the student
+  // to manually refresh the other tab. Switching back to the module tab
+  // (or alt-tabbing into the window) auto-syncs within a second.
   useEffect(() => {
-    if (!isLoggedIn || !user || supabaseLoaded.current) return;
+    if (!isLoggedIn || !user) return;
 
     async function loadProgress() {
       try {
@@ -171,21 +174,26 @@ export default function ModulePage({
         if (!token) return;
         const res = await fetch(
           `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}`,
-          { headers: { "x-id-token": token } }
+          {
+            headers: { "x-id-token": token },
+            // Skip any HTTP/SW cache so stale empty responses can't pin
+            // a just-reset student into a "still done" state.
+            cache: "no-store",
+          }
         );
         if (!res.ok) return;
         const data = await res.json();
-        // Only mark as loaded on success so we retry on next mount if the
-        // first attempt fails (network / 5xx).
         supabaseLoaded.current = true;
         const remoteProgress = (data.progress ?? {}) as Record<
           number,
           { completed: boolean; mcqScore: number | null; mcqTotal: number | null }
         >;
 
+        const remoteCount = Object.keys(remoteProgress).length;
+
         // Replace local `done` with exactly what the server has. Empty
-        // server → empty local (which also purges the ifp105_mN_progress
-        // localStorage key via the save effect above).
+        // server → empty local (which also purges the
+        // ifp105_mN_progress localStorage key via the save effect).
         const remoteDone = new Set<number>();
         for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
           if (tp.completed) remoteDone.add(Number(topicIdStr));
@@ -200,11 +208,45 @@ export default function ModulePage({
           }
         }
         setMcqScores(scores);
+
+        // Detected reset: server came back empty but we previously had
+        // local progress. Purge the per-quiz localStorage keys for this
+        // module so the student's old answers + scores in McqQuiz also
+        // disappear. Without this, reopening a quiz would still show
+        // the student's prior selections and "X/Y score" badge.
+        if (remoteCount === 0) {
+          try {
+            const keysToClear: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (!key) continue;
+              if (key.startsWith(`ifp105_m${moduleNumber}_quiz_t`)) {
+                keysToClear.push(key);
+              }
+            }
+            keysToClear.forEach((k) => localStorage.removeItem(k));
+          } catch {}
+          // Also clear the per-topic answer-count state so the UI
+          // doesn't still show "7/7 answered" for a reset topic.
+          setMcqAnswerCounts({});
+        }
       } catch {}
     }
 
     loadProgress();
-  }, [isLoggedIn, user, moduleNumber]);
+
+    // Auto-sync when the tab regains focus (admin reset in another tab,
+    // device woke from sleep, etc.).
+    const onFocus = () => {
+      if (document.visibilityState === "visible") loadProgress();
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isLoggedIn, user, moduleNumber, getIdToken]);
 
   // Reading progress bar — rAF-throttled so setState fires at most once per frame
   useEffect(() => {

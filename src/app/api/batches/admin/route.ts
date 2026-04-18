@@ -105,18 +105,57 @@ export async function POST(req: NextRequest) {
     case "add-rolls": {
       const { batchId, section, rolls } = body;
       const sec = section || "Section 1";
-      const newRolls = (rolls as string[])
-        .map((r: string) => r.trim().toUpperCase())
-        .filter(Boolean)
-        .map((enrollment_no) => ({
+
+      // Accept BOTH shapes: plain string[] (legacy upload flow, paste-a-list
+      // textarea in the roster UI) AND {enrollment_no, name}[] (new upload
+      // script). Normalize to the richer shape internally so the rest of
+      // the case is shape-agnostic.
+      const rowsInput = Array.isArray(rolls) ? (rolls as unknown[]) : [];
+      const newRolls = rowsInput
+        .map((r) => {
+          if (typeof r === "string") {
+            return { enrollment_no: r.trim().toUpperCase(), name: null as string | null };
+          }
+          if (r && typeof r === "object") {
+            const obj = r as { enrollment_no?: unknown; name?: unknown };
+            const eno =
+              typeof obj.enrollment_no === "string"
+                ? obj.enrollment_no.trim().toUpperCase()
+                : "";
+            const nm = typeof obj.name === "string" ? obj.name.trim() : null;
+            return { enrollment_no: eno, name: nm || null };
+          }
+          return { enrollment_no: "", name: null };
+        })
+        .filter((r) => r.enrollment_no)
+        .map((r) => ({
           batch_id: batchId,
           section: sec,
-          enrollment_no,
+          enrollment_no: r.enrollment_no,
+          name: r.name,
         }));
 
-      const { error } = await supabase
+      // Primary attempt: upsert with names. If the roll_list.name column
+      // doesn't exist yet (migration pending), retry without it so add-rolls
+      // keeps working — same graceful-degrade pattern as the bloom_stats
+      // retry in /api/progress.
+      let { error } = await supabase
         .from("roll_list")
         .upsert(newRolls, { onConflict: "batch_id,section,enrollment_no" });
+
+      if (error && /column.*name.*does not exist|PGRST204|roll_list.*name/i.test(error.message)) {
+        console.warn(
+          "[add-rolls] roll_list.name column missing — retrying without names. Run migration-add-roll-list-name.sql."
+        );
+        const withoutName = newRolls.map((r) => ({
+          batch_id: r.batch_id,
+          section: r.section,
+          enrollment_no: r.enrollment_no,
+        }));
+        ({ error } = await supabase
+          .from("roll_list")
+          .upsert(withoutName, { onConflict: "batch_id,section,enrollment_no" }));
+      }
 
       if (error) {
         return Response.json({ error: error.message }, { status: 500 });
