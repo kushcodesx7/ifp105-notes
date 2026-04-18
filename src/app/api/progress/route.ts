@@ -1,12 +1,19 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
+import { getCourseIdBySlug } from "@/lib/course-registry";
 
-// GET — Load student progress for a module
+// GET — Load student progress for a module in a specific course.
+//
+// Multi-course: `course` query param is optional and defaults to the
+// platform's current course slug ("ict") for backward compat. If the
+// courses table doesn't exist yet (Phase 3 migration not run), the
+// filter degrades gracefully to email+module only — same rows return.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
   const module = searchParams.get("module");
+  const courseSlug = (searchParams.get("course") || "ict").trim();
 
   if (!email || !module) {
     return Response.json(
@@ -24,13 +31,41 @@ export async function GET(req: NextRequest) {
   const auth = await requireSelf(req, email);
   if (!auth.ok) return auth.response;
 
-  const { data, error } = await supabase
+  // Resolve slug → UUID (cached). Null means either the course doesn't
+  // exist or the migration hasn't run yet — in both cases we skip the
+  // filter and fall back to email+module, matching legacy behaviour.
+  const courseId = await getCourseIdBySlug(courseSlug);
+
+  let query = supabase
     .from("student_progress")
     .select(
       "topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at"
     )
     .eq("student_email", email)
     .eq("module_number", moduleNumber);
+
+  if (courseId) query = query.eq("course_id", courseId);
+
+  let { data, error } = await query;
+
+  // If the filter fails because the `course_id` column doesn't exist
+  // yet (migration pending), retry without it. PGRST102 is Supabase's
+  // "column does not exist" response.
+  if (
+    error &&
+    /course_id.*does not exist|column.*course_id|PGRST204|PGRST102/i.test(error.message)
+  ) {
+    console.warn(
+      "[progress] course_id column missing — retrying without. Run migration-phase3-multi-course.sql."
+    );
+    ({ data, error } = await supabase
+      .from("student_progress")
+      .select(
+        "topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at"
+      )
+      .eq("student_email", email)
+      .eq("module_number", moduleNumber));
+  }
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -60,7 +95,14 @@ export async function GET(req: NextRequest) {
   return Response.json({ progress });
 }
 
-// POST — Save/update progress for a topic
+// POST — Save/update progress for a topic.
+//
+// Multi-course: accepts an optional `courseSlug` in the body (defaults
+// to "ict"). The upsert now uniquely keys on
+// (student_email, course_id, module_number, topic_id) so Python's
+// "Module 1 Topic 1" doesn't overwrite ICT's. If the migration hasn't
+// run yet (`course_id` column missing) we fall back to the legacy
+// key and log a one-line warning.
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
@@ -77,6 +119,9 @@ export async function POST(req: NextRequest) {
     // server stays dumb. Safe to omit; older clients don't send them.
     bloomStats,
     confidenceStats,
+    // Optional course slug; client passes it via the ModulePage prop chain.
+    // Defaults to "ict" for pre-multi-course clients.
+    courseSlug,
   } = body;
 
   if (!email || !moduleNumber || !topicId) {
@@ -90,6 +135,9 @@ export async function POST(req: NextRequest) {
   const auth = await requireSelf(req, email);
   if (!auth.ok) return auth.response;
 
+  const slug = typeof courseSlug === "string" && courseSlug.trim() ? courseSlug.trim() : "ict";
+  const courseId = await getCourseIdBySlug(slug);
+
   // Upsert progress row
   const upsertData: Record<string, unknown> = {
     student_email: email,
@@ -100,6 +148,7 @@ export async function POST(req: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
+  if (courseId) upsertData.course_id = courseId;
   if (completed !== undefined) upsertData.completed = completed;
   if (mcqScore !== undefined) upsertData.mcq_score = mcqScore;
   if (mcqTotal !== undefined) upsertData.mcq_total = mcqTotal;
@@ -110,41 +159,64 @@ export async function POST(req: NextRequest) {
   if (confidenceStats !== undefined && confidenceStats !== null)
     upsertData.confidence_stats = confidenceStats;
 
+  // onConflict key reflects the CURRENT unique index. If the Phase 3
+  // migration has rebuilt it to include course_id, we key on the
+  // new 4-tuple; otherwise fall back to the legacy 3-tuple. The retry
+  // logic below catches "column does not exist" errors either way so
+  // this decision doesn't have to be perfect.
+  const newOnConflict = "student_email,course_id,module_number,topic_id";
+  const legacyOnConflict = "student_email,module_number,topic_id";
+
   // Run the progress upsert AND the session-ping in parallel. Previous
   // version awaited them sequentially — every student click cost 2
   // Supabase round-trips (~300ms on 4G Tashkent). They share no causal
   // dependency; Promise.all cuts the request to ~1 RTT.
   const progressPromise = supabase.from("student_progress").upsert(
     upsertData,
-    {
-      onConflict: "student_email,module_number,topic_id",
-    }
+    { onConflict: courseId ? newOnConflict : legacyOnConflict }
   );
-  const sessionPromise = supabase.from("student_sessions").upsert(
-    {
-      student_email: email,
-      student_name: name || "Student",
-      enrollment_no: "N/A",
-      last_active_at: new Date().toISOString(),
-    },
-    { onConflict: "student_email" }
-  );
+  const sessionPayload: Record<string, unknown> = {
+    student_email: email,
+    student_name: name || "Student",
+    enrollment_no: "N/A",
+    last_active_at: new Date().toISOString(),
+  };
+  if (courseId) sessionPayload.course_id = courseId;
+  const sessionPromise = supabase
+    .from("student_sessions")
+    .upsert(sessionPayload, { onConflict: "student_email" });
 
   let [progressRes] = await Promise.all([progressPromise, sessionPromise]);
   let error = progressRes.error;
 
-  // Graceful degradation: if the Bloom's migration hasn't run yet, Supabase
-  // returns PGRST204 / PGRST116 complaining about an unknown column. Retry
-  // once without the new JSONB fields so the student's progress still saves.
-  // (Session upsert above doesn't reference those columns, so it's fine.)
+  // Graceful degradation #1: Bloom's migration not applied.
   if (error && /bloom_stats|confidence_stats/i.test(error.message)) {
     console.warn(
-      "[progress] bloom_stats/confidence_stats columns missing — retrying without them. Run migration-add-bloom-stats.sql to enable Bloom's radar."
+      "[progress] bloom_stats/confidence_stats columns missing — retrying without. Run migration-add-bloom-stats.sql."
     );
     delete upsertData.bloom_stats;
     delete upsertData.confidence_stats;
     progressRes = await supabase.from("student_progress").upsert(upsertData, {
-      onConflict: "student_email,module_number,topic_id",
+      onConflict: courseId ? newOnConflict : legacyOnConflict,
+    });
+    error = progressRes.error;
+  }
+
+  // Graceful degradation #2: Phase 3 migration not applied.
+  // Drop course_id from both the payload and the onConflict key and
+  // retry once. Existing ICT-only deployments survive.
+  if (
+    error &&
+    /course_id|student_progress_course_module_topic_key|PGRST204|PGRST102/i.test(
+      error.message
+    )
+  ) {
+    console.warn(
+      "[progress] course_id column/constraint missing — retrying without. Run migration-phase3-multi-course.sql."
+    );
+    delete upsertData.course_id;
+    progressRes = await supabase.from("student_progress").upsert(upsertData, {
+      onConflict: legacyOnConflict,
     });
     error = progressRes.error;
   }

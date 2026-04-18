@@ -215,7 +215,7 @@ export default function ModulePage({
         const token = getIdToken();
         if (!token) return;
         const res = await fetch(
-          `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}`,
+          `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}&course=${encodeURIComponent(courseSlug)}`,
           {
             headers: { "x-id-token": token },
             // Skip any HTTP/SW cache so stale empty responses can't pin
@@ -363,6 +363,10 @@ export default function ModulePage({
         email: user.email,
         name: user.name,
         moduleNumber,
+        // Phase 3: course slug threaded through so the server can
+        // resolve course_id and scope the upsert. Safe to omit on
+        // pre-Phase-3 servers — they ignore the field.
+        courseSlug,
         ...data,
       }),
       signal: controller.signal,

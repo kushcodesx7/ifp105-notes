@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
+import { getCourseIdBySlug, CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 
 // GET — return all batches with public student listings.
 //
@@ -167,7 +168,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Upsert student
+  // Upsert student (legacy per-student table — kept as identity source).
   const { error } = await supabase.from("students").upsert(
     {
       batch_id: batchId,
@@ -184,6 +185,41 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  // Phase 3: also write to the `enrollments` junction table so the DB
+  // tracks (student, course, batch) tuples. Existing registrations are
+  // backfilled as part of the Phase 3 migration — this write handles
+  // NEW registrations going forward.
+  //
+  // Graceful degrade: if the enrollments table or `course_id` lookup
+  // fails (migration not applied), skip the write and log a warning.
+  // The student row above is the authoritative source today; enrollments
+  // is additive data that becomes authoritative in Phase 4.
+  try {
+    const courseId = await getCourseIdBySlug(CURRENT_COURSE_SLUG);
+    if (courseId) {
+      const { error: enrollErr } = await supabase.from("enrollments").upsert(
+        {
+          student_email: email,
+          course_id: courseId,
+          batch_id: batchId,
+          section,
+          enrollment_no: enrollmentNo.toUpperCase(),
+          added_at: new Date().toISOString().split("T")[0],
+          active: true,
+        },
+        { onConflict: "student_email,course_id,batch_id" }
+      );
+      if (enrollErr) {
+        console.warn(
+          "[register] enrollments upsert failed — skipping. Run migration-phase3-multi-course.sql if this is new.",
+          enrollErr.message
+        );
+      }
+    }
+  } catch (e) {
+    console.warn("[register] enrollments write threw — ignoring:", e);
   }
 
   return Response.json({ success: true });
