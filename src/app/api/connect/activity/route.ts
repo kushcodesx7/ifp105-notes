@@ -39,11 +39,16 @@ interface ActivityEvent {
 export async function GET() {
   const sinceIso = new Date(Date.now() - WINDOW_MS).toISOString();
 
-  // Map of email → {name, section, photoUrl} so we can join progress → student
-  const [studentsRes, progressRes] = await Promise.all([
+  // Map of email → {name, section, photoUrl} so we can join progress → student.
+  // Also pull roll_list so we can show teacher-verified names in the activity
+  // strip ("Oysha completed HTML" instead of "248_oysha completed HTML").
+  const [studentsRes, rollRes, progressRes] = await Promise.all([
     supabase
       .from("students")
-      .select("email, name, section, photo_url, added_at"),
+      .select("email, name, batch_id, enrollment_no, section, photo_url, added_at"),
+    supabase
+      .from("roll_list")
+      .select("batch_id, section, enrollment_no, name"),
     supabase
       .from("student_progress")
       .select("student_email, module_number, topic_id, completed, updated_at")
@@ -57,6 +62,22 @@ export async function GET() {
     return Response.json({ error: studentsRes.error.message }, { status: 500 });
   }
 
+  // Graceful fallback if roll_list.name column is missing (migration pending).
+  let rollRows = rollRes.data as
+    | { batch_id: string; section: string; enrollment_no: string; name: string | null }[]
+    | null;
+  if (rollRes.error && /name|PGRST204/i.test(rollRes.error.message)) {
+    rollRows = [];
+  }
+  const rollNameByKey = new Map<string, string>();
+  for (const r of rollRows || []) {
+    if (!r.name) continue;
+    rollNameByKey.set(
+      `${r.batch_id}__${r.section}__${r.enrollment_no}`,
+      r.name
+    );
+  }
+
   // Build lookup map from email → student row (filter hidden sections here —
   // any event tied to a student in a hidden section will simply be dropped).
   interface StudentMeta {
@@ -68,8 +89,13 @@ export async function GET() {
   const studentByEmail: Record<string, StudentMeta> = {};
   for (const s of studentsRes.data || []) {
     if (!s.email || isHiddenSection(s.section)) continue;
+    const rollKey = `${(s as { batch_id?: string }).batch_id || ""}__${
+      s.section || ""
+    }__${(s as { enrollment_no?: string }).enrollment_no || ""}`;
+    const teacherName = rollNameByKey.get(rollKey);
     studentByEmail[s.email] = {
-      name: s.name || "",
+      // Prefer teacher-verified roll-list name; fall back to display name.
+      name: teacherName || s.name || "",
       section: s.section || "",
       photoUrl: s.photo_url || null,
       addedAt: s.added_at || null,

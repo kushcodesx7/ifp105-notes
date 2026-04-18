@@ -46,9 +46,13 @@ export async function GET(req: NextRequest) {
   if (batchId) studentQuery.eq("batch_id", batchId);
   if (section) studentQuery.eq("section", section);
 
+  // Pull the name column too — used below to override each student's
+  // display name with the teacher-verified roll-list name when set.
+  // Graceful fallback if the migration hasn't been applied yet (handled
+  // below in studentsRes mapping; missing column → null name).
   const rollQuery = supabase
     .from("roll_list")
-    .select("batch_id, section", { count: "exact" });
+    .select("batch_id, section, enrollment_no, name", { count: "exact" });
   if (batchId) rollQuery.eq("batch_id", batchId);
   if (section) rollQuery.eq("section", section);
 
@@ -69,6 +73,31 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: studentsRes.error.message }, { status: 500 });
   }
 
+  // Graceful: if roll_list.name column is missing (migration not applied),
+  // retry with the old column set so the feed still renders. Students
+  // just won't get the teacher-verified name upgrade until the migration
+  // runs — everything else works.
+  let rollRows = rollRes.data as
+    | { batch_id: string; section: string; enrollment_no: string; name: string | null }[]
+    | null;
+  if (rollRes.error && /name|PGRST204/i.test(rollRes.error.message)) {
+    const fb = await supabase
+      .from("roll_list")
+      .select("batch_id, section, enrollment_no");
+    rollRows = (fb.data || []).map((r) => ({
+      ...(r as { batch_id: string; section: string; enrollment_no: string }),
+      name: null,
+    }));
+  }
+
+  // Index teacher-verified names by (batch, section, roll) for O(1) lookup.
+  const rollNameByKey = new Map<string, string>();
+  for (const r of rollRows || []) {
+    if (!r.name) continue;
+    const key = `${r.batch_id}__${r.section}__${r.enrollment_no}`;
+    rollNameByKey.set(key, r.name);
+  }
+
   // Aggregate per-email completion count
   const doneByEmail: Record<string, number> = {};
   for (const row of progressRes.data || []) {
@@ -84,12 +113,23 @@ export async function GET(req: NextRequest) {
 
   // Map to public shape (email never leaves the server side).
   // Progress is always public — no opt-out.
+  //
+  // `name` is the teacher-verified roll-list name when available
+  // ("Oysha Abdullayeva"), falling back to the student's chosen display
+  // name ("248_oysha"). This way the Connect feed shows real names as
+  // soon as the teacher uploads them, with no UI change needed. The
+  // client-side `prettyName()` helper strips numeric prefixes from the
+  // legacy format — it's a no-op on the real name path.
   const students = visibleStudentRows.map((s) => {
     const done = s.email ? doneByEmail[s.email] || 0 : 0;
     const completionPct = Math.min(100, Math.round((done / TOTAL_TOPICS) * 100));
+    const rollKey = `${s.batch_id || ""}__${s.section || ""}__${
+      s.enrollment_no || ""
+    }`;
+    const preferredName = rollNameByKey.get(rollKey) || s.name;
     return {
       enrollmentNo: s.enrollment_no,
-      name: s.name,
+      name: preferredName,
       batchId: s.batch_id,
       section: s.section,
       linkedinUrl: s.linkedin_url,
@@ -104,8 +144,8 @@ export async function GET(req: NextRequest) {
 
   const perSectionTotals: Record<string, number> = {};
   let visibleRollCount = 0;
-  for (const r of rollRes.data || []) {
-    const sec = (r as { section?: string }).section || "";
+  for (const r of rollRows || []) {
+    const sec = r.section || "";
     if (!sec) continue;
     if (!includeHidden && isHiddenSection(sec)) continue;
     perSectionTotals[sec] = (perSectionTotals[sec] || 0) + 1;

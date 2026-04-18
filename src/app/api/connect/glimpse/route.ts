@@ -22,8 +22,13 @@ export async function GET() {
     // show bio on the 3 cards).
     supabase
       .from("students")
-      .select("email, enrollment_no, name, section, photo_url, skills, added_at"),
-    supabase.from("roll_list").select("section"),
+      .select(
+        "email, enrollment_no, name, batch_id, section, photo_url, skills, added_at"
+      ),
+    // Include name + batch_id + enrollment_no to decorate students with
+    // the teacher-verified name. Falls back gracefully if the migration
+    // is pending.
+    supabase.from("roll_list").select("batch_id, section, enrollment_no, name"),
     // Only the last 7 days, and only the 3 columns we aggregate
     supabase
       .from("student_progress")
@@ -34,6 +39,39 @@ export async function GET() {
   if (studentsRes.error) {
     return Response.json({ error: studentsRes.error.message }, { status: 500 });
   }
+
+  // Graceful: if roll_list.name column missing, refetch without.
+  let rollRows = rollRes.data as
+    | { batch_id: string; section: string; enrollment_no: string; name: string | null }[]
+    | null;
+  if (rollRes.error && /name|PGRST204/i.test(rollRes.error.message)) {
+    const fb = await supabase
+      .from("roll_list")
+      .select("batch_id, section, enrollment_no");
+    rollRows = (fb.data || []).map((r) => ({
+      ...(r as { batch_id: string; section: string; enrollment_no: string }),
+      name: null,
+    }));
+  }
+
+  // Lookup (batch, section, roll) → teacher name
+  const rollNameByKey = new Map<string, string>();
+  for (const r of rollRows || []) {
+    if (!r.name) continue;
+    const key = `${r.batch_id}__${r.section}__${r.enrollment_no}`;
+    rollNameByKey.set(key, r.name);
+  }
+  const preferName = (s: {
+    batch_id?: string | null;
+    section?: string | null;
+    enrollment_no?: string | null;
+    name?: string | null;
+  }) =>
+    rollNameByKey.get(
+      `${s.batch_id || ""}__${s.section || ""}__${s.enrollment_no || ""}`
+    ) ||
+    s.name ||
+    "";
 
   // Exclude hidden sections (e.g. Test Section) from every public number
   const allStudents = (studentsRes.data || []).filter(
@@ -79,7 +117,7 @@ export async function GET() {
     const allTime = s.email ? allTimeDone[s.email] || 0 : 0;
     return {
       enrollmentNo: s.enrollment_no,
-      name: s.name,
+      name: preferName(s),
       section: s.section,
       photoUrl: s.photo_url,
       skills: (s as { skills?: string[] }).skills || [],
@@ -96,7 +134,7 @@ export async function GET() {
     .slice(0, 5)
     .map((s) => ({
       enrollmentNo: s.enrollment_no,
-      name: s.name,
+      name: preferName(s),
       section: s.section,
       photoUrl: s.photo_url,
       lastThree: (s.enrollment_no || "").slice(-3),
@@ -105,8 +143,8 @@ export async function GET() {
   // Section leader + registered counts (hidden sections excluded)
   const perSectionRolls: Record<string, number> = {};
   let visibleRollCount = 0;
-  for (const r of rollRes.data || []) {
-    const sec = (r as { section?: string }).section || "";
+  for (const r of rollRows || []) {
+    const sec = r.section || "";
     if (!sec || isHiddenSection(sec)) continue;
     perSectionRolls[sec] = (perSectionRolls[sec] || 0) + 1;
     visibleRollCount += 1;
