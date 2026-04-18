@@ -8,6 +8,7 @@ import StudentDetailModal from "@/components/StudentDetailModal";
 import { useAuth } from "@/lib/auth-context";
 import { SKILLS, getSkill } from "@/lib/skills";
 import { sizedAvatar } from "@/lib/avatar";
+import { sectionColor } from "@/lib/sectionColors";
 
 interface Student {
   enrollmentNo: string;
@@ -23,26 +24,9 @@ interface Student {
   completionPct?: number;
 }
 
-// Section accent palette (matches the 5 module accents + one extra)
-const SECTION_COLORS: Record<string, { from: string; to: string; glow: string; dot: string }> = {
-  "Section 1": { from: "#6366F1", to: "#8B5CF6", glow: "rgba(99,102,241,0.35)", dot: "#6366F1" },
-  "Section 2": { from: "#10B981", to: "#059669", glow: "rgba(16,185,129,0.35)", dot: "#10B981" },
-  "Section 3": { from: "#3B82F6", to: "#06B6D4", glow: "rgba(59,130,246,0.35)", dot: "#3B82F6" },
-  "Section 4": { from: "#06B6D4", to: "#0EA5E9", glow: "rgba(6,182,212,0.35)", dot: "#06B6D4" },
-  "Section 5": { from: "#8B5CF6", to: "#EC4899", glow: "rgba(139,92,246,0.35)", dot: "#8B5CF6" },
-  "Section 6": { from: "#F59E0B", to: "#EF4444", glow: "rgba(245,158,11,0.35)", dot: "#F59E0B" },
-};
-
-function sectionColor(section: string) {
-  return (
-    SECTION_COLORS[section] || {
-      from: "#71717a",
-      to: "#52525b",
-      glow: "rgba(113,113,122,0.25)",
-      dot: "#71717a",
-    }
-  );
-}
+// Section palette + lookup moved to @/lib/sectionColors so Connect, the
+// home widgets, and the activity strip all share one source of truth.
+// Keeping `SECTION_COLORS` alias here so any inline references compile.
 
 // Parse a display name — strip leading "NNN_" numeric prefixes so "284_Muhammadaziz"
 // becomes "Muhammadaziz" and "221_IFS4_221_Sherzodbek" becomes "Sherzodbek"

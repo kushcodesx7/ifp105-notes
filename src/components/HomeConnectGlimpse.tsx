@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getSkill } from "@/lib/skills";
 import { sizedAvatar } from "@/lib/avatar";
+import { sectionColor } from "@/lib/sectionColors";
 import HomeActivityStrip from "@/components/HomeActivityStrip";
 
 interface RecentJoiner {
@@ -43,25 +44,7 @@ interface Glimpse {
   sectionLeader: SectionLeader | null;
 }
 
-// Section accent palette — kept in sync with /connect page
-const SECTION_COLORS: Record<string, { from: string; to: string; dot: string }> = {
-  "Section 1": { from: "#6366F1", to: "#8B5CF6", dot: "#6366F1" },
-  "Section 2": { from: "#10B981", to: "#059669", dot: "#10B981" },
-  "Section 3": { from: "#3B82F6", to: "#06B6D4", dot: "#3B82F6" },
-  "Section 4": { from: "#06B6D4", to: "#0EA5E9", dot: "#06B6D4" },
-  "Section 5": { from: "#8B5CF6", to: "#EC4899", dot: "#8B5CF6" },
-  "Section 6": { from: "#F59E0B", to: "#EF4444", dot: "#F59E0B" },
-};
-
-function sectionColor(section: string | null) {
-  return (
-    SECTION_COLORS[section || ""] || {
-      from: "#71717a",
-      to: "#52525b",
-      dot: "#71717a",
-    }
-  );
-}
+// Section palette moved to @/lib/sectionColors.
 
 function prettyName(raw: string): string {
   if (!raw) return "Unknown";

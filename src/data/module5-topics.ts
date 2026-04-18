@@ -584,13 +584,13 @@ export const topics: Topic[] = [
           },
           {
             icon: "\ud83d\udecb\ufe0f",
-            title: "IKEA Place App",
-            description: "See how virtual furniture looks in your real room before buying. Place a virtual sofa in your living room.",
+            title: "IKEA Place / Uzum AR (furniture, appliances)",
+            description: "See how virtual furniture or a large appliance looks in your real room before buying. Uzum\u2019s product pages in Uzbekistan have started adding AR previews for the same reason \u2014 \u201cwill this fit?\u201d without a tape measure.",
           },
           {
             icon: "\ud83d\uddfa\ufe0f",
-            title: "Google Maps Live View",
-            description: "Point your camera at the street and see virtual arrows overlaid on the real road, guiding you.",
+            title: "Yandex Go / Google Maps Live View",
+            description: "Point your camera at the street and see virtual arrows overlaid on the real road. Yandex Go uses the same pattern for the last 100m of a taxi ride in Tashkent.",
           },
         ],
       },

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sizedAvatar } from "@/lib/avatar";
+import { sectionDot } from "@/lib/sectionColors";
 
 interface ActivityEvent {
   id: string;
@@ -16,19 +17,8 @@ interface ActivityEvent {
   at: string;
 }
 
-// Section accent palette — same as connect page
-const SECTION_DOT: Record<string, string> = {
-  "Section 1": "#6366F1",
-  "Section 2": "#10B981",
-  "Section 3": "#3B82F6",
-  "Section 4": "#06B6D4",
-  "Section 5": "#8B5CF6",
-  "Section 6": "#F59E0B",
-};
-
-function sectionColor(s: string): string {
-  return SECTION_DOT[s] || "#71717a";
-}
+// Use the shared palette from @/lib/sectionColors (single source of truth).
+// Activity strip only needs the dot hex, so wrap sectionDot().
 
 function prettyName(raw: string): string {
   if (!raw) return "Someone";
@@ -126,7 +116,7 @@ export default function HomeActivityStrip() {
   if (events.length === 0) return null;
 
   const evt = events[currentIdx % events.length];
-  const col = sectionColor(evt.section);
+  const col = sectionDot(evt.section);
 
   const message =
     evt.type === "completed"

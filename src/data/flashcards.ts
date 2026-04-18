@@ -28,7 +28,7 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
     // Topic 3: How Every Computer Works -- IPO
     3: [
       { front: "What does IPO stand for in computing?", back: "Input, Process, Output -- the 3-step cycle every computer follows." },
-      { front: "What does the 'Process' step involve and which component performs it?", back: "The CPU does all thinking -- calculations, decisions, comparisons -- in milliseconds." },
+      { front: "What does the 'Process' step involve and which component performs it?", back: "The CPU does all thinking — calculations, decisions, comparisons — in nanoseconds (a 3 GHz CPU runs ~3 billion simple operations every second)." },
       { front: "Give an example of an Input device and an Output device.", back: "Input: keyboard, mouse, microphone. Output: monitor, speakers, printer." },
       { front: "What is the role of Storage in the IPO model?", back: "Storage saves your work permanently even when the computer turns off. Without it, everything disappears on shutdown." },
       { front: "In the Pizza Analogy, what does the oven represent?", back: "The CPU (Process). Ingredients = Input, finished pizza = Output, fridge = Storage." },
@@ -206,7 +206,7 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
 
     // Topic 3: Social Media Management Tools
     3: [
-      { front: "Name 3 social media management tools.", back: "Hootsuite (enterprise), Buffer (beginners/small biz), Sprout Social (agencies/advanced analytics)." },
+      { front: "Name 3 social media management tools.", back: "Buffer (free-tier, beginner default), Later (visual Instagram planner), Metricool (analytics-heavy; popular with small agencies in UZ). Hootsuite dropped its free tier in 2023 and is now enterprise-only." },
       { front: "What are the 4 core functions of a social media management tool?", back: "Scheduling (auto-post at best times), Monitoring (track mentions), Analytics (track performance), Unified Inbox (all messages in one place)." },
       { front: "What is a 'Unified Inbox' in social media management?", back: "All comments, messages, and mentions from every platform combined into ONE inbox -- reply without switching apps." },
       { front: "Why do professionals use scheduling tools?", back: "Write posts in advance and auto-publish at optimal times. Saves hours, prevents mistakes, and enables data-driven decisions." },
@@ -367,7 +367,7 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "What are the 4 types of Data Analytics?", back: "Descriptive (what happened?), Diagnostic (why?), Predictive (what will happen?), Prescriptive (what should we do?)." },
       { front: "What type of analytics answers 'What will happen next?'", back: "Predictive Analytics -- uses patterns in historical data to forecast future outcomes." },
       { front: "What is Prescriptive Analytics?", back: "The most advanced type -- recommends specific actions to take. Example: 'Launch a sale in April to boost revenue.'" },
-      { front: "Name 3 tools used for Data Analytics.", back: "Excel, Python, Tableau, Power BI, SQL, Google Sheets, R." },
+      { front: "Name 3 tools commonly used for Data Analytics.", back: "Excel + SQL + Python is the classic starter trio. Beyond that: Tableau (dashboards), Power BI (Microsoft BI), Google Sheets, R (statistics). Every analyst job posting in 2026 asks for at least SQL + one of Excel/Python." },
     ],
 
     // Topic 4: Cloud Computing
@@ -408,7 +408,7 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "What is the Internet of Things (IoT)?", back: "A network of physical objects embedded with sensors, software, and connectivity that collect and exchange data over the internet." },
       { front: "What are the 4 components of an IoT system?", back: "Sensors (collect data), Connectivity (send data via Wi-Fi/Bluetooth), Data Processing (analyse in cloud), Action (respond -- turn on lights, send alert)." },
       { front: "Give 4 examples of IoT devices.", back: "Smart watches, smart thermostats (Nest), smart speakers (Alexa), connected cars, soil sensors in agriculture." },
-      { front: "Name 2 benefits and 2 risks of IoT.", back: "Benefits: automation, remote monitoring. Risks: privacy concerns (always collecting data), security vulnerabilities (hackable devices)." },
+      { front: "Name 2 benefits and 2 risks of IoT.", back: "Benefits: (1) automation — devices act on sensor data without humans; (2) remote monitoring — from anywhere on the internet. Risks: (1) privacy — devices constantly collect data about where you are and what you do; (2) security — weak default passwords make IoT devices common entry points for hackers." },
     ],
 
     // Topic 9: Introduction to Generative AI

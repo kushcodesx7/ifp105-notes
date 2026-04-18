@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
@@ -160,6 +160,12 @@ export default function Home() {
   const { user, isLoggedIn } = useAuth();
   const [continueData, setContinueData] = useState<ContinueData | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  // Respect prefers-reduced-motion. globals.css covers CSS animations,
+  // but framer-motion's `animate={{ x: [...], y: [...] }}` runs on JS
+  // rAF and ignores that media query. We gate the infinite hero orb
+  // loops on this flag so users who asked for less motion actually get
+  // it (and as a bonus, spare low-end Android GPU cycles).
+  const reduceMotion = useReducedMotion();
 
   // Quick quiz state — start with 0 on server, randomize on client to avoid hydration mismatch
   const [quizIndex, setQuizIndex] = useState(0);
@@ -245,14 +251,22 @@ export default function Home() {
 
       {/* ─── HERO (compact) ─── */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden pt-14">
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <motion.div
-            animate={{ x: [0, 30, -20, 0], y: [0, -40, 20, 0], scale: [1, 1.1, 0.95, 1] }}
+            animate={
+              reduceMotion
+                ? undefined
+                : { x: [0, 30, -20, 0], y: [0, -40, 20, 0], scale: [1, 1.1, 0.95, 1] }
+            }
             transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-[10%] right-[15%] w-[400px] h-[400px] rounded-full bg-indigo-500/20 blur-[120px]"
           />
           <motion.div
-            animate={{ x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
+            animate={
+              reduceMotion
+                ? undefined
+                : { x: [0, -20, 30, 0], y: [0, 30, -20, 0] }
+            }
             transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-[15%] left-[10%] w-[300px] h-[300px] rounded-full bg-violet-500/15 blur-[120px]"
           />

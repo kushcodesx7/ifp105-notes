@@ -169,8 +169,9 @@ export const cheatsheets: ModuleCheatSheet[] = [
       {
         title: "Tools & Advertising",
         items: [
-          { term: "Hootsuite", definition: "Industry-standard management tool — schedule posts, monitor mentions, analytics across platforms." },
-          { term: "Buffer", definition: "Simple, beginner-friendly scheduling and analytics tool for small businesses." },
+          { term: "Buffer / Later", definition: "Free-tier scheduling + analytics for a single creator or small brand. Buffer is the beginner default; Later adds a visual Instagram grid planner." },
+          { term: "Metricool", definition: "Analytics-heavy scheduler popular with small agencies (including in UZ). Free plan covers one brand across most platforms." },
+          { term: "Hootsuite / Sprout Social", definition: "Enterprise scheduling + monitoring. Hootsuite dropped its free tier in 2023, so small businesses have moved on; agencies still use it." },
           { term: "A/B Testing", definition: "Run two ad versions with ONE difference — keep the winner, drop the loser." },
           { term: "CPC", definition: "Cost Per Click — you pay only when someone clicks your ad." },
           { term: "CPM", definition: "Cost Per Thousand Impressions — you pay per 1,000 views of your ad." },

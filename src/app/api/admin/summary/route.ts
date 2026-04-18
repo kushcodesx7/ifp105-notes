@@ -28,20 +28,21 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const weekAgoIso = new Date(now - WEEK_MS).toISOString();
 
-  const [studentsRes, rollsRes, sessionsRes, progressRes, fullSessionsRes] =
+  // Previously fetched student_sessions TWICE — once filtered to the
+  // week window and once unfiltered for stale-detection. Fetch ALL
+  // sessions once and derive both views in-memory; saves one round-trip
+  // and ~50KB of internal-network payload per request. At 218 students
+  // × a few sessions per student, the full table is tiny.
+  const [studentsRes, rollsRes, allSessionsRes, progressRes] =
     await Promise.all([
       supabase
         .from("students")
         .select("email, name, section, batch_id, added_at"),
       supabase.from("roll_list").select("batch_id, section"),
-      supabase
-        .from("student_sessions")
-        .select("student_email, last_active_at")
-        .gte("last_active_at", weekAgoIso),
+      supabase.from("student_sessions").select("student_email, last_active_at"),
       supabase
         .from("student_progress")
         .select("student_email, completed, mcq_score, mcq_total"),
-      supabase.from("student_sessions").select("student_email, last_active_at"),
     ]);
 
   type Student = {
@@ -71,22 +72,23 @@ export async function GET(req: NextRequest) {
     totalRolls += 1;
   }
 
-  // ─── Active this week (intersect with registered) ───────────────
+  // Active-this-week + last-active map come from a SINGLE session pass.
+  // Sessions in the last 7 days → intersect with registered = this
+  // week's active count. Every session → populates lastActiveMap.
   const activeSet = new Set<string>();
-  for (const s of sessionsRes.data || []) {
-    if (s.student_email && registeredEmails.has(s.student_email)) {
+  const lastActiveMap: Record<string, string> = {};
+  for (const s of allSessionsRes.data || []) {
+    if (!s.student_email) continue;
+    if (s.last_active_at) lastActiveMap[s.student_email] = s.last_active_at;
+    if (
+      s.last_active_at &&
+      s.last_active_at >= weekAgoIso &&
+      registeredEmails.has(s.student_email)
+    ) {
       activeSet.add(s.student_email);
     }
   }
   const activeThisWeek = activeSet.size;
-
-  // ─── Last-active map (all sessions, for stale detection) ────────
-  const lastActiveMap: Record<string, string> = {};
-  for (const s of fullSessionsRes.data || []) {
-    if (s.student_email && s.last_active_at) {
-      lastActiveMap[s.student_email] = s.last_active_at;
-    }
-  }
 
   // ─── Progress aggregation per registered student ────────────────
   type Agg = {
@@ -209,7 +211,7 @@ export async function GET(req: NextRequest) {
 
   // ─── Pending registration: signed-in without a students row ─────
   const pendingEmails: Set<string> = new Set();
-  for (const s of fullSessionsRes.data || []) {
+  for (const s of allSessionsRes.data || []) {
     if (s.student_email && !registeredEmails.has(s.student_email)) {
       pendingEmails.add(s.student_email);
     }

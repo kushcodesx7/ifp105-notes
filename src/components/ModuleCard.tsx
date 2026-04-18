@@ -133,7 +133,15 @@ export default function ModuleCard({
       {progress && progress.done > 0 && (
         <div className="px-7 pb-5 -mt-1">
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div
+              role="progressbar"
+              aria-valuenow={progress.done}
+              aria-valuemin={0}
+              aria-valuemax={progress.total}
+              aria-label={`Module progress: ${progress.done} of ${progress.total} topics done`}
+              className="flex-1 h-1.5 rounded-full overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            >
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${(progress.done / progress.total) * 100}%` }}
