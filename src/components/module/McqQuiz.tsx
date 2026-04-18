@@ -727,7 +727,9 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                       Before we reveal the answer —{" "}
                       <span className="text-white font-semibold">how sure are you?</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
+                    {/* 2x2 on small screens, 4-across from sm (640px) up.
+                         Four labels on 375px were cramped and truncated. */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {CONFIDENCE_ORDER.map((lvl) => {
                         const meta = CONFIDENCE_META[lvl];
                         return (
@@ -736,7 +738,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                             whileHover={{ y: -2 }}
                             whileTap={{ scale: 0.96 }}
                             onClick={() => handleConfidence(lvl)}
-                            className="flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg transition-all focus-glow"
+                            className="flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-1 py-3 px-2 rounded-lg transition-all focus-glow min-h-[48px]"
                             style={{
                               background: 'rgba(255,255,255,0.03)',
                               border: `1px solid rgba(255,255,255,0.08)`,
@@ -746,7 +748,7 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
                               {meta.emoji}
                             </span>
                             <span
-                              className="text-[10px] font-semibold"
+                              className="text-[11px] sm:text-[10px] font-semibold"
                               style={{ color: meta.color }}
                             >
                               {meta.label}

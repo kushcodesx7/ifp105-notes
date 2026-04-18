@@ -88,9 +88,10 @@ export default function HomeBloomsProfile() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 items-center">
-          {/* Radar chart */}
+          {/* Radar chart — let it fill the column; SVG scales via viewBox.
+               Constraining to a pixel max on mobile clipped axis labels. */}
           <div className="flex justify-center">
-            <div className="w-full max-w-[340px]">
+            <div className="w-full max-w-[360px]">
               <BloomsRadar levels={data.levels} />
             </div>
           </div>

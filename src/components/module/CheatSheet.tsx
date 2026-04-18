@@ -47,10 +47,16 @@ export default function CheatSheet({ data, accentFrom, accentTo }: CheatSheetPro
             {section.items.map((item, ii) => (
               <div
                 key={item.term}
-                className="flex gap-3 py-2.5 items-start"
+                // Stack term + definition on mobile (narrow screens would
+                // squeeze the definition into ~150px otherwise). Side-by-side
+                // from sm+ where there's room for the two-column layout.
+                className="flex flex-col sm:flex-row gap-1 sm:gap-3 py-2.5 items-start"
                 style={{ borderBottom: ii < section.items.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
               >
-                <span className="text-[13px] font-semibold shrink-0 min-w-[140px]" style={{ color: accentFrom }}>
+                <span
+                  className="text-[13px] font-semibold shrink-0 sm:min-w-[140px]"
+                  style={{ color: accentFrom }}
+                >
                   {item.term}
                 </span>
                 <span className="text-[13px] text-zinc-400 leading-relaxed">
