@@ -3,7 +3,7 @@ import ModulePage from "@/components/module/ModulePage";
 import HtmlEditor from "@/components/module/HtmlEditor";
 import YourTurnChallenge from "@/components/module/YourTurnChallenge";
 import { topics } from "@/data/module4-topics";
-import { mcqData } from "@/data/module4-mcq";
+// mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 import { module4Challenges } from "@/data/module4-challenges";
 import TagMatchGame from "@/components/module/TagMatchGame";
 import BugFixChallenge from "@/components/module/BugFixChallenge";
@@ -35,7 +35,6 @@ export default function Module4() {
       orbColor1="rgba(6,182,212,0.15)"
       orbColor2="rgba(8,145,178,0.1)"
       topics={topics}
-      mcqData={mcqData}
       stats={[
         { n: "11", l: "Topics" },
         { n: "~55", l: "Minutes" },

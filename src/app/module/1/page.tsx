@@ -1,8 +1,10 @@
 "use client";
 import ModulePage from "@/components/module/ModulePage";
 import { topics } from "@/data/module1-topics";
-import { mcqData } from "@/data/module1-mcq";
 
+// MCQ data is no longer imported here — ModulePage dynamically loads
+// src/data/module1-mcq.ts in its own chunk via src/data/load-mcq.ts.
+// Keeps this initial route bundle ~50KB gz smaller on first paint.
 export default function Module1() {
   return (
     <ModulePage
@@ -15,7 +17,6 @@ export default function Module1() {
       orbColor1="rgba(99,102,241,0.15)"
       orbColor2="rgba(124,58,237,0.1)"
       topics={topics}
-      mcqData={mcqData}
       stats={[
         { n: "11", l: "Topics" },
         { n: "~55", l: "Minutes" },

@@ -1,7 +1,7 @@
 "use client";
 import ModulePage from "@/components/module/ModulePage";
 import { topics } from "@/data/module3-topics";
-import { mcqData } from "@/data/module3-mcq";
+// mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 
 export default function Module3() {
   return (
@@ -15,7 +15,6 @@ export default function Module3() {
       orbColor1="rgba(59,130,246,0.15)"
       orbColor2="rgba(37,99,235,0.1)"
       topics={topics}
-      mcqData={mcqData}
       stats={[
         { n: "7", l: "Topics" },
         { n: "~40", l: "Minutes" },

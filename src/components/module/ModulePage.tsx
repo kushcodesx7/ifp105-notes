@@ -60,7 +60,12 @@ interface ModulePageProps {
   orbColor1: string;
   orbColor2: string;
   topics: Topic[];
-  mcqData: Record<number, Question[]>;
+  // Optional: callers can still pass mcqData eagerly for tests / legacy.
+  // Production code path is the dynamic import inside this component
+  // (see loadMcqData effect below) — omit this prop and the component
+  // splits the bank into its own chunk, saving ~30-50KB gz on first
+  // paint for every module.
+  mcqData?: Record<number, Question[]>;
   stats: { n: string; l: string }[];
   renderAfterContent?: (topicId: number) => React.ReactNode;
 }
@@ -75,7 +80,7 @@ export default function ModulePage({
   orbColor1,
   orbColor2,
   topics,
-  mcqData,
+  mcqData: mcqDataProp,
   stats,
   renderAfterContent,
 }: ModulePageProps) {
@@ -100,6 +105,28 @@ export default function ModulePage({
   const [mcqAnswerCounts, setMcqAnswerCounts] = useState<Record<number, { answered: number; total: number }>>({});
   const hasShownLoginPrompt = useRef(false);
   const supabaseLoaded = useRef(false);
+
+  // MCQ data — either eagerly supplied by the caller (legacy / tests)
+  // or dynamically imported at runtime. Dynamic path splits each
+  // module's bank into its own chunk, shaving ~30-50KB gz off first
+  // paint for every module route.
+  const [mcqData, setMcqData] = useState<Record<number, Question[]>>(
+    () => mcqDataProp ?? {}
+  );
+  const [mcqReady, setMcqReady] = useState<boolean>(!!mcqDataProp);
+  useEffect(() => {
+    if (mcqDataProp) return; // eager path — nothing to fetch
+    let alive = true;
+    import("@/data/load-mcq").then(async ({ loadMcqData }) => {
+      const data = await loadMcqData(moduleNumber);
+      if (!alive) return;
+      setMcqData(data);
+      setMcqReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [moduleNumber, mcqDataProp]);
 
   // Load localStorage progress
   useEffect(() => {
@@ -628,7 +655,23 @@ export default function ModulePage({
 
               {renderAfterContent && renderAfterContent(activeTab)}
 
-              {mcqData[activeTab] && (
+              {/* While the lazy chunk is fetching, show a compact skeleton
+                   so the topic doesn't visually end mid-scroll. Once
+                   mcqReady flips true, the real quiz slots in. If a
+                   topic happens to have no MCQs, nothing renders here
+                   (the dynamic check below falls through). */}
+              {!mcqReady ? (
+                <div
+                  className="my-6 rounded-2xl animate-pulse"
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.04)",
+                    minHeight: 180,
+                  }}
+                  aria-busy="true"
+                  aria-label="Loading quiz"
+                />
+              ) : mcqData[activeTab] ? (
                 <div data-tour="quiz-section">
                 <ErrorBoundary>
                   <McqQuiz
@@ -644,7 +687,7 @@ export default function ModulePage({
                   />
                 </ErrorBoundary>
                 </div>
-              )}
+              ) : null}
 
               {(() => {
                 const topicMcq = mcqAnswerCounts[activeTab];
