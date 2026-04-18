@@ -33,6 +33,7 @@ import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
 import { getCurrentCourse } from "@/lib/course-registry";
 import { progressKey } from "@/lib/storage-keys";
 import { RevealOnScroll } from "@/components/ui/RevealOnScroll";
+import CoursePicker from "@/components/CoursePicker";
 
 // Module grid on the home page. Derived from the course registry so
 // titles / accents / topic counts can't drift between this page and
@@ -260,6 +261,12 @@ export default function Home() {
   return (
     <main id="main-content" className="relative">
       <Navbar />
+
+      {/* Course picker — renders as `null` until at least 2 active
+          courses exist on the platform, so the single-course (ICT-only)
+          view is unchanged today. Once Python / Data Science land,
+          students hit this picker first. */}
+      <CoursePicker />
 
       {/* ─── HERO (compact) ─── */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden pt-14">
