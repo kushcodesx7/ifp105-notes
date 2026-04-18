@@ -19,7 +19,7 @@ export default function Module3() {
       stats={[
         { n: "7", l: "Topics" },
         { n: "~40", l: "Minutes" },
-        { n: "70", l: "Practice Qs" },
+        { n: "49", l: "Practice Qs" },
       ]}
     />
   );
