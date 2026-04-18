@@ -417,7 +417,7 @@ export default function IFSConnectPage() {
             >
               <button
                 onClick={() => setSectionFilter("all")}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all shrink-0 ${
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all active:scale-95 shrink-0 ${
                   sectionFilter === "all" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                 }`}
                 style={{
@@ -441,7 +441,7 @@ export default function IFSConnectPage() {
                   <button
                     key={sec}
                     onClick={() => setSectionFilter(sec)}
-                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all shrink-0 ${
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all active:scale-95 shrink-0 ${
                       isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                     }`}
                     style={{
@@ -519,6 +519,12 @@ export default function IFSConnectPage() {
             </p>
           </div>
         ) : (
+          // Filter changes used to take up to 500ms (card stagger delay cap)
+          // plus a fade-out exit animation. Combined with the card's
+          // backdrop-filter: blur(12px) this looked like "the page is loading"
+          // when it was purely client-side filtering. Stagger is now capped
+          // at ~100ms and cards exit instantly (no exit prop) so clicking a
+          // section pill feels snappy.
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <AnimatePresence>
               {filtered.map((student, i) => {
@@ -532,14 +538,17 @@ export default function IFSConnectPage() {
                   <motion.div
                     key={student.enrollmentNo}
                     id={`student-${student.enrollmentNo}`}
-                    initial={{ opacity: 0, y: 16 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{
                       opacity: 1,
                       y: 0,
                       scale: isSpotlight ? 1.04 : 1,
                     }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ delay: Math.min(i * 0.02, 0.5) }}
+                    transition={{
+                      duration: 0.2,
+                      delay: Math.min(i * 0.008, 0.1),
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
                     whileHover={{ y: -4 }}
                     onClick={() => setDetailStudent(student)}
                     role="button"
