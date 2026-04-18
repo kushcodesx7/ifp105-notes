@@ -2,8 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { useFocusTrap } from "@/lib/use-focus-trap";
+
+// Decode a Google ID token's payload without verifying (client-side only).
+// The server-side endpoint still verifies properly; here we just need the
+// email/name to refresh the auth context after re-auth.
+function decodeJwt(token: string): Record<string, string> | null {
+  try {
+    const base64 = token.split(".")[1];
+    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
 interface Batch {
   id: string;
@@ -48,7 +62,16 @@ export default function RegistrationModal({
   onSuccess,
   closable = true,
 }: RegistrationModalProps) {
-  const { user, login, getIdToken } = useAuth();
+  const { user, login, getIdToken, setIdToken } = useAuth();
+  // `needsReauth` flips true when we detect the in-memory ID token is
+  // missing. Happens when: (a) the student's Google JWT expired (they
+  // hang out in the tab for >1 hour), (b) they signed in on another
+  // tab/device and this tab restored `user` from localStorage but the
+  // token was never persisted (by design — tokens are memory-only), or
+  // (c) the server rejected a stale token. The fix is to show an
+  // inline Google Sign In button so they can re-auth WITHOUT losing
+  // the form data they already filled in.
+  const [needsReauth, setNeedsReauth] = useState(false);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(false);
@@ -158,7 +181,11 @@ export default function RegistrationModal({
 
     const token = getIdToken();
     if (!token) {
-      setError("Please sign in again to register.");
+      // Flip into the inline re-auth flow instead of a dead-end error.
+      // Form data is preserved (local state) so after re-auth she can
+      // hit Register again without re-typing anything.
+      setNeedsReauth(true);
+      setError("Your session expired. Please sign in again below to finish registering — your answers are saved.");
       return;
     }
 
@@ -223,6 +250,46 @@ export default function RegistrationModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, closable, onClose]);
 
+  // Proactively detect missing token on modal open so the student sees
+  // "sign in again" BEFORE filling out the whole form. Previously we
+  // only hit this check at submit time, which meant she'd type her
+  // batch/section/roll/LinkedIn only to be told "please sign in again"
+  // — that's exactly the UX bug a student reported on Apr 18.
+  useEffect(() => {
+    if (!open) return;
+    if (!getIdToken()) setNeedsReauth(true);
+    else setNeedsReauth(false);
+  }, [open, getIdToken]);
+
+  function handleReauthSuccess(response: { credential?: string }) {
+    if (!response.credential) return;
+    const payload = decodeJwt(response.credential);
+    if (!payload?.email) return;
+    // Reject if the re-auth is for a DIFFERENT Google account than the
+    // one that started registration — otherwise the modal would merge
+    // someone else's identity mid-flow.
+    if (
+      user?.email &&
+      payload.email.toLowerCase() !== user.email.toLowerCase()
+    ) {
+      setError(
+        `Signed in as ${payload.email} — please use the same Google account (${user.email}) that started registration.`
+      );
+      return;
+    }
+    setIdToken(response.credential);
+    // Refresh user in auth context so the fresh photo/name from the new
+    // JWT shows up everywhere (same pattern as Navbar's sign-in).
+    login({
+      ...(user || {}),
+      name: payload.name || user?.name || "",
+      email: payload.email,
+      photo: payload.picture || user?.photo,
+    });
+    setNeedsReauth(false);
+    setError("");
+  }
+
   // Trap Tab / Shift+Tab inside the dialog while it's open so keyboard
   // users can't focus the page behind the backdrop.
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -282,6 +349,46 @@ export default function RegistrationModal({
                 to your section so your progress syncs across devices.
               </p>
             </div>
+
+            {/* Re-auth banner — shown only when the Google ID token is
+                 missing or expired. Form data is preserved underneath
+                 so the student can re-auth in place without retyping. */}
+            {needsReauth && (
+              <div
+                className="mb-4 p-4 rounded-xl"
+                style={{
+                  background: "rgba(99,102,241,0.08)",
+                  border: "1px solid rgba(99,102,241,0.25)",
+                }}
+              >
+                <div className="text-[12px] font-bold text-indigo-300 mb-1 flex items-center gap-2">
+                  <span aria-hidden="true">🔐</span>
+                  Sign in again to finish registering
+                </div>
+                <div className="text-[11px] text-zinc-400 mb-3 leading-relaxed">
+                  Your Google session expired (it lasts ~1 hour). Click
+                  below to refresh it — your answers below are saved and
+                  you won&apos;t lose them.
+                </div>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleReauthSuccess}
+                    onError={() => {
+                      setError(
+                        "Google sign-in failed. Check your connection and try again."
+                      );
+                    }}
+                    theme="filled_black"
+                    size="large"
+                    shape="pill"
+                    text="signin_with"
+                    // `useOneTap` would auto-select the current Google
+                    // account — nice UX but can loop on this cohort's
+                    // devices. Plain button is predictable.
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Warning box */}
             <div
@@ -461,7 +568,10 @@ export default function RegistrationModal({
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading || !selectedBatchId || !selectedSection || !enrollmentNo.trim()}
+                // Disable while re-auth is needed — student must refresh
+                // the Google session above before the Register click will
+                // have a valid token to send.
+                disabled={loading || needsReauth || !selectedBatchId || !selectedSection || !enrollmentNo.trim()}
                 className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
               >
                 {loading ? "Registering..." : "Register — Lock in my details →"}
