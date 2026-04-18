@@ -62,10 +62,14 @@ export default function RegistrationModal({
   const [error, setError] = useState("");
 
   // Load batches when modal opens
+  // `cache: "no-store"` is critical: without it, browsers (and any rogue
+  // service worker) can serve a stale response — which is exactly what
+  // happened to at least one student: empty batch/section dropdowns
+  // because the old empty-roster response was still in her HTTP cache.
   useEffect(() => {
     if (!open) return;
     setBatchesLoading(true);
-    fetch("/api/batches")
+    fetch("/api/batches", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setBatches(data.batches || []);
@@ -89,14 +93,32 @@ export default function RegistrationModal({
       return;
     }
     setSectionsLoading(true);
-    fetch(`/api/batches/sections?batchId=${encodeURIComponent(selectedBatchId)}`)
-      .then((r) => r.json())
+    setError("");
+    fetch(
+      `/api/batches/sections?batchId=${encodeURIComponent(selectedBatchId)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => {
+        if (!r.ok) throw new Error(`sections ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
-        setSections(data.sections || []);
+        const list = Array.isArray(data?.sections) ? data.sections : [];
+        setSections(list);
         setSectionsLoading(false);
+        // If sections somehow came back empty, surface it to the user
+        // instead of leaving the dropdown silently unusable.
+        if (list.length === 0) {
+          setError(
+            "Couldn't load sections. Try closing and reopening the app, or tell your teacher."
+          );
+        }
       })
       .catch(() => {
         setSectionsLoading(false);
+        setError(
+          "Couldn't load sections. Check your internet and try again."
+        );
       });
   }, [selectedBatchId]);
 
@@ -165,12 +187,17 @@ export default function RegistrationModal({
       return;
     }
 
-    // Update auth context
+    // Update auth context. `section` was previously left out here, which
+    // meant a newly-registered student's `isRegistered` check in the
+    // Navbar failed (it wants enrollmentNo + batchId + section), so the
+    // "Register" warning chip would still appear until a DB-refresh
+    // cycle filled it in.
     login({
       ...user!,
       name: nameToSave,
       enrollmentNo: rollNum,
       batchId: selectedBatchId,
+      section: selectedSection,
     });
 
     // Reset form
