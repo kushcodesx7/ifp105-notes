@@ -118,20 +118,17 @@ export default function CourseEditPage({
               </p>
             </div>
 
-            {isICT && (
-              <div
-                className="mb-6 rounded-xl p-4 text-[13px]"
-                style={{
-                  background: "rgba(245,158,11,0.08)",
-                  border: "1px solid rgba(245,158,11,0.3)",
-                  color: "#fcd34d",
-                }}
-              >
-                ℹ️ ICT&apos;s modules and topics live in TypeScript files
-                (<code>src/data/module*.ts</code>) per the hybrid-migration
-                strategy. Metadata edits below still apply. To edit ICT
-                content, edit the TS files directly.
-              </div>
+            {/* Phase 5.5: ICT can be seeded into the DB and edited from
+                the UI. When the DB is empty for ICT (modules.length === 0)
+                we offer a one-click seeder that copies the TS files in.
+                After seeding, students read from the DB (with TS fallback
+                if anything goes wrong). See `/api/admin/seed-ict`. */}
+            {isICT && modules.length === 0 && (
+              <IctSeedPrompt
+                idToken={idToken}
+                password={password}
+                onSeeded={() => mutate()}
+              />
             )}
 
             <CourseMetaEditor
@@ -151,14 +148,12 @@ export default function CourseEditPage({
                   {modules.length} module{modules.length === 1 ? "" : "s"}
                 </p>
               </div>
-              {!isICT && (
-                <button
-                  onClick={() => setCreatingModule((v) => !v)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:opacity-90 active:scale-95 transition-all"
-                >
-                  {creatingModule ? "Cancel" : "+ New module"}
-                </button>
-              )}
+              <button
+                onClick={() => setCreatingModule((v) => !v)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:opacity-90 active:scale-95 transition-all"
+              >
+                {creatingModule ? "Cancel" : "+ New module"}
+              </button>
             </div>
 
             {migrationPending && (
@@ -199,11 +194,9 @@ export default function CourseEditPage({
               )}
             </AnimatePresence>
 
-            {modules.length === 0 && !creatingModule && (
+            {modules.length === 0 && !creatingModule && !isICT && (
               <div className="text-center py-8 text-sm text-zinc-500">
-                No modules yet.
-                {!isICT &&
-                  " Click + New module to add the first one."}
+                No modules yet. Click + New module to add the first one.
               </div>
             )}
 
@@ -213,7 +206,6 @@ export default function CourseEditPage({
                   key={m.id}
                   slug={slug}
                   module={m}
-                  isICT={isICT}
                   idToken={idToken}
                   password={password}
                   onChange={() => mutate()}
@@ -347,14 +339,12 @@ function CourseMetaEditor({
 function ModuleRowCard({
   slug,
   module: m,
-  isICT,
   idToken,
   password,
   onChange,
 }: {
   slug: string;
   module: ModuleRow;
-  isICT: boolean;
   idToken: string | null;
   password: string;
   onChange: () => void;
@@ -405,22 +395,18 @@ function ModuleRowCard({
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {!isICT && (
-          <>
-            <Link
-              href={`/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`}
-              className="text-xs font-semibold text-white bg-white/[0.05] hover:bg-white/[0.1] px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Edit →
-            </Link>
-            <button
-              onClick={handleDelete}
-              className="text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Delete
-            </button>
-          </>
-        )}
+        <Link
+          href={`/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`}
+          className="text-xs font-semibold text-white bg-white/[0.05] hover:bg-white/[0.1] px-3 py-1.5 rounded-lg transition-colors"
+        >
+          Edit →
+        </Link>
+        <button
+          onClick={handleDelete}
+          className="text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-3 py-1.5 rounded-lg transition-colors"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );
@@ -559,5 +545,100 @@ function LabelledInput({
         />
       )}
     </label>
+  );
+}
+
+// ─── ICT seed prompt (Phase 5.5) ───────────────────────────
+// Shown on /admin/courses/ict when the DB has 0 modules for ICT. One
+// click ports the TS files (src/data/module*.ts + module*-mcq.ts) into
+// modules / topics / questions rows. Safe to re-run — the seeder uses
+// upsert-on-conflict so a second click just refreshes the data.
+
+function IctSeedPrompt({
+  idToken,
+  password,
+  onSeeded,
+}: {
+  idToken: string | null;
+  password: string;
+  onSeeded: () => void;
+}) {
+  const [seeding, setSeeding] = useState(false);
+  const [result, setResult] = useState<{
+    counts: { modulesUpserted: number; topicsUpserted: number; questionsUpserted: number };
+    warnings: string[];
+  } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function runSeed() {
+    setErr(null);
+    setSeeding(true);
+    try {
+      const r = await adminWrite<{
+        ok: boolean;
+        counts: { modulesUpserted: number; topicsUpserted: number; questionsUpserted: number };
+        warnings: string[];
+      }>("/api/admin/seed-ict", "POST", { idToken, password }, {});
+      setResult({ counts: r.counts, warnings: r.warnings });
+      onSeeded();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSeeding(false);
+    }
+  }
+
+  return (
+    <div
+      className="mb-6 rounded-xl p-5"
+      style={{
+        background: "rgba(99,102,241,0.06)",
+        border: "1px solid rgba(99,102,241,0.3)",
+      }}
+    >
+      <h3 className="text-sm font-bold text-white mb-1">
+        📥 Port ICT into the database
+      </h3>
+      <p className="text-[12px] text-zinc-400 mb-3 leading-relaxed">
+        ICT content currently lives in TypeScript files (<code>src/data/module*.ts</code>).
+        Click below to copy all 5 modules, ~48 topics, and ~336 MCQs into the DB
+        tables so you can edit them from this UI. <strong>Students keep seeing
+        the same content</strong> — the module pages prefer the DB copy and fall
+        back to TS automatically if anything goes wrong.
+      </p>
+      {result ? (
+        <div className="space-y-1 text-[12px]">
+          <p className="text-emerald-400">
+            ✓ Seeded {result.counts.modulesUpserted} modules ·{" "}
+            {result.counts.topicsUpserted} topics ·{" "}
+            {result.counts.questionsUpserted} questions
+          </p>
+          {result.warnings.length > 0 && (
+            <details className="text-amber-400">
+              <summary className="cursor-pointer">
+                {result.warnings.length} warning{result.warnings.length === 1 ? "" : "s"}
+              </summary>
+              <ul className="mt-1 ml-4 list-disc text-[11px] text-amber-300/80">
+                {result.warnings.slice(0, 10).map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+                {result.warnings.length > 10 && (
+                  <li>…and {result.warnings.length - 10} more</li>
+                )}
+              </ul>
+            </details>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={runSeed}
+          disabled={seeding}
+          className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 active:scale-95 transition-all"
+        >
+          {seeding ? "Seeding (takes ~20s)…" : "Seed ICT into database"}
+        </button>
+      )}
+      {err && <p className="text-[12px] text-red-400 mt-2">{err}</p>}
+    </div>
   );
 }

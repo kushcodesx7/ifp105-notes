@@ -1,27 +1,10 @@
-"use client";
-import ModulePage from "@/components/module/ModulePage";
-import { topics } from "@/data/module5-topics";
-import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
-// mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
+import Module5Client from "./ClientModule";
+import { topics as fallbackTopics } from "@/data/module5-topics";
+import { loadModuleFromDB } from "@/lib/module-loader";
 
-export default function Module5() {
-  return (
-    <ModulePage
-      courseSlug={CURRENT_COURSE_SLUG}
-      moduleNumber={5}
-      moduleTitle="Tech Trends"
-      moduleSubtitle="AI, Cloud & Beyond"
-      moduleDescription="AI, Machine Learning, Cloud, Blockchain, VR/AR, IoT, Generative AI — the technologies shaping our future."
-      accentFrom="#8B5CF6"
-      accentTo="#7C3AED"
-      orbColor1="rgba(139,92,246,0.15)"
-      orbColor2="rgba(124,58,237,0.1)"
-      topics={topics}
-      stats={[
-        { n: "10", l: "Topics" },
-        { n: "~50", l: "Minutes" },
-        { n: "70", l: "Practice Qs" },
-      ]}
-    />
-  );
+export const revalidate = 30;
+
+export default async function Module5Page() {
+  const db = await loadModuleFromDB("ict", 5);
+  return <Module5Client topics={db?.topics ?? fallbackTopics} />;
 }

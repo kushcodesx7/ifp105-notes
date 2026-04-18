@@ -1,27 +1,10 @@
-"use client";
-import ModulePage from "@/components/module/ModulePage";
-import { topics } from "@/data/module3-topics";
-import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
-// mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
+import Module3Client from "./ClientModule";
+import { topics as fallbackTopics } from "@/data/module3-topics";
+import { loadModuleFromDB } from "@/lib/module-loader";
 
-export default function Module3() {
-  return (
-    <ModulePage
-      courseSlug={CURRENT_COURSE_SLUG}
-      moduleNumber={3}
-      moduleTitle="Social Media"
-      moduleSubtitle="Foundation"
-      moduleDescription="Social media platforms, modern tools & automation, metrics, advertising, LinkedIn, and personal branding."
-      accentFrom="#3B82F6"
-      accentTo="#2563EB"
-      orbColor1="rgba(59,130,246,0.15)"
-      orbColor2="rgba(37,99,235,0.1)"
-      topics={topics}
-      stats={[
-        { n: "7", l: "Topics" },
-        { n: "~40", l: "Minutes" },
-        { n: "49", l: "Practice Qs" },
-      ]}
-    />
-  );
+export const revalidate = 30;
+
+export default async function Module3Page() {
+  const db = await loadModuleFromDB("ict", 3);
+  return <Module3Client topics={db?.topics ?? fallbackTopics} />;
 }
