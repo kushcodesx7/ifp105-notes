@@ -21,6 +21,10 @@ const TABS = [
   { href: "/admin", label: "Home", icon: "📊", exact: true },
   { href: "/admin/people", label: "People", icon: "👥", alts: ["/admin/progress"] },
   { href: "/admin/roster", label: "Roster", icon: "🎓", alts: ["/admin/batches", "/admin/batch-progress"] },
+  // Phase 4 — course content editor. The Courses tab sits between Roster
+  // and Tools because it's content-management (adjacent to Roster's
+  // people-management) rather than a destructive/debug surface.
+  { href: "/admin/courses", label: "Courses", icon: "📚" },
   { href: "/admin/tools", label: "Tools", icon: "🛠" },
 ];
 
