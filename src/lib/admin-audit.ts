@@ -13,6 +13,7 @@ export type AdminActionKind =
   | "change_section"
   | "change_roll"
   | "change_email"
+  | "change_name"
   | "reset_progress"
   | "unlink"
   | "delete_student"

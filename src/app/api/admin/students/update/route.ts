@@ -32,13 +32,21 @@ export async function POST(req: NextRequest) {
     ?.toUpperCase()
     .trim();
   const newEmail = (body.newEmail as string | undefined)?.toLowerCase().trim();
+  // Edit the teacher-verified name on the student's roll_list row (the
+  // "real" name shown in /admin/people and everywhere else the UI
+  // surfaces identity). The student's chosen display name field on
+  // `students.name` is NOT touched — they picked that for themselves.
+  const newRollListName = (body.rollListName as string | undefined)?.trim();
 
   if (!email) {
     return Response.json({ error: "email required" }, { status: 400 });
   }
-  if (!newSection && !newEnrollmentNo && !newEmail) {
+  if (!newSection && !newEnrollmentNo && !newEmail && newRollListName === undefined) {
     return Response.json(
-      { error: "At least one of section, enrollmentNo, newEmail is required" },
+      {
+        error:
+          "At least one of section, enrollmentNo, newEmail, rollListName is required",
+      },
       { status: 400 }
     );
   }
@@ -184,6 +192,72 @@ export async function POST(req: NextRequest) {
         name: current.name,
       },
     });
+  }
+
+  // ─── Name change on roll_list ─────────────────────────────────
+  // Updates roll_list.name for (current_batch, current_or_new_section,
+  // current_or_new_roll). Graceful-degrades if the migration is
+  // pending. Before the update we re-read the student in case the
+  // section/roll blocks above just moved them.
+  if (newRollListName !== undefined) {
+    const { data: freshStudent } = await supabase
+      .from("students")
+      .select("email, enrollment_no, section, batch_id")
+      .eq("email", newEmail && newEmail !== email ? newEmail : email)
+      .maybeSingle();
+
+    const targetBatch = freshStudent?.batch_id || current.batch_id;
+    const targetSection =
+      freshStudent?.section || newSection || current.section;
+    const targetRoll =
+      freshStudent?.enrollment_no ||
+      newEnrollmentNo ||
+      current.enrollment_no;
+
+    let priorName: string | null = null;
+    const { data: priorRoll } = await supabase
+      .from("roll_list")
+      .select("name")
+      .eq("batch_id", targetBatch)
+      .eq("section", targetSection)
+      .eq("enrollment_no", targetRoll)
+      .maybeSingle();
+    priorName = (priorRoll as { name?: string | null } | null)?.name ?? null;
+
+    const patch = { name: newRollListName || null };
+    let { error: nameErr } = await supabase
+      .from("roll_list")
+      .update(patch)
+      .eq("batch_id", targetBatch)
+      .eq("section", targetSection)
+      .eq("enrollment_no", targetRoll);
+
+    if (nameErr && /name|PGRST204/i.test(nameErr.message)) {
+      // Migration pending — don't fail the whole request, just skip.
+      console.warn(
+        "[admin/update] roll_list.name column missing — skipping name update. Run migration-add-roll-list-name.sql."
+      );
+      nameErr = null;
+    }
+    if (nameErr) {
+      return Response.json({ error: nameErr.message }, { status: 500 });
+    }
+
+    if (priorName !== (newRollListName || null)) {
+      await logAdminAction({
+        actorEmail: actor,
+        action: "change_name",
+        subjectEmail:
+          newEmail && newEmail !== email ? newEmail : email,
+        subjectBatchId: targetBatch,
+        subjectSection: targetSection,
+        details: {
+          from: priorName,
+          to: newRollListName || null,
+          roll: targetRoll,
+        },
+      });
+    }
   }
 
   // Silence unused-var warning (isHiddenSection reserved for future validation)

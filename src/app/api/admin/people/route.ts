@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
       .select(
         "email, name, enrollment_no, section, batch_id, photo_url, linkedin_url, bio, skills, added_at"
       ),
-    supabase.from("roll_list").select("batch_id, section, enrollment_no"),
+    // Try to include name. Column may not exist yet → handled below.
+    supabase.from("roll_list").select("batch_id, section, enrollment_no, name"),
     supabase.from("student_sessions").select("student_email, last_active_at"),
     // Pull per-topic progress so we can build module breakdowns + aggregate
     // Bloom's stats by summing the JSONB columns across topics per student.
@@ -76,6 +77,31 @@ export async function GET(req: NextRequest) {
       bloom_stats: null,
       confidence_stats: null,
     }));
+  }
+
+  // Graceful: if roll_list.name column is missing the first select errors,
+  // fall back to the old column set so the page still loads while the
+  // migration is pending.
+  let rollRows = rollsRes.data as
+    | { batch_id: string; section: string; enrollment_no: string; name: string | null }[]
+    | null;
+  if (rollsRes.error && /name|PGRST204/i.test(rollsRes.error.message)) {
+    const fb = await supabase
+      .from("roll_list")
+      .select("batch_id, section, enrollment_no");
+    rollRows = (fb.data || []).map((r) => ({
+      ...(r as { batch_id: string; section: string; enrollment_no: string }),
+      name: null,
+    }));
+  }
+
+  // Index roll_list by (batch_id, section, roll) for O(1) lookup when we
+  // decorate each student row with their teacher-verified name.
+  const rollNameByKey = new Map<string, string>();
+  for (const r of rollRows || []) {
+    if (!r.name) continue;
+    const key = `${r.batch_id}__${r.section}__${r.enrollment_no}`;
+    rollNameByKey.set(key, r.name);
   }
 
   // Build maps
@@ -179,9 +205,20 @@ export async function GET(req: NextRequest) {
       ? Math.floor((now - new Date(lastActive).getTime()) / 86400000)
       : null;
 
+    const rollKey = `${s.batch_id || ""}__${s.section || "Section 1"}__${
+      s.enrollment_no || ""
+    }`;
+    const rollListName = rollNameByKey.get(rollKey) || null;
+
     return {
       email,
+      // `name` is the student's chosen display name ("248_oysha").
+      // `rollListName` is the teacher-verified roll-list name
+      // ("Oysha Abdullayeva"). The UI shows rollListName as the primary
+      // identity and falls back to `name` when the teacher hasn't
+      // provided one for that roll yet.
       name: s.name || "(no name)",
+      rollListName,
       enrollmentNo: s.enrollment_no || "",
       section: s.section || "Section 1",
       batchId: s.batch_id || "",
@@ -202,11 +239,12 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // Full roll list for drawer (to surface claim status)
-  const rollList = (rollsRes.data || []).map((r) => ({
-    batchId: (r as { batch_id?: string }).batch_id || "",
-    section: (r as { section?: string }).section || "Section 1",
-    enrollmentNo: (r as { enrollment_no?: string }).enrollment_no || "",
+  // Full roll list for drawer (to surface claim status + teacher name)
+  const rollList = (rollRows || []).map((r) => ({
+    batchId: r.batch_id || "",
+    section: r.section || "Section 1",
+    enrollmentNo: r.enrollment_no || "",
+    name: r.name || null,
   }));
 
   return Response.json(

@@ -63,8 +63,15 @@ async function main() {
   for (const section of data.batches) {
     console.log(`\n📦 Section: ${section.name} (${section.rolls.length} students)`);
 
-    // Add rolls for this section under the main batch
-    const rollsToAdd = section.rolls.map((r) => r.enrollment_no);
+    // Add rolls for this section under the main batch. Sending the full
+    // {enrollment_no, name} objects so the teacher-verified names land in
+    // roll_list.name — used by /admin/people to show "Xusanova Laylo"
+    // instead of the auto-generated "201_laylo" display name. The API
+    // accepts either plain strings (legacy) or these objects (new).
+    const rollsToAdd = section.rolls.map((r) => ({
+      enrollment_no: r.enrollment_no,
+      name: r.name ?? null,
+    }));
     const addRolls = await request({
       action: "add-rolls",
       batchId: BATCH_ID,
