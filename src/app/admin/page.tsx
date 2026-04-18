@@ -8,6 +8,7 @@ import Breadcrumbs from "@/components/admin/Breadcrumbs";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -460,14 +461,12 @@ function AlertsRow({
   loading: boolean;
 }) {
   if (loading && !data) {
+    // Shared Skeleton primitive — shimmer effect instead of flat pulse.
     return (
-      <div className="mb-6 h-[88px] rounded-2xl animate-pulse"
-        style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.05)",
-        }}
-        aria-busy="true"
-        aria-label="Loading alerts"
+      <Skeleton
+        className="mb-6"
+        height={88}
+        radius={16}
       />
     );
   }
