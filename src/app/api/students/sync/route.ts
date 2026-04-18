@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { parseBody, SyncStudentSchema } from "@/lib/schemas";
 
 // POST /api/students/sync
 // Keeps the student's profile photo fresh after Google auth. If the photo URL
@@ -10,13 +12,22 @@ import { requireSelf } from "@/lib/verify-google-token";
 // Body: { email, photoUrl }
 // Auth: caller must own the email (Google ID token check).
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body.email !== "string" || typeof body.photoUrl !== "string") {
-    return Response.json({ error: "Missing email or photoUrl" }, { status: 400 });
-  }
+  // Rate limit — called once per login, so 30/min is plenty for any
+  // legitimate user and bounds repeated re-auth spam.
+  const rl = await rateLimit({
+    bucket: "auth:sync",
+    id: ipFromRequest(req),
+    limit: 30,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 30);
 
-  const email = body.email.toLowerCase().trim();
-  const photoUrl = body.photoUrl.trim();
+  const parsed = await parseBody(req, SyncStudentSchema);
+  if (!parsed.ok) return parsed.response;
+  const { email, photoUrl } = parsed.data;
+  if (!photoUrl) {
+    return Response.json({ error: "Missing photoUrl" }, { status: 400 });
+  }
 
   // Verify caller owns this email
   const auth = await requireSelf(req, email);
