@@ -147,38 +147,70 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── Email change ───────────────────────────────────────────────
-  // Careful: email is the join key for student_progress and student_sessions.
-  // We UPDATE all three tables. Done as separate UPDATEs (not a transaction)
-  // since supabase-js doesn't expose tx directly — but each is idempotent.
+  // Email is the join key for student_progress and student_sessions.
+  // Delegate to the `admin_change_student_email` RPC so all four
+  // UPDATEs (students + progress + sessions + profiles) run inside a
+  // single Postgres transaction — no more partial-state disasters when
+  // one of the three follow-up updates fails.
+  //
+  // If the migration (scripts/migration-admin-atomic-rpcs.sql) hasn't
+  // run yet, the RPC call errors with PGRST202 / "function ... does
+  // not exist"; fall back to the legacy sequential path so admins
+  // aren't blocked. Delete this fallback once the migration is live
+  // in prod.
   if (newEmail && newEmail !== email) {
-    // Reject if newEmail already has a students row
-    const { data: clash } = await supabase
-      .from("students")
-      .select("email")
-      .eq("email", newEmail)
-      .maybeSingle();
-    if (clash) {
-      return Response.json(
-        { error: `Another student is already registered with ${newEmail}.` },
-        { status: 409 }
+    const { data: rpcResult, error: rpcErr } = await supabase.rpc(
+      "admin_change_student_email",
+      { p_old_email: email, p_new_email: newEmail }
+    );
+
+    if (rpcErr) {
+      const msg = rpcErr.message || "";
+      // Duplicate email → return 409 with a human message.
+      if (/unique_violation|already registered/i.test(msg)) {
+        return Response.json(
+          { error: `Another student is already registered with ${newEmail}.` },
+          { status: 409 }
+        );
+      }
+      // Migration not applied yet → fall back to the old non-atomic path.
+      const migrationPending =
+        /function.*admin_change_student_email.*does not exist|PGRST202/i.test(msg);
+      if (!migrationPending) {
+        return Response.json({ error: msg }, { status: 500 });
+      }
+      console.warn(
+        "[admin/update] admin_change_student_email RPC missing — falling back to non-atomic sequential updates. Run migration-admin-atomic-rpcs.sql."
       );
+
+      const { data: clash } = await supabase
+        .from("students")
+        .select("email")
+        .eq("email", newEmail)
+        .maybeSingle();
+      if (clash) {
+        return Response.json(
+          { error: `Another student is already registered with ${newEmail}.` },
+          { status: 409 }
+        );
+      }
+
+      const { error: sErr } = await supabase
+        .from("students")
+        .update({ email: newEmail })
+        .eq("email", email);
+      if (sErr) return Response.json({ error: sErr.message }, { status: 500 });
+
+      await supabase
+        .from("student_progress")
+        .update({ student_email: newEmail })
+        .eq("student_email", email);
+
+      await supabase
+        .from("student_sessions")
+        .update({ student_email: newEmail })
+        .eq("student_email", email);
     }
-
-    const { error: sErr } = await supabase
-      .from("students")
-      .update({ email: newEmail })
-      .eq("email", email);
-    if (sErr) return Response.json({ error: sErr.message }, { status: 500 });
-
-    await supabase
-      .from("student_progress")
-      .update({ student_email: newEmail })
-      .eq("student_email", email);
-
-    await supabase
-      .from("student_sessions")
-      .update({ student_email: newEmail })
-      .eq("student_email", email);
 
     await logAdminAction({
       actorEmail: actor,
@@ -190,6 +222,9 @@ export async function POST(req: NextRequest) {
         from: email,
         to: newEmail,
         name: current.name,
+        // rpcResult is { students_updated, progress_updated, ... } when
+        // the RPC path succeeded; null when we fell back.
+        counts: rpcResult ?? null,
       },
     });
   }
