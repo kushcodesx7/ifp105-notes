@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import BloomsRadar from "@/components/BloomsRadar";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { useToast } from "@/components/admin/Toast";
 import { BLOOM_META, BLOOM_ORDER, type BloomLevel } from "@/lib/blooms";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminEmail } from "@/lib/admins";
+import { compareSections } from "@/lib/sections";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -40,13 +45,23 @@ export interface AdminStudent {
 interface Props {
   student: AdminStudent | null;
   onClose: () => void;
+  // All known sections (for the change-section picker). Optional — if
+  // omitted the section dropdown falls back to free-text input.
+  sections?: string[];
+  // Called after any mutation so parent can refetch the student list.
+  onMutated?: () => void;
 }
 
 type Tab = "overview" | "progress" | "thinking" | "connect";
 
 // Slide-in drawer. On desktop (sm+) sits as a right panel; on mobile it
 // takes the full screen. Keyboard: Esc closes.
-export default function StudentDrawer({ student, onClose }: Props) {
+export default function StudentDrawer({
+  student,
+  onClose,
+  sections,
+  onMutated,
+}: Props) {
   const [tab, setTab] = useState<Tab>("overview");
 
   // Reset to overview when a new student opens
@@ -159,7 +174,14 @@ export default function StudentDrawer({ student, onClose }: Props) {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-5">
-              {tab === "overview" && <OverviewTab student={student} />}
+              {tab === "overview" && (
+                <OverviewTab
+                  student={student}
+                  sections={sections}
+                  onMutated={onMutated}
+                  onClose={onClose}
+                />
+              )}
               {tab === "progress" && <ProgressTab student={student} />}
               {tab === "thinking" && <ThinkingTab student={student} />}
               {tab === "connect" && <ConnectTab student={student} />}
@@ -220,9 +242,160 @@ function Avatar({ student, size }: { student: AdminStudent; size: number }) {
   );
 }
 
-// ─── Overview tab ──────────────────────────────────────────────────
+// ─── Overview tab (with Phase 2a actions) ──────────────────────────
 
-function OverviewTab({ student }: { student: AdminStudent }) {
+type ActionKind =
+  | null
+  | "change-section"
+  | "change-roll"
+  | "change-email"
+  | "reset-progress"
+  | "unlink";
+
+function OverviewTab({
+  student,
+  sections,
+  onMutated,
+  onClose,
+}: {
+  student: AdminStudent;
+  sections?: string[];
+  onMutated?: () => void;
+  onClose: () => void;
+}) {
+  const { user, getIdToken } = useAuth();
+  const isAdmin = isAdminEmail(user?.email);
+  const { toast } = useToast();
+
+  // Which mutation is being prepared (form is filled) or in flight
+  const [pendingAction, setPendingAction] = useState<ActionKind>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Form inputs for each action
+  const [newSection, setNewSection] = useState(student.section);
+  const [newRoll, setNewRoll] = useState(student.enrollmentNo);
+  const [newEmail, setNewEmail] = useState(student.email);
+
+  // Reset form state when student changes
+  useEffect(() => {
+    setPendingAction(null);
+    setNewSection(student.section);
+    setNewRoll(student.enrollmentNo);
+    setNewEmail(student.email);
+  }, [student.email, student.section, student.enrollmentNo]);
+
+  // Auth headers: prefer ID token (attributed in audit log), fall back to
+  // admin password in sessionStorage.
+  function authHeaders(): Record<string, string> {
+    const h: Record<string, string> = { "Content-Type": "application/json" };
+    const token = getIdToken();
+    if (token && isAdmin) {
+      h["x-id-token"] = token;
+    } else {
+      const pw = sessionStorage.getItem("admin_pw");
+      if (pw) h["x-admin-password"] = pw;
+    }
+    return h;
+  }
+
+  async function callApi(path: string, body: Record<string, unknown>) {
+    setLoading(true);
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || `Failed (${res.status})`);
+      }
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── Confirm handlers (invoked from the ConfirmDialog) ───────
+  async function confirmChangeSection() {
+    try {
+      await callApi("/api/admin/students/update", {
+        email: student.email,
+        section: newSection,
+      });
+      toast({ kind: "success", message: `Section: ${student.section} → ${newSection}` });
+      setPendingAction(null);
+      onMutated?.();
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  async function confirmChangeRoll() {
+    try {
+      await callApi("/api/admin/students/update", {
+        email: student.email,
+        enrollmentNo: newRoll,
+      });
+      toast({ kind: "success", message: `Roll: ${student.enrollmentNo} → ${newRoll}` });
+      setPendingAction(null);
+      onMutated?.();
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  async function confirmChangeEmail() {
+    try {
+      await callApi("/api/admin/students/update", {
+        email: student.email,
+        newEmail,
+      });
+      toast({ kind: "success", message: `Email changed to ${newEmail}` });
+      setPendingAction(null);
+      onMutated?.();
+      onClose(); // email change invalidates the current drawer's identity
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  async function confirmResetProgress() {
+    try {
+      const data = await callApi("/api/admin/students/reset-progress", {
+        email: student.email,
+      });
+      toast({
+        kind: "success",
+        message: `Reset · deleted ${data.deletedRows} rows (${data.deletedTopics} topics, ${data.deletedQuizzes} quizzes).`,
+      });
+      setPendingAction(null);
+      onMutated?.();
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  async function confirmUnlink() {
+    try {
+      await callApi("/api/admin/students/unlink", {
+        email: student.email,
+      });
+      toast({ kind: "success", message: `${student.name} unlinked. Progress preserved.` });
+      setPendingAction(null);
+      onMutated?.();
+      onClose();
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  // Sort known sections for the picker (fall back to commonly-seen if absent)
+  const sectionOptions = useMemo(() => {
+    const set = new Set<string>([student.section, ...(sections || [])]);
+    return Array.from(set).sort(compareSections);
+  }, [sections, student.section]);
+
   return (
     <div className="space-y-4">
       <StatGrid>
@@ -258,17 +431,240 @@ function OverviewTab({ student }: { student: AdminStudent }) {
         value={`${student.completedCount} / 48`}
       />
 
+      {/* ── Section change ──────────────────────────────────────── */}
+      <ActionBlock
+        title="Change section"
+        description={`Move ${student.name} to a different section of the same batch.`}
+      >
+        <select
+          value={newSection}
+          onChange={(e) => setNewSection(e.target.value)}
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg text-[12px] text-white bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-indigo-500/50"
+        >
+          {sectionOptions.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <ActionButton
+          disabled={newSection === student.section}
+          onClick={() => setPendingAction("change-section")}
+        >
+          Change
+        </ActionButton>
+      </ActionBlock>
+
+      {/* ── Roll change ─────────────────────────────────────────── */}
+      <ActionBlock
+        title="Change roll number"
+        description={`Update the enrollment number for ${student.name}.`}
+      >
+        <input
+          type="text"
+          value={newRoll}
+          onChange={(e) => setNewRoll(e.target.value.toUpperCase())}
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg text-[12px] text-white bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-indigo-500/50"
+          placeholder="e.g. A85456325267"
+        />
+        <ActionButton
+          disabled={!newRoll || newRoll === student.enrollmentNo}
+          onClick={() => setPendingAction("change-roll")}
+        >
+          Change
+        </ActionButton>
+      </ActionBlock>
+
+      {/* ── Email change ────────────────────────────────────────── */}
+      <ActionBlock
+        title="Change email"
+        description="Repoint the student's account to a different email. Progress and sessions carry over."
+      >
+        <input
+          type="email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value.toLowerCase())}
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg text-[12px] text-white bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-indigo-500/50"
+          placeholder="student@gmail.com"
+        />
+        <ActionButton
+          disabled={!newEmail || newEmail === student.email}
+          onClick={() => setPendingAction("change-email")}
+        >
+          Change
+        </ActionButton>
+      </ActionBlock>
+
+      {/* ── Reset + unlink (danger zone) ────────────────────────── */}
       <div
-        className="mt-4 rounded-xl p-3 text-[11px] text-zinc-500"
+        className="rounded-xl p-4 space-y-3"
         style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.05)",
+          background: "rgba(239,68,68,0.05)",
+          border: "1px solid rgba(239,68,68,0.2)",
         }}
       >
-        Admin actions (change section · reset progress · unlink email) ship
-        in Phase 2. For now this is a read-only view.
+        <div className="text-[10px] font-bold text-red-300 uppercase tracking-widest">
+          Danger zone
+        </div>
+
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] font-semibold text-zinc-200">
+              Reset all quiz progress
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Delete every completed topic and quiz score. Profile stays.
+            </div>
+          </div>
+          <button
+            onClick={() => setPendingAction("reset-progress")}
+            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-red-300 transition-all active:scale-95 shrink-0"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.25)",
+            }}
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] font-semibold text-zinc-200">
+              Unlink account
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Remove their registration. Email is free for a new account to
+              claim the same roll. Progress is preserved.
+            </div>
+          </div>
+          <button
+            onClick={() => setPendingAction("unlink")}
+            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-red-300 transition-all active:scale-95 shrink-0"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.25)",
+            }}
+          >
+            Unlink
+          </button>
+        </div>
       </div>
+
+      {/* ── Confirmation dialogs ────────────────────────────────── */}
+      <ConfirmDialog
+        open={pendingAction === "change-section"}
+        title="Change section?"
+        description={`Move ${student.name} between sections of ${student.batchId}.`}
+        diff={[{ label: "Section", from: student.section, to: newSection }]}
+        confirmLabel="Change section"
+        kind="primary"
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmChangeSection}
+      />
+      <ConfirmDialog
+        open={pendingAction === "change-roll"}
+        title="Change roll number?"
+        diff={[
+          { label: "Roll number", from: student.enrollmentNo, to: newRoll },
+        ]}
+        confirmLabel="Change roll"
+        kind="primary"
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmChangeRoll}
+      />
+      <ConfirmDialog
+        open={pendingAction === "change-email"}
+        title="Change email?"
+        description="Their progress and sessions will move to the new email. If the new email already has an account, the change will be rejected."
+        diff={[{ label: "Email", from: student.email, to: newEmail }]}
+        confirmLabel="Change email"
+        kind="primary"
+        loading={loading}
+        warning="The drawer will close afterwards — reopen the student with their new email."
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmChangeEmail}
+      />
+      <ConfirmDialog
+        open={pendingAction === "reset-progress"}
+        title={`Reset ${student.name}'s quiz progress?`}
+        description={`Deletes ${student.completedCount} completed topics plus all quiz scores. The student keeps their profile, section, and roll number.`}
+        kind="danger"
+        confirmLabel="Reset progress"
+        warning="Cannot be undone — student will need to redo every quiz."
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmResetProgress}
+      />
+      <ConfirmDialog
+        open={pendingAction === "unlink"}
+        title={`Unlink ${student.name}'s account?`}
+        description="Their registration (batch · section · roll · email) will be removed. Quiz progress stays in the database under their old email so it can re-attach if they re-register."
+        kind="danger"
+        confirmLabel="Unlink"
+        warning="The drawer will close. The roll number will appear as 'pending' until someone re-registers with it."
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmUnlink}
+      />
     </div>
+  );
+}
+
+// Small layout primitives used inside OverviewTab
+function ActionBlock({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-xl p-3"
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <div className="mb-2">
+        <div className="text-[12px] font-semibold text-zinc-200">{title}</div>
+        {description && (
+          <div className="text-[11px] text-zinc-500 mt-0.5">{description}</div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">{children}</div>
+    </div>
+  );
+}
+
+function ActionButton({
+  children,
+  disabled,
+  onClick,
+}: {
+  children: React.ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="px-3 py-2 rounded-lg text-[11px] font-semibold text-white transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+      style={{
+        background: disabled
+          ? "rgba(255,255,255,0.04)"
+          : "linear-gradient(135deg, #6366F1, #8B5CF6)",
+        boxShadow: disabled ? "none" : "0 2px 8px rgba(99,102,241,0.25)",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
