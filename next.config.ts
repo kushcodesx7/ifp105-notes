@@ -54,6 +54,26 @@ const nextConfig: NextConfig = {
         },
       ],
     },
+    {
+      // Never let the service worker file itself be HTTP-cached. Browsers
+      // bypass the HTTP cache for /sw.js on update checks by default, but
+      // only after a 24-hour window — which means a stale v5 SW could
+      // keep serving broken HTML for a full day post-deploy. Setting
+      // no-cache on the file ensures the very next visit picks up a new
+      // SW version and triggers the install → activate → cache-purge
+      // flow immediately.
+      source: "/sw.js",
+      headers: [
+        {
+          key: "Cache-Control",
+          value: "public, max-age=0, must-revalidate",
+        },
+        {
+          key: "Service-Worker-Allowed",
+          value: "/",
+        },
+      ],
+    },
   ],
 };
 
