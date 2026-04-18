@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
-import { TOTAL_TOPICS } from "@/lib/modules";
+import { TOTAL_TOPICS } from "@/lib/course-registry";
 
 // GET /api/cron/weekly-digest
 // Generates a weekly teacher digest. Protected by a shared secret — only

@@ -3,6 +3,7 @@ import ModulePage from "@/components/module/ModulePage";
 import HtmlEditor from "@/components/module/HtmlEditor";
 import YourTurnChallenge from "@/components/module/YourTurnChallenge";
 import { topics } from "@/data/module4-topics";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 // mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 import { module4Challenges } from "@/data/module4-challenges";
 import TagMatchGame from "@/components/module/TagMatchGame";
@@ -26,6 +27,7 @@ const editorDefaults: Record<number, string> = {
 export default function Module4() {
   return (
     <ModulePage
+      courseSlug={CURRENT_COURSE_SLUG}
       moduleNumber={4}
       moduleTitle="HTML & Web"
       moduleSubtitle="Development"

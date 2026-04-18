@@ -3,6 +3,7 @@ import ModulePage from "@/components/module/ModulePage";
 import ExcelSimulator from "@/components/module/ExcelSimulator";
 import ShortcutTrainer from "@/components/module/ShortcutTrainer";
 import { topics } from "@/data/module2-topics";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 // mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 
 // Excel challenges for topics 4, 5, 6
@@ -97,6 +98,7 @@ const wordShortcuts = [
 export default function Module2() {
   return (
     <ModulePage
+      courseSlug={CURRENT_COURSE_SLUG}
       moduleNumber={2}
       moduleTitle="Office Automation"
       moduleSubtitle="Word, Excel & PowerPoint"

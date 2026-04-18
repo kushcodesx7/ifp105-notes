@@ -1,11 +1,13 @@
 "use client";
 import ModulePage from "@/components/module/ModulePage";
 import { topics } from "@/data/module3-topics";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 // mcqData loaded dynamically by ModulePage; see src/data/load-mcq.ts.
 
 export default function Module3() {
   return (
     <ModulePage
+      courseSlug={CURRENT_COURSE_SLUG}
       moduleNumber={3}
       moduleTitle="Social Media"
       moduleSubtitle="Foundation"

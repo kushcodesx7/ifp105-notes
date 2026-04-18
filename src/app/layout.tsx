@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { DM_Serif_Display } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { getCurrentCourse } from "@/lib/course-registry";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,32 +23,40 @@ const dmSerif = DM_Serif_Display({
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://ifp105-notes.vercel.app";
 
+// SEO / OG / Twitter metadata derived from the course registry so the
+// moment the teacher renames "IFP105 — ICT Fundamentals" → "Python101
+// — Intro to Python" in the registry, every social preview follows.
+// `pageTitle` stays in the `<code> — <name>` format matching the
+// previous hardcoded string.
+const currentCourse = getCurrentCourse();
+const pageTitle = `${currentCourse.code} — ${currentCourse.name}`;
+const pageDescription = `Interactive study notes for ${currentCourse.name}. Built for IFS students at Amity Tashkent.`;
+const ogDescription = `Interactive modules with quizzes, analogies, cheat sheets, and progress tracking. Built for IFS students at Amity Tashkent.`;
+const twitterDescription = `Interactive modules with quizzes, cheat sheets, and a Bloom's Taxonomy thinking profile.`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "IFP105 — ICT Study Notes",
-  description:
-    "Interactive study notes for Information & Communication Technology. Built for IFS students at Amity Tashkent.",
+  title: pageTitle,
+  description: pageDescription,
   openGraph: {
-    title: "IFP105 — ICT Study Notes",
-    description:
-      "Interactive modules with quizzes, analogies, cheat sheets, and progress tracking. Built for IFS students at Amity Tashkent.",
+    title: pageTitle,
+    description: ogDescription,
     type: "website",
-    siteName: "IFP105",
+    siteName: currentCourse.code,
     url: SITE_URL,
     images: [
       {
         url: "/og-cover.png",
         width: 1200,
         height: 630,
-        alt: "IFP105 — ICT Study Notes",
+        alt: pageTitle,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "IFP105 — ICT Study Notes",
-    description:
-      "Interactive modules with quizzes, cheat sheets, and a Bloom's Taxonomy thinking profile.",
+    title: pageTitle,
+    description: twitterDescription,
     images: ["/og-cover.png"],
   },
   robots: "index, follow",

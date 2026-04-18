@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
+import { getCurrentCourse } from "@/lib/course-registry";
 
 // GET /api/connect/activity
 // Recent peer activity for the home page glimpse. Two event types:
@@ -12,15 +13,13 @@ import { isHiddenSection } from "@/lib/hidden-sections";
 const WINDOW_MS = 48 * 60 * 60 * 1000; // 48h — enough to feel alive even on a slow day
 const MAX_EVENTS = 10;
 
-// Display name of each topic per module — keep in sync with module topic data
-// (first-30-chars trunc is fine; activity strip won't show long titles)
-const MODULE_NAMES: Record<number, string> = {
-  1: "Hardware",
-  2: "Office",
-  3: "Social",
-  4: "HTML",
-  5: "Tech",
-};
+// Module display names derived from the course registry so this feed
+// auto-updates if module titles change. The activity strip has limited
+// horizontal space, so we use the registry's short `title` field
+// (e.g. "Hardware") rather than `fullTitle` ("Hardware & Software").
+const MODULE_NAMES: Record<number, string> = Object.fromEntries(
+  getCurrentCourse().modules.map((m) => [m.id, m.title])
+);
 
 interface ActivityEvent {
   id: string; // stable for React keys

@@ -6,7 +6,8 @@ import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
-import { MODULE_TOTALS } from "@/lib/modules";
+import { getCurrentCourse } from "@/lib/course-registry";
+import { progressKey } from "@/lib/storage-keys";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import { decodeJwt } from "@/lib/jwt";
 import RegistrationModal from "@/components/RegistrationModal";
@@ -17,13 +18,20 @@ interface NavbarProps {
   moduleNumber?: number;
 }
 
-const MODULES = [
-  { number: 1, title: "Hardware & Software", href: "/module/1", accent: "#6366F1", lsKey: "ifp105_m1_progress" },
-  { number: 2, title: "Office Automation", href: "/module/2", accent: "#10B981", lsKey: "ifp105_m2_progress" },
-  { number: 3, title: "Social Media", href: "/module/3", accent: "#3B82F6", lsKey: "ifp105_m3_progress" },
-  { number: 4, title: "HTML & Web Dev", href: "/module/4", accent: "#06B6D4", lsKey: "ifp105_m4_progress" },
-  { number: 5, title: "Tech Trends", href: "/module/5", accent: "#8B5CF6", lsKey: "ifp105_m5_progress" },
-];
+// Module metadata for the navbar dropdown. Derived from the course
+// registry (which today is always the single ICT course) so the
+// Navbar stops being a second source of truth for module titles /
+// accents / topic counts. Long titles come from the registry's
+// `fullTitle` field; short titles used elsewhere (admin grid) stay
+// in the registry's `title`.
+const currentCourse = getCurrentCourse();
+const MODULES = currentCourse.modules.map((m) => ({
+  number: m.id,
+  title: m.fullTitle ?? m.title,
+  href: `/module/${m.id}`,
+  accent: m.accent,
+  topicCount: m.topicCount,
+}));
 
 // Read per-module progress from localStorage. Returns {done, total, pct}
 // for each module id so the Navbar dropdown can show a compact bar.
@@ -32,10 +40,10 @@ function readProgressMap(): Record<number, { done: number; total: number; pct: n
   const out: Record<number, { done: number; total: number; pct: number }> = {};
   if (typeof window === "undefined") return out;
   for (const m of MODULES) {
-    const total = MODULE_TOTALS[m.number] || 0;
+    const total = m.topicCount;
     let done = 0;
     try {
-      const raw = localStorage.getItem(m.lsKey);
+      const raw = localStorage.getItem(progressKey(currentCourse.slug, m.number));
       if (raw) done = new Set(JSON.parse(raw)).size;
     } catch {}
     out[m.number] = {

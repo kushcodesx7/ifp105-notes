@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 // Phase 1: XP + badges removed. Quiz completion no longer awards points.
 import { useAuth } from "@/lib/auth-context";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { quizStateKey, ANON_SALT_KEY } from "@/lib/storage-keys";
 import {
   BLOOM_META,
   BLOOM_ORDER,
@@ -48,6 +50,10 @@ export interface ConfidenceStatsPayload {
 }
 
 interface McqQuizProps {
+  // Course this quiz belongs to. Used to namespace the per-quiz
+  // localStorage blob so two courses with "Module 1 Topic 1" don't
+  // overwrite each other. Defaults to the current course in Phase 2.
+  courseSlug?: string;
   topicId: number;
   moduleNumber?: number;
   questions: Question[];
@@ -88,8 +94,16 @@ interface SavedQuizState {
   completed: boolean;
 }
 
-export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComplete, onAnswerCountChange }: McqQuizProps) {
-  const LS_KEY = `ifp105_m${moduleNumber}_quiz_t${topicId}`;
+export default function McqQuiz({
+  courseSlug: courseSlugProp,
+  topicId,
+  moduleNumber = 1,
+  questions,
+  onComplete,
+  onAnswerCountChange,
+}: McqQuizProps) {
+  const courseSlug = courseSlugProp ?? CURRENT_COURSE_SLUG;
+  const LS_KEY = quizStateKey(courseSlug, moduleNumber, topicId);
   const total = questions.length;
   // Per-student salt: stable for this user across sessions and devices.
   // Authenticated → hash(email). Anonymous → falls back to a per-browser
@@ -100,10 +114,10 @@ export default function McqQuiz({ topicId, moduleNumber = 1, questions, onComple
     if (user?.email) return hashString(user.email.toLowerCase());
     if (typeof window === "undefined") return 0;
     try {
-      let s = localStorage.getItem("ifp105_anon_salt");
+      let s = localStorage.getItem(ANON_SALT_KEY);
       if (!s) {
         s = String(Math.floor(Math.random() * 0xffffffff));
-        localStorage.setItem("ifp105_anon_salt", s);
+        localStorage.setItem(ANON_SALT_KEY, s);
       }
       return Number(s) >>> 0;
     } catch {

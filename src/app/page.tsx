@@ -30,64 +30,75 @@ const HomeBloomsProfile = dynamic(() => import("@/components/HomeBloomsProfile")
 });
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
+import { getCurrentCourse } from "@/lib/course-registry";
+import { progressKey } from "@/lib/storage-keys";
 
-const modules = [
-  {
-    number: "01",
-    title: "Hardware & Software",
-    description: "CPU, RAM, ROM, I/O devices, storage, software types, internet basics — the foundation of everything.",
+// Module grid on the home page. Derived from the course registry so
+// titles / accents / topic counts can't drift between this page and
+// Navbar / admin. The registry owns structural data (id, title,
+// accent, topicCount); home-page-specific UI copy (description, icon,
+// tags) lives in the overlay below. When a new course is added, the
+// overlay key becomes the course slug and the home page auto-renders.
+const currentCourse = getCurrentCourse();
+
+interface HomeModuleOverlay {
+  description: string;
+  icon: string;
+  extraTags?: string[]; // e.g. "Interactive"
+}
+// ICT-specific copy for each module.
+const ICT_MODULE_OVERLAYS: Record<number, HomeModuleOverlay> = {
+  1: {
+    description:
+      "CPU, RAM, ROM, I/O devices, storage, software types, internet basics — the foundation of everything.",
     icon: "\u{1F5A5}\uFE0F",
-    href: "/module/1",
-    accent: "#6366F1",
-    tags: ["11 Topics", "~55 min", "110 Qs"],
-    lsKey: "ifp105_m1_progress",
-    totalTopics: 11,
   },
-  {
-    number: "02",
-    title: "Office Automation",
-    description: "MS Word, Excel, and PowerPoint — editing, formatting, formulas, charts, presentations, and slide shows.",
+  2: {
+    description:
+      "MS Word, Excel, and PowerPoint — editing, formatting, formulas, charts, presentations, and slide shows.",
     icon: "\u{1F4CA}",
-    href: "/module/2",
-    accent: "#10B981",
-    tags: ["9 Topics", "~45 min", "90 Qs"],
-    lsKey: "ifp105_m2_progress",
-    totalTopics: 9,
   },
-  {
-    number: "03",
-    title: "Social Media Foundation",
-    description: "Social media platforms, modern tools & automation, measurement, advertising, LinkedIn, and personal branding.",
+  3: {
+    description:
+      "Social media platforms, modern tools & automation, measurement, advertising, LinkedIn, and personal branding.",
     icon: "\u{1F4F1}",
-    href: "/module/3",
-    accent: "#3B82F6",
-    tags: ["7 Topics", "~40 min", "70 Qs"],
-    lsKey: "ifp105_m3_progress",
-    totalTopics: 7,
   },
-  {
-    number: "04",
-    title: "HTML & Web Development",
-    description: "Build web pages from scratch. Tags, elements, attributes, tables, lists, links, images — with a live playground.",
+  4: {
+    description:
+      "Build web pages from scratch. Tags, elements, attributes, tables, lists, links, images — with a live playground.",
     icon: "\u{1F310}",
-    href: "/module/4",
-    accent: "#06B6D4",
-    tags: ["11 Topics", "Interactive"],
-    lsKey: "ifp105_m4_progress",
-    totalTopics: 11,
+    extraTags: ["Interactive"],
   },
-  {
-    number: "05",
-    title: "Latest Technology Trends",
-    description: "AI, Machine Learning, Cloud, Blockchain, VR/AR, IoT, Generative AI — understand the technologies shaping our future.",
+  5: {
+    description:
+      "AI, Machine Learning, Cloud, Blockchain, VR/AR, IoT, Generative AI — understand the technologies shaping our future.",
     icon: "\u{1F680}",
-    href: "/module/5",
-    accent: "#8B5CF6",
-    tags: ["10 Topics", "~50 min", "100 Qs"],
-    lsKey: "ifp105_m5_progress",
-    totalTopics: 10,
   },
-];
+};
+
+const modules = currentCourse.modules.map((m) => {
+  const overlay = ICT_MODULE_OVERLAYS[m.id];
+  const minutes = m.topicCount * 5; // rough reading time estimate
+  const questions = m.topicCount * 7; // 7 Qs per topic (Bloom's ladder)
+  const baseTags: string[] = [
+    `${m.topicCount} Topics`,
+    `~${minutes} min`,
+    `${questions} Qs`,
+  ];
+  return {
+    number: String(m.id).padStart(2, "0"),
+    title: m.fullTitle ?? m.title,
+    description: overlay?.description ?? m.subtitle,
+    icon: overlay?.icon ?? "📘",
+    href: `/module/${m.id}`,
+    accent: m.accent,
+    tags: overlay?.extraTags
+      ? [`${m.topicCount} Topics`, ...overlay.extraTags]
+      : baseTags,
+    lsKey: progressKey(currentCourse.slug, m.id),
+    totalTopics: m.topicCount,
+  };
+});
 
 const featureIcons = {
   brain: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a5 5 0 015 5c0 1.5-.5 2.8-1.3 3.8A5.02 5.02 0 0119 15a5 5 0 01-3.2 4.7M12 2a5 5 0 00-5 5c0 1.5.5 2.8 1.3 3.8A5.02 5.02 0 005 15a5 5 0 003.2 4.7M12 2v20M8.2 19.7A5 5 0 0012 22a5 5 0 003.8-2.3"/></svg>,
