@@ -239,22 +239,21 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // Full roll list for drawer (to surface claim status + teacher name)
-  const rollList = (rollRows || []).map((r) => ({
-    batchId: r.batch_id || "",
-    section: r.section || "Section 1",
-    enrollmentNo: r.enrollment_no || "",
-    name: r.name || null,
-  }));
-
+  // NOTE (perf audit Apr 2026): used to also ship the full roll_list here
+  // (~1300 entries × 80 bytes ≈ 100KB) but nothing on the client side
+  // consumed it — the drawer reads rollListName directly off each student
+  // object. Dropping it cuts the response by roughly 40% on a full class.
   return Response.json(
     {
       students,
-      rollList,
     },
     {
       headers: {
-        "Cache-Control": "private, max-age=15, stale-while-revalidate=60",
+        // Response is per-admin + mutable; short private cache + SWR
+        // absorbs focus/visibilitychange double-fetches without
+        // hammering the DB. Bumped from 15s to 30s fresh because the
+        // client already refetches on tab focus.
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
       },
     }
   );

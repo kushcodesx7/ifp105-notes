@@ -184,7 +184,7 @@ export const topics: Topic[] = [
           },
           {
             title: "Process \ud83e\udde0",
-            description: "The CPU does all the thinking \u2014 calculations, decisions, comparisons. Happens in milliseconds. You never see it.",
+            description: "The CPU does all the thinking \u2014 calculations, decisions, comparisons. A modern chip runs 3 billion+ simple operations per second (each one takes nanoseconds). You never see it.",
           },
           {
             title: "Output \ud83d\udda5\ufe0f",
@@ -244,7 +244,7 @@ export const topics: Topic[] = [
       {
         type: "callout",
         variant: "dark",
-        html: `<strong>Real example \u2014 You type 2+3:</strong> Keyboard sends input \u2192 CU tells ALU "add these" \u2192 ALU calculates 5 \u2192 Registers hold it \u2192 Screen shows 5. All in under one millisecond. \u26a1`,
+        html: `<strong>Real example \u2014 You type 2+3:</strong> Keyboard sends input \u2192 CU tells ALU "add these" \u2192 ALU calculates 5 \u2192 Registers hold it \u2192 Screen shows 5. The actual arithmetic takes nanoseconds; most of the felt delay is your screen refreshing. \u26a1`,
       },
       {
         type: "text",

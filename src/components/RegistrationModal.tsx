@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 interface Batch {
   id: string;
@@ -222,6 +223,11 @@ export default function RegistrationModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, closable, onClose]);
 
+  // Trap Tab / Shift+Tab inside the dialog while it's open so keyboard
+  // users can't focus the page behind the backdrop.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, open);
+
   if (!user) return null;
 
   return (
@@ -239,6 +245,7 @@ export default function RegistrationModal({
           aria-labelledby="registration-modal-title"
         >
           <motion.div
+            ref={dialogRef}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 10 }}

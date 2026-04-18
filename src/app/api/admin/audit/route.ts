@@ -36,10 +36,18 @@ export async function GET(req: NextRequest) {
   if (!admin.ok) return admin.response;
 
   const { searchParams } = new URL(req.url);
-  const actor = searchParams.get("actor")?.trim() || "";
-  const action = searchParams.get("action")?.trim() || "";
-  const subject = searchParams.get("subject")?.trim() || "";
-  const before = searchParams.get("before")?.trim() || "";
+  // Cap inbound filter strings at a sane length. supabase-js parameterises
+  // queries so SQL is safe, but there's no reason to let a 50KB `actor`
+  // value travel all the way to the DB.
+  const MAX_FILTER_LEN = 120;
+  const actor =
+    (searchParams.get("actor")?.trim() || "").slice(0, MAX_FILTER_LEN);
+  const action =
+    (searchParams.get("action")?.trim() || "").slice(0, MAX_FILTER_LEN);
+  const subject =
+    (searchParams.get("subject")?.trim() || "").slice(0, MAX_FILTER_LEN);
+  const before =
+    (searchParams.get("before")?.trim() || "").slice(0, MAX_FILTER_LEN);
   const limitRaw = parseInt(searchParams.get("limit") || "50", 10);
   const limit = Math.max(1, Math.min(500, isNaN(limitRaw) ? 50 : limitRaw));
 

@@ -16,7 +16,6 @@ import { sizedAvatar } from "@/lib/avatar";
 
 interface PeopleResponse {
   students: AdminStudent[];
-  rollList: { batchId: string; section: string; enrollmentNo: string }[];
 }
 
 type FilterKey =
@@ -119,7 +118,11 @@ function PeoplePage() {
     useAdminFetch<PeopleResponse>(
       "/api/admin/people",
       credential,
-      { enabled: authenticated, refreshInterval: 60_000 }
+      // 2-min polling is enough: the drawer refetches on mount + tab
+      // focus already re-syncs via visibilitychange. Halving the poll
+      // rate halves this tab's /api/admin/people traffic with no
+      // perceivable latency impact.
+      { enabled: authenticated, refreshInterval: 120_000 }
     );
 
   useEffect(() => {

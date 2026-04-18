@@ -110,33 +110,17 @@ export async function POST(req: NextRequest) {
   if (confidenceStats !== undefined && confidenceStats !== null)
     upsertData.confidence_stats = confidenceStats;
 
-  let { error } = await supabase.from("student_progress").upsert(
+  // Run the progress upsert AND the session-ping in parallel. Previous
+  // version awaited them sequentially — every student click cost 2
+  // Supabase round-trips (~300ms on 4G Tashkent). They share no causal
+  // dependency; Promise.all cuts the request to ~1 RTT.
+  const progressPromise = supabase.from("student_progress").upsert(
     upsertData,
     {
       onConflict: "student_email,module_number,topic_id",
     }
   );
-
-  // Graceful degradation: if the Bloom's migration hasn't run yet, Supabase
-  // returns PGRST204 / PGRST116 complaining about an unknown column. Retry
-  // once without the new JSONB fields so the student's progress still saves.
-  if (error && /bloom_stats|confidence_stats/i.test(error.message)) {
-    console.warn(
-      "[progress] bloom_stats/confidence_stats columns missing — retrying without them. Run migration-add-bloom-stats.sql to enable Bloom's radar."
-    );
-    delete upsertData.bloom_stats;
-    delete upsertData.confidence_stats;
-    ({ error } = await supabase.from("student_progress").upsert(upsertData, {
-      onConflict: "student_email,module_number,topic_id",
-    }));
-  }
-
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-
-  // Update student_sessions last_active_at
-  await supabase.from("student_sessions").upsert(
+  const sessionPromise = supabase.from("student_sessions").upsert(
     {
       student_email: email,
       student_name: name || "Student",
@@ -145,6 +129,29 @@ export async function POST(req: NextRequest) {
     },
     { onConflict: "student_email" }
   );
+
+  let [progressRes] = await Promise.all([progressPromise, sessionPromise]);
+  let error = progressRes.error;
+
+  // Graceful degradation: if the Bloom's migration hasn't run yet, Supabase
+  // returns PGRST204 / PGRST116 complaining about an unknown column. Retry
+  // once without the new JSONB fields so the student's progress still saves.
+  // (Session upsert above doesn't reference those columns, so it's fine.)
+  if (error && /bloom_stats|confidence_stats/i.test(error.message)) {
+    console.warn(
+      "[progress] bloom_stats/confidence_stats columns missing — retrying without them. Run migration-add-bloom-stats.sql to enable Bloom's radar."
+    );
+    delete upsertData.bloom_stats;
+    delete upsertData.confidence_stats;
+    progressRes = await supabase.from("student_progress").upsert(upsertData, {
+      onConflict: "student_email,module_number,topic_id",
+    });
+    error = progressRes.error;
+  }
+
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
 
   return Response.json({ ok: true });
 }

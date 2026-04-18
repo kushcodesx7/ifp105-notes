@@ -213,16 +213,16 @@ export const practiceSets: PracticeSet[] = [
       },
       {
         q: "What is 'organic content' on social media?",
-        opts: ["Content about organic food", "Content you pay to promote", "Content posted naturally without paying for ads", "Content from verified accounts only"],
+        opts: ["Content from verified accounts only", "Content you pay to promote", "Content posted naturally without paying for ads", "Content produced outside business hours"],
         ans: 2,
         why: "Organic content is posted for free — no paid promotion. Paid content is boosted with money to reach more people.",
         bloom: "remember",
       },
       {
         q: "Which tool is used to schedule social media posts in advance?",
-        opts: ["Photoshop", "Hootsuite", "Excel", "Notepad"],
+        opts: ["Photoshop", "Buffer", "Excel", "Notepad"],
         ans: 1,
-        why: "Hootsuite (also Buffer, Sprout Social) lets you schedule posts across multiple platforms ahead of time from one dashboard.",
+        why: "Buffer, Later, and Metricool let you schedule posts across multiple platforms ahead of time from one dashboard. (Hootsuite filled this role too until it dropped its free tier in 2023.)",
         bloom: "remember",
       },
       {
@@ -234,9 +234,9 @@ export const practiceSets: PracticeSet[] = [
       },
       {
         q: "What is a 'hashtag' used for?",
-        opts: ["To tag a friend", "To make text bold", "To categorize content and make it discoverable", "To encrypt a message"],
+        opts: ["To tag a friend", "To make text bold", "To categorize a post so people searching that topic can find it (historically — algorithms down-weight it now)", "To pin the post to the top of a profile"],
         ans: 2,
-        why: "Hashtags (#topic) categorize your post so people searching for that topic can find it. They increase discoverability.",
+        why: "Hashtags (#topic) historically categorize posts for keyword search. Note for 2026: Instagram explicitly de-prioritised hashtag search in 2024 and X/Twitter down-weights hashtag-stuffed posts — still worth using sparingly, but no longer the growth hack they were.",
         bloom: "remember",
       },
       {
@@ -394,9 +394,9 @@ export const practiceSets: PracticeSet[] = [
       },
       {
         q: "Which of these is an example of IoT (Internet of Things)?",
-        opts: ["A regular light bulb", "A smart thermostat that adjusts temperature automatically", "A paper notebook", "A wired desktop computer"],
+        opts: ["A regular bedside lamp plugged into the wall", "A smart thermostat that adjusts temperature based on occupancy and sends alerts to your phone", "A laptop that browses the web", "A Bluetooth speaker that only pairs with a nearby phone"],
         ans: 1,
-        why: "IoT = everyday objects connected to the internet with sensors. A smart thermostat senses temperature and adjusts itself remotely.",
+        why: "IoT = everyday objects with built-in sensors + an internet connection, usually reporting to a cloud dashboard or phone. Bluetooth-only devices don't qualify (no internet), and a laptop is a general-purpose computer, not a specialised everyday object.",
         bloom: "apply",
       },
       {
