@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
@@ -10,13 +10,18 @@ import AdminAuthGate, {
 } from "@/components/admin/AdminAuthGate";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import BlockEditor from "@/components/admin/BlockEditor";
+import TopicRenderer from "@/components/module/TopicRenderer";
+import type { ContentBlock } from "@/types/content";
 
 // /admin/courses/[slug]/modules/[num]
 //
-// Lists topics for a module and surfaces the MCQ editor inline per
-// topic — expand a topic to edit its questions without leaving the page.
-// Topic body content (ContentBlock[]) is Phase 5; here we only edit
-// the scalar fields (title, hook, timeMin).
+// Lists topics for a module and surfaces three editors inline per topic:
+//   - Scalar fields (title, hook, timeMin)
+//   - Body content (ContentBlock[]) via BlockEditor — Phase 5
+//   - MCQ list via QuestionEditor
+//
+// Expand a topic to access all three without leaving the page.
 
 interface Topic {
   id: string;
@@ -389,6 +394,22 @@ function TopicRow({
   );
 }
 
+interface TopicDetail {
+  id: string;
+  number: number;
+  title: string;
+  timeMin: number | null;
+  hook: string | null;
+  contentJson: ContentBlock[];
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TopicDetailResponse {
+  topic: TopicDetail;
+}
+
 function TopicEditorPanel({
   slug,
   num,
@@ -412,6 +433,57 @@ function TopicEditorPanel({
   const [saving, setSaving] = useState(false);
 
   const credential = idToken ? { idToken } : password;
+
+  // Full topic detail (includes contentJson). The list endpoint used
+  // by the parent doesn't return content_json to keep the payload
+  // small — we only pay for it when the teacher actually opens the
+  // topic to edit its body.
+  const { data: detailData, mutate: mutateDetail } =
+    useAdminFetch<TopicDetailResponse>(
+      `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
+      credential
+    );
+
+  // Body blocks + dirty tracking. Seed from the fetched detail, reset
+  // whenever the server version changes (e.g. after save).
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [bodyDirty, setBodyDirty] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [savingBody, setSavingBody] = useState(false);
+
+  const serverBlocks = detailData?.topic.contentJson;
+  useEffect(() => {
+    if (!serverBlocks) return;
+    setBlocks(serverBlocks);
+    setBodyDirty(false);
+    // Only re-sync when the server version actually changes (by JSON
+    // identity via stringify). Prevents overwriting in-flight edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(serverBlocks)]);
+
+  function handleBlocksChange(next: ContentBlock[]) {
+    setBlocks(next);
+    setBodyDirty(true);
+  }
+
+  async function saveBody() {
+    setSavingBody(true);
+    try {
+      await adminWrite(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
+        "PATCH",
+        { idToken, password },
+        { contentJson: blocks }
+      );
+      setBodyDirty(false);
+      mutateDetail();
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setSavingBody(false);
+    }
+  }
+
   const { data: qData, mutate: mutateQs } = useAdminFetch<QuestionsResponse>(
     `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}/questions`,
     credential
@@ -492,6 +564,61 @@ function TopicEditorPanel({
         >
           Delete topic
         </button>
+      </div>
+
+      {/* ── Topic body (content blocks) — Phase 5 ───────────── */}
+      <div className="mt-5 border-t border-white/[0.05] pt-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <h3 className="text-[13px] font-bold">Topic body</h3>
+            <p className="text-[11px] text-zinc-500">
+              Blocks rendered above the quiz — paragraphs, callouts, images, steps, tables.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPreview((v) => !v)}
+              className="text-[11px] font-semibold text-zinc-300 bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded"
+            >
+              {showPreview ? "Edit" : "Preview"}
+            </button>
+            <button
+              onClick={saveBody}
+              disabled={!bodyDirty || savingBody}
+              className="text-[11px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 px-2.5 py-1 rounded"
+            >
+              {savingBody ? "Saving…" : bodyDirty ? "Save body" : "Saved"}
+            </button>
+          </div>
+        </div>
+
+        {showPreview ? (
+          <div
+            className="rounded-lg p-4"
+            style={{
+              background: "#08080F",
+              border: "1px solid rgba(255,255,255,0.05)",
+            }}
+          >
+            {blocks.length === 0 ? (
+              <p className="text-[12px] text-zinc-600 italic text-center py-4">
+                (Empty — nothing to preview yet.)
+              </p>
+            ) : (
+              <TopicRenderer content={blocks} />
+            )}
+          </div>
+        ) : (
+          <BlockEditor
+            value={blocks}
+            onChange={handleBlocksChange}
+            courseSlug={slug}
+            moduleNumber={parseInt(num, 10)}
+            topicNumber={topic.number}
+            idToken={idToken}
+            password={password}
+          />
+        )}
       </div>
 
       <div className="mt-5 border-t border-white/[0.05] pt-4">

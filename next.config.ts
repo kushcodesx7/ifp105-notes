@@ -15,6 +15,22 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Allow `<Image>` to render course-content bucket URLs that Phase 5's
+  // block editor writes into topic content_json. The hostname pattern
+  // is any *.supabase.co — matching the project subdomain and the
+  // forwarded `/storage/v1/object/public/...` path. Without this,
+  // next/image bails with "hostname not configured" and the student
+  // sees a broken image.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
+
   // Cache static assets aggressively
   headers: async () => [
     {
