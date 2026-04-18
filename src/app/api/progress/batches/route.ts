@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
+import { isHiddenSection } from "@/lib/hidden-sections";
+import { compareSections } from "@/lib/sections";
 
 // GET /api/progress/batches
 // GET /api/progress/batches?batchId=2025-2026  (drill into one batch)
@@ -61,6 +63,7 @@ export async function GET(req: NextRequest) {
   // Build email → student metadata map (from registered students)
   interface RegisteredStudent {
     batchId: string;
+    section: string;
     enrollmentNo: string;
     name: string;
     email: string;
@@ -72,6 +75,7 @@ export async function GET(req: NextRequest) {
     if (s.email) {
       studentMeta[s.email] = {
         batchId: s.batch_id || "",
+        section: (s as { section?: string | null }).section || "Section 1",
         enrollmentNo: s.enrollment_no || "",
         name: s.name || "",
         email: s.email,
@@ -192,10 +196,20 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  // Count roll list per batch
+  // Count roll list per batch, and also per-section within each batch. Hidden
+  // sections ("Test Section" etc) are excluded from the student-facing roll
+  // count so the admin dashboard shows the real headcount (218, not 221 with
+  // 3 testing rolls). Per-section breakdown powers the new batch card UI.
   const rollCountByBatch: Record<string, number> = {};
+  const rollsBySectionPerBatch: Record<string, Record<string, number>> = {};
   for (const r of rollList || []) {
-    if (r.batch_id) rollCountByBatch[r.batch_id] = (rollCountByBatch[r.batch_id] || 0) + 1;
+    if (!r.batch_id) continue;
+    const section = (r as { section?: string | null }).section || "Section 1";
+    if (isHiddenSection(section)) continue; // don't inflate with test rolls
+    rollCountByBatch[r.batch_id] = (rollCountByBatch[r.batch_id] || 0) + 1;
+    if (!rollsBySectionPerBatch[r.batch_id]) rollsBySectionPerBatch[r.batch_id] = {};
+    rollsBySectionPerBatch[r.batch_id][section] =
+      (rollsBySectionPerBatch[r.batch_id][section] || 0) + 1;
   }
 
   // ─── If drilling into a specific batch ───
@@ -304,6 +318,35 @@ export async function GET(req: NextRequest) {
 
     const totalRolls = rollCountByBatch[batch.id] || 0;
 
+    // Per-section breakdown: for each section in this batch, how many rolls
+    // were uploaded vs how many students finished registration. Useful for
+    // spotting "Section 4 still has 10 pending" at a glance.
+    const sectionRolls = rollsBySectionPerBatch[batch.id] || {};
+    const registeredBySection: Record<string, number> = {};
+    for (const s of batchStudents) {
+      // studentAgg stores section on the student from the students table;
+      // infer via the email map if available, else skip.
+      const section = studentMeta[s.email]?.section || "Section 1";
+      if (isHiddenSection(section)) continue;
+      registeredBySection[section] = (registeredBySection[section] || 0) + 1;
+    }
+    const allSectionNames = new Set<string>([
+      ...Object.keys(sectionRolls),
+      ...Object.keys(registeredBySection),
+    ]);
+    const sections = Array.from(allSectionNames)
+      .sort(compareSections)
+      .map((name) => {
+        const sectionRollCount = sectionRolls[name] || 0;
+        const sectionRegistered = registeredBySection[name] || 0;
+        return {
+          name,
+          totalRolls: sectionRollCount,
+          registered: sectionRegistered,
+          pending: Math.max(0, sectionRollCount - sectionRegistered),
+        };
+      });
+
     return {
       id: batch.id,
       name: batch.name,
@@ -314,16 +357,26 @@ export async function GET(req: NextRequest) {
       activeThisWeek,
       avgCompletion,
       avgMcq,
+      sections,
     };
   });
 
-  // Also count "orphan" students who have progress but no batch
-  const orphanStudents = Object.values(studentAgg).filter((s) => !s.batchId);
+  // "Orphan" students = signed in and made progress but never finished
+  // registration (no batch_id). Return their identity so the teacher can
+  // message them directly from the dashboard instead of guessing who to nudge.
+  const orphanStudents = Object.values(studentAgg)
+    .filter((s) => !s.batchId)
+    .map((s) => ({
+      name: s.name,
+      email: s.email,
+      lastActive: s.lastActive,
+    }));
 
   return Response.json(
     {
       batches: batchSummaries,
       orphanStudents: orphanStudents.length,
+      orphanStudentList: orphanStudents,
     },
     {
       headers: {

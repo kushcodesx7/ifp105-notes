@@ -8,6 +8,13 @@ import { useAdminFetch } from "@/lib/useAdminFetch";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 
+interface SectionBreakdown {
+  name: string;
+  totalRolls: number;
+  registered: number;
+  pending: number;
+}
+
 interface BatchSummary {
   id: string;
   name: string;
@@ -18,6 +25,13 @@ interface BatchSummary {
   activeThisWeek: number;
   avgCompletion: number;
   avgMcq: number;
+  sections?: SectionBreakdown[];
+}
+
+interface OrphanStudent {
+  name: string;
+  email: string;
+  lastActive: string | null;
 }
 
 export default function BatchProgressListPage() {
@@ -50,13 +64,19 @@ export default function BatchProgressListPage() {
 
   const credential = idToken ? { idToken } : password;
   const { data: batchData, error: fetchError, mutate: refreshData, isLoading: fetchLoading } =
-    useAdminFetch<{ batches: BatchSummary[]; orphanStudents: number }>(
+    useAdminFetch<{
+      batches: BatchSummary[];
+      orphanStudents: number;
+      orphanStudentList?: OrphanStudent[];
+    }>(
       "/api/progress/batches",
       credential,
       { enabled: authenticated, refreshInterval: 30_000 }
     );
   const batches = batchData?.batches ?? [];
   const orphanCount = batchData?.orphanStudents ?? 0;
+  const orphanList = batchData?.orphanStudentList ?? [];
+  const [showOrphans, setShowOrphans] = useState(false);
   const initialLoaded = !!batchData || (!fetchLoading && !!fetchError);
 
   // Clear password session on auth failure (leave Google session alone)
@@ -259,6 +279,59 @@ export default function BatchProgressListPage() {
                         </div>
                       </div>
 
+                      {/* Per-section breakdown — shows which sections have
+                            which completion rate at a glance. Only renders
+                            when the API returns sections (newer endpoint). */}
+                      {batch.sections && batch.sections.length > 0 && (
+                        <div className="mb-4">
+                          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                            Sections
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {batch.sections.map((sec) => {
+                              const pct =
+                                sec.totalRolls > 0
+                                  ? Math.round((sec.registered / sec.totalRolls) * 100)
+                                  : 0;
+                              return (
+                                <div
+                                  key={sec.name}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                                  style={{
+                                    background: "rgba(255,255,255,0.025)",
+                                    border: "1px solid rgba(255,255,255,0.04)",
+                                  }}
+                                >
+                                  <span className="text-[11px] font-semibold text-zinc-300 shrink-0">
+                                    {sec.name.replace(/^Section /, "S")}
+                                  </span>
+                                  <div
+                                    className="flex-1 h-1 rounded-full overflow-hidden"
+                                    style={{ background: "rgba(255,255,255,0.06)" }}
+                                  >
+                                    <div
+                                      className="h-full rounded-full transition-all"
+                                      style={{
+                                        width: `${pct}%`,
+                                        background:
+                                          pct >= 80
+                                            ? "#22c55e"
+                                            : pct >= 40
+                                              ? "#f59e0b"
+                                              : "#ef4444",
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] font-semibold text-zinc-400 tabular-nums shrink-0">
+                                    {sec.registered}/{sec.totalRolls}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Activity bar */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs">
@@ -329,16 +402,95 @@ export default function BatchProgressListPage() {
 
         {orphanCount > 0 && (
           <div
-            className="mt-6 p-4 rounded-xl text-sm"
+            className="mt-6 rounded-xl overflow-hidden"
             style={{
               background: "rgba(245,158,11,0.06)",
               border: "1px solid rgba(245,158,11,0.15)",
-              color: "#fbbf24",
             }}
           >
-            ⚠️ {orphanCount} student{orphanCount !== 1 ? "s" : ""}{" "}signed in but haven&apos;t{" "}
-            completed registration (not linked to any batch). They&apos;re saving progress but{" "}
-            you can&apos;t group them yet. Encourage them to register via the batch page.
+            <button
+              onClick={() => setShowOrphans((v) => !v)}
+              className="w-full p-4 flex items-start justify-between gap-3 text-left hover:bg-white/[0.02] transition-colors"
+            >
+              <div className="text-sm text-amber-400">
+                ⚠️ <strong>{orphanCount}</strong> student
+                {orphanCount !== 1 ? "s" : ""} signed in but haven&apos;t
+                completed registration. They&apos;re saving progress but{" "}
+                aren&apos;t linked to any section.{" "}
+                {orphanList.length > 0 && (
+                  <span className="text-amber-300 underline">
+                    {showOrphans ? "Hide names" : "Show names & emails"}
+                  </span>
+                )}
+              </div>
+              {orphanList.length > 0 && (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className={`shrink-0 mt-1 transition-transform text-amber-400 ${
+                    showOrphans ? "rotate-180" : ""
+                  }`}
+                >
+                  <path
+                    d="M4 6l4 4 4-4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {showOrphans && orphanList.length > 0 && (
+              <div
+                className="px-4 pb-4 space-y-1.5 max-h-80 overflow-y-auto"
+                style={{ borderTop: "1px solid rgba(245,158,11,0.1)" }}
+              >
+                <div className="pt-3 text-[10px] text-amber-400/60 mb-1 uppercase tracking-wider font-semibold">
+                  Message these students to finish registration
+                </div>
+                {orphanList.map((s) => {
+                  const daysAgo = s.lastActive
+                    ? Math.floor(
+                        (Date.now() - new Date(s.lastActive).getTime()) /
+                          86400000
+                      )
+                    : null;
+                  return (
+                    <div
+                      key={s.email}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg"
+                      style={{
+                        background: "rgba(0,0,0,0.25)",
+                        border: "1px solid rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-semibold text-zinc-200 truncate">
+                          {s.name || "(no name)"}
+                        </div>
+                        <a
+                          href={`mailto:${s.email}`}
+                          className="text-[11px] text-zinc-400 hover:text-indigo-300 truncate block"
+                        >
+                          {s.email}
+                        </a>
+                      </div>
+                      <div className="text-[10px] text-zinc-500 shrink-0 tabular-nums">
+                        {daysAgo === null
+                          ? "—"
+                          : daysAgo === 0
+                            ? "today"
+                            : `${daysAgo}d ago`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
