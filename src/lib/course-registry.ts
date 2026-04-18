@@ -91,8 +91,16 @@ export function getCourseModule(
 // the result in-process. In practice this is called a handful of
 // times per API request (upserts + filters), and the `courses` table
 // has 1 row, so the cache is effectively free and correct.
-
-import { supabase } from "@/lib/supabase";
+//
+// IMPORTANT — do NOT add a top-level `import { supabase } from "@/lib/supabase"`
+// to this file. `@/lib/supabase` is constructed with
+// `process.env.SUPABASE_SERVICE_KEY` (server-only, no NEXT_PUBLIC_ prefix);
+// importing it at module scope pulls it into every client bundle that
+// pulls in course-registry (Navbar, home page, ModulePage, …) and
+// `createClient(url, undefined)` throws "supabaseKey is required" at
+// module-evaluation time, killing hydration site-wide. The dynamic
+// import below keeps the supabase client strictly server-side (these
+// functions are only called from API routes).
 
 const slugToIdCache = new Map<string, string | null>();
 
@@ -110,6 +118,12 @@ export async function getCourseIdBySlug(
     return slugToIdCache.get(slug) ?? null;
   }
   try {
+    // Lazy import so the supabase client module (which hard-requires
+    // the server-only service key at construction time) only loads
+    // when this function is actually called — i.e. inside a server API
+    // route. Client bundles that import course-registry for its
+    // sync helpers never touch supabase.
+    const { supabase } = await import("@/lib/supabase");
     const { data, error } = await supabase
       .from("courses")
       .select("id")
