@@ -1,9 +1,16 @@
 "use client";
+import dynamic from "next/dynamic";
 import ModulePage from "@/components/module/ModulePage";
 import ExcelSimulator from "@/components/module/ExcelSimulator";
 import ShortcutTrainer from "@/components/module/ShortcutTrainer";
 import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { useInlineEditMode } from "@/lib/use-inline-edit";
 import type { Topic } from "@/types/content";
+
+const InlineModuleEditor = dynamic(
+  () => import("@/components/admin/InlineModuleEditor"),
+  { ssr: false }
+);
 
 // Excel challenges for topics 4, 5, 6
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +46,10 @@ const wordShortcuts = [
 ];
 
 export default function Module2Client({ topics }: { topics: Topic[] }) {
+  const isEditing = useInlineEditMode();
+  if (isEditing) {
+    return <InlineModuleEditor slug={CURRENT_COURSE_SLUG} moduleNumber={2} />;
+  }
   return (
     <ModulePage
       courseSlug={CURRENT_COURSE_SLUG}
