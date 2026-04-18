@@ -1,0 +1,937 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import Navbar from "@/components/Navbar";
+import BlockEditor from "@/components/admin/BlockEditor";
+import { useAuth } from "@/lib/auth-context";
+import { useAdminFetch } from "@/lib/useAdminFetch";
+import type { ContentBlock } from "@/types/content";
+
+// Inline module editor — the "edit this page" view of a module.
+//
+// Lives at the SAME URL as the student-facing module page
+// (`/module/N?edit=1`) and reuses the student hero + tab-bar layout so
+// the admin's muscle memory transfers. The body, however, flips from
+// read-only (TopicRenderer + McqQuiz) to editable: each topic shows
+// inline editors for its title/hook/timeMin, a BlockEditor for the
+// content_json, and a list of MCQ editors.
+//
+// The entire component is dynamically imported from the module page's
+// client wrapper, so the editor chunk never lands in a student's
+// bundle (see use-inline-edit.ts for the admin gate).
+//
+// Save model:
+//   - Topic body blocks auto-save 2s after the last edit. We chose
+//     auto-save here because typos are the #1 use case — making the
+//     admin click "save" every time would bring back the friction we
+//     set out to kill.
+//   - Topic meta (title / hook / timeMin) and MCQ list use explicit
+//     Save buttons. Both are structurally small and benefit from the
+//     admin knowing their change was intentional.
+//   - All edits go through the existing admin PATCH endpoints; ISR on
+//     the student-facing route picks up changes within ~30s.
+
+interface Topic {
+  id: string;
+  number: number;
+  title: string;
+  timeMin: number | null;
+  hook: string | null;
+  orderIndex: number;
+  questionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ModuleDetail {
+  id: string;
+  number: number;
+  title: string;
+  fullTitle: string | null;
+  subtitle: string | null;
+  description: string | null;
+  accent: string | null;
+  orderIndex: number;
+}
+
+interface ModuleResponse {
+  module: ModuleDetail;
+  topics: Topic[];
+}
+
+interface TopicDetail {
+  id: string;
+  number: number;
+  title: string;
+  timeMin: number | null;
+  hook: string | null;
+  contentJson: ContentBlock[];
+}
+
+interface TopicDetailResponse {
+  topic: TopicDetail;
+}
+
+interface Question {
+  id: string;
+  number: number;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  bloom: string | null;
+  explanation: string | null;
+  difficulty: string | null;
+}
+
+interface QuestionsResponse {
+  questions: Question[];
+  migrationPending?: string;
+}
+
+// ─── Top-level shell ──────────────────────────────────────
+
+export default function InlineModuleEditor({
+  slug,
+  moduleNumber,
+}: {
+  slug: string;
+  moduleNumber: number;
+}) {
+  const { isLoggedIn, getIdToken } = useAuth();
+  const idToken = isLoggedIn ? getIdToken() : null;
+  const credential = idToken ? { idToken } : null;
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const { data: moduleData, isLoading } = useAdminFetch<ModuleResponse>(
+    `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}`,
+    credential
+  );
+
+  // Which topic tab is active? Kept in local state; defaults to the
+  // lowest-numbered topic once data arrives.
+  const [activeTopicNumber, setActiveTopicNumber] = useState<number | null>(
+    null
+  );
+  useEffect(() => {
+    if (!moduleData) return;
+    const first = moduleData.topics[0]?.number ?? null;
+    setActiveTopicNumber((prev) => prev ?? first);
+  }, [moduleData]);
+
+  function exitEdit() {
+    const sp = new URLSearchParams(searchParams?.toString() || "");
+    sp.delete("edit");
+    const qs = sp.toString();
+    router.push(`/module/${moduleNumber}${qs ? `?${qs}` : ""}`);
+  }
+
+  if (!idToken) {
+    return (
+      <main className="min-h-screen">
+        <Navbar showBack title={`Module ${moduleNumber}`} />
+        <div className="pt-20 px-6 max-w-lg mx-auto text-center">
+          <p className="text-sm text-zinc-400">
+            You&apos;re signed in via a restored session. Sign in with Google
+            once more so edit mode can send authenticated requests, then try
+            again.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  const module_ = moduleData?.module;
+  const topics = moduleData?.topics || [];
+  const activeTopic = topics.find((t) => t.number === activeTopicNumber);
+
+  return (
+    <main className="min-h-screen">
+      <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
+
+      {/* Edit-mode banner — stays pinned under the nav so the admin
+          never forgets which mode they're in. */}
+      <div
+        className="sticky top-14 z-30 px-4 sm:px-6 py-2 flex items-center justify-between gap-3 flex-wrap"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(124,58,237,0.08))",
+          borderBottom: "1px solid rgba(239,68,68,0.3)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <div className="flex items-center gap-2 text-[12px] text-zinc-200">
+          <span aria-hidden="true">✏️</span>
+          <strong className="font-semibold">Editing</strong>
+          <span className="text-zinc-400">
+            — changes auto-save and appear for students within ~30s
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}`}
+            className="text-[11px] font-medium text-zinc-300 hover:text-white px-2.5 py-1 rounded-full hover:bg-white/[0.04]"
+          >
+            Full admin view →
+          </Link>
+          <button
+            onClick={exitEdit}
+            className="text-[11px] font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 rounded-full hover:opacity-90"
+          >
+            ✓ Done
+          </button>
+        </div>
+      </div>
+
+      {isLoading && !moduleData && (
+        <div className="pt-10 text-center text-sm text-zinc-500">Loading…</div>
+      )}
+
+      {module_ && (
+        <>
+          {/* Hero — mirrors the student view but without the animated orbs.
+              Keeps the visual context so the admin knows what page they're on. */}
+          <section className="px-6 py-8 max-w-3xl mx-auto">
+            <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+              Module {module_.number}
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-1">
+              {module_.fullTitle ?? module_.title}
+            </h1>
+            {module_.subtitle && (
+              <p className="text-zinc-500 text-sm">{module_.subtitle}</p>
+            )}
+          </section>
+
+          {/* Topic tab bar — click to switch the active topic. */}
+          <div
+            className="sticky top-[5.4rem] z-20 max-w-3xl mx-auto"
+            style={{
+              background: "rgba(9,9,15,0.9)",
+              backdropFilter: "blur(20px)",
+              borderBottom: "1px solid #1e1e28",
+            }}
+          >
+            <div className="flex items-center overflow-x-auto scrollbar-thin px-4">
+              {topics.map((t) => {
+                const active = t.number === activeTopicNumber;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setActiveTopicNumber(t.number)}
+                    className={`relative px-3 py-3 text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${
+                      active
+                        ? "text-indigo-300"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    <span className="inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold rounded mr-1.5"
+                      style={{
+                        background: active ? "#4F46E5" : "#1e1e28",
+                        color: active ? "white" : "#71717a",
+                      }}
+                    >
+                      {t.number}
+                    </span>
+                    {t.title.substring(0, 22)}
+                    {t.title.length > 22 ? "…" : ""}
+                    {active && (
+                      <motion.div
+                        layoutId="editActiveTopic"
+                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 to-violet-500"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Active topic editor */}
+          <div className="max-w-3xl mx-auto px-5 py-6 pb-24">
+            <AnimatePresence mode="wait">
+              {activeTopic ? (
+                <motion.div
+                  key={activeTopic.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TopicEditor
+                    slug={slug}
+                    moduleNumber={moduleNumber}
+                    topicMeta={activeTopic}
+                    idToken={idToken}
+                  />
+                </motion.div>
+              ) : (
+                <p className="text-sm text-zinc-500 text-center py-10">
+                  No topics in this module yet.
+                </p>
+              )}
+            </AnimatePresence>
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
+
+// ─── Topic editor ─────────────────────────────────────────
+
+function TopicEditor({
+  slug,
+  moduleNumber,
+  topicMeta,
+  idToken,
+}: {
+  slug: string;
+  moduleNumber: number;
+  topicMeta: Topic;
+  idToken: string;
+}) {
+  const credential = useMemo(() => ({ idToken }), [idToken]);
+
+  // Full detail fetch — need content_json which isn't on the list response.
+  const { data: detailData, mutate: mutateDetail } =
+    useAdminFetch<TopicDetailResponse>(
+      `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicMeta.number}`,
+      credential
+    );
+
+  // Questions fetch
+  const { data: qData, mutate: mutateQs } = useAdminFetch<QuestionsResponse>(
+    `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicMeta.number}/questions`,
+    credential
+  );
+
+  // Local meta state (title / hook / timeMin) — seeded from server, diff-saved.
+  const [title, setTitle] = useState(topicMeta.title);
+  const [hook, setHook] = useState(topicMeta.hook || "");
+  const [timeMinStr, setTimeMinStr] = useState(
+    topicMeta.timeMin != null ? String(topicMeta.timeMin) : ""
+  );
+  useEffect(() => {
+    setTitle(topicMeta.title);
+    setHook(topicMeta.hook || "");
+    setTimeMinStr(topicMeta.timeMin != null ? String(topicMeta.timeMin) : "");
+  }, [topicMeta.id, topicMeta.title, topicMeta.hook, topicMeta.timeMin]);
+
+  const metaDirty =
+    title !== topicMeta.title ||
+    hook !== (topicMeta.hook || "") ||
+    timeMinStr !== (topicMeta.timeMin != null ? String(topicMeta.timeMin) : "");
+
+  const [savingMeta, setSavingMeta] = useState(false);
+  async function saveMeta() {
+    setSavingMeta(true);
+    try {
+      const res = await fetch(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicMeta.number}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-id-token": idToken,
+          },
+          body: JSON.stringify({
+            title,
+            hook,
+            timeMin: timeMinStr.trim() === "" ? null : parseInt(timeMinStr, 10),
+          }),
+        }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `Save failed (${res.status})`);
+      }
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setSavingMeta(false);
+    }
+  }
+
+  // Blocks state + auto-save (debounced 2s idle).
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [blocksDirty, setBlocksDirty] = useState(false);
+  const [blockSaveState, setBlockSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [blockSaveError, setBlockSaveError] = useState<string | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const serverBlocks = detailData?.topic.contentJson;
+  useEffect(() => {
+    if (!serverBlocks) return;
+    setBlocks(serverBlocks);
+    setBlocksDirty(false);
+    setBlockSaveState("idle");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(serverBlocks)]);
+
+  function handleBlocksChange(next: ContentBlock[]) {
+    setBlocks(next);
+    setBlocksDirty(true);
+    // Reset debounce timer.
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => void saveBlocks(next), 2000);
+  }
+
+  async function saveBlocks(next: ContentBlock[]) {
+    setBlockSaveState("saving");
+    setBlockSaveError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicMeta.number}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-id-token": idToken,
+          },
+          body: JSON.stringify({ contentJson: next }),
+        }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `Save failed (${res.status})`);
+      }
+      setBlocksDirty(false);
+      setBlockSaveState("saved");
+      mutateDetail();
+    } catch (e) {
+      setBlockSaveError((e as Error).message);
+      setBlockSaveState("error");
+    }
+  }
+
+  // Unsaved-changes warning on nav. Fires for meta dirty OR in-flight
+  // block autosave. Safety net — the 2s debounce usually completes
+  // before navigation, but a fast close-tab after typing could miss.
+  useEffect(() => {
+    const hasUnsaved = metaDirty || blocksDirty || blockSaveState === "saving";
+    if (!hasUnsaved) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [metaDirty, blocksDirty, blockSaveState]);
+
+  const questions = qData?.questions || [];
+
+  return (
+    <div className="space-y-5">
+      {/* Meta fields ── title / hook / time */}
+      <div
+        className="rounded-xl p-4 space-y-3"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            Topic {topicMeta.number}
+          </div>
+          <button
+            onClick={saveMeta}
+            disabled={!metaDirty || savingMeta}
+            className="text-[11px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 px-2.5 py-1 rounded"
+          >
+            {savingMeta ? "Saving…" : metaDirty ? "Save title/hook" : "Saved"}
+          </button>
+        </div>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Topic title"
+          className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-lg font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+        />
+        <div className="grid md:grid-cols-[1fr_auto] gap-2">
+          <textarea
+            value={hook}
+            onChange={(e) => setHook(e.target.value)}
+            placeholder="Hook — the one-line opener that sits above the body"
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+          />
+          <label className="text-[11px] text-zinc-500 block">
+            <span className="block mb-1">Time (min)</span>
+            <input
+              type="number"
+              value={timeMinStr}
+              onChange={(e) => setTimeMinStr(e.target.value)}
+              placeholder="—"
+              className="w-20 px-2 py-1.5 rounded bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-indigo-500/50"
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* Body blocks — auto-saved */}
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold">Topic body</h3>
+          <BlockSaveIndicator state={blockSaveState} dirty={blocksDirty} />
+        </div>
+        {blockSaveError && (
+          <p className="text-[11px] text-red-400 mb-2">{blockSaveError}</p>
+        )}
+        <BlockEditor
+          value={blocks}
+          onChange={handleBlocksChange}
+          courseSlug={slug}
+          moduleNumber={moduleNumber}
+          topicNumber={topicMeta.number}
+          idToken={idToken}
+          password=""
+        />
+      </div>
+
+      {/* Questions */}
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold">
+            Questions ({questions.length})
+          </h3>
+        </div>
+        {qData?.migrationPending && (
+          <p className="text-[11px] text-amber-400 mb-3">
+            ⚠️ {qData.migrationPending}
+          </p>
+        )}
+        <div className="space-y-2">
+          {questions.map((q) => (
+            <InlineQuestionEditor
+              key={q.id}
+              slug={slug}
+              moduleNumber={moduleNumber}
+              topicNumber={topicMeta.number}
+              question={q}
+              idToken={idToken}
+              onChange={mutateQs}
+            />
+          ))}
+        </div>
+        <InlineNewQuestionForm
+          slug={slug}
+          moduleNumber={moduleNumber}
+          topicNumber={topicMeta.number}
+          nextNumber={(questions[questions.length - 1]?.number ?? 0) + 1}
+          idToken={idToken}
+          onCreated={mutateQs}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Save indicator ───────────────────────────────────────
+
+function BlockSaveIndicator({
+  state,
+  dirty,
+}: {
+  state: "idle" | "saving" | "saved" | "error";
+  dirty: boolean;
+}) {
+  if (state === "saving") {
+    return (
+      <span className="text-[11px] text-amber-400 flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+        Saving…
+      </span>
+    );
+  }
+  if (state === "error") {
+    return (
+      <span className="text-[11px] text-red-400">⚠ Save failed</span>
+    );
+  }
+  if (dirty) {
+    return (
+      <span className="text-[11px] text-zinc-500">Unsaved — auto-saving…</span>
+    );
+  }
+  if (state === "saved") {
+    return (
+      <span className="text-[11px] text-emerald-400 flex items-center gap-1">
+        ✓ Saved
+      </span>
+    );
+  }
+  return null;
+}
+
+// ─── Inline question editor (duplicated from admin page; see note) ──
+//
+// Minimal MCQ editor for inline use. Kept separate from the admin page
+// version because the inline flow has a tighter context (one topic at
+// a time) and slightly different styling. A future refactor can extract
+// a shared component; for Phase 6 the duplication is deliberate to
+// avoid coupling two call-site UIs.
+
+function InlineQuestionEditor({
+  slug,
+  moduleNumber,
+  topicNumber,
+  question: q,
+  idToken,
+  onChange,
+}: {
+  slug: string;
+  moduleNumber: number;
+  topicNumber: number;
+  question: Question;
+  idToken: string;
+  onChange: () => void;
+}) {
+  const [text, setText] = useState(q.question);
+  const [options, setOptions] = useState<string[]>(q.options);
+  const [correctIndex, setCorrectIndex] = useState(q.correctIndex);
+  const [explanation, setExplanation] = useState(q.explanation || "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setText(q.question);
+    setOptions(q.options);
+    setCorrectIndex(q.correctIndex);
+    setExplanation(q.explanation || "");
+  }, [q.id, q.question, q.correctIndex, q.explanation, q.options]);
+
+  const dirty =
+    text !== q.question ||
+    JSON.stringify(options) !== JSON.stringify(q.options) ||
+    correctIndex !== q.correctIndex ||
+    explanation !== (q.explanation || "");
+
+  async function save() {
+    setErr(null);
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicNumber}/questions/${q.number}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-id-token": idToken,
+          },
+          body: JSON.stringify({
+            question: text,
+            options,
+            correctIndex,
+            explanation,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `Save failed (${res.status})`);
+      }
+      onChange();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function del() {
+    if (!confirm(`Delete question ${q.number}?`)) return;
+    try {
+      const res = await fetch(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicNumber}/questions/${q.number}`,
+        {
+          method: "DELETE",
+          headers: { "x-id-token": idToken },
+        }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `Delete failed (${res.status})`);
+      }
+      onChange();
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  }
+
+  return (
+    <div
+      className="rounded-lg p-3"
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
+      <div className="flex items-start gap-2 mb-2">
+        <span className="text-[11px] text-zinc-500 font-mono shrink-0 mt-1.5">
+          Q{q.number}
+        </span>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={2}
+          className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+        />
+      </div>
+
+      <div className="space-y-1.5 mb-2 pl-7">
+        {options.map((opt, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name={`inline-correct-${q.id}`}
+              checked={correctIndex === i}
+              onChange={() => setCorrectIndex(i)}
+              className="w-4 h-4 accent-emerald-500 shrink-0"
+              aria-label={`Mark option ${i + 1} as correct`}
+            />
+            <input
+              type="text"
+              value={opt}
+              onChange={(e) => {
+                const v = e.target.value;
+                setOptions((prev) => prev.map((o, idx) => (idx === i ? v : o)));
+              }}
+              className={`w-full px-2.5 py-1.5 rounded-lg bg-white/[0.03] border text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 ${
+                correctIndex === i
+                  ? "border-emerald-500/40"
+                  : "border-white/[0.06]"
+              }`}
+            />
+            {options.length > 2 && (
+              <button
+                onClick={() => {
+                  setOptions((prev) => prev.filter((_, idx) => idx !== i));
+                  if (correctIndex === i) setCorrectIndex(0);
+                  else if (correctIndex > i) setCorrectIndex((v) => v - 1);
+                }}
+                className="text-zinc-600 hover:text-red-400 text-sm shrink-0 w-6 h-6 rounded"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        {options.length < 6 && (
+          <button
+            onClick={() => setOptions((prev) => [...prev, ""])}
+            className="text-[11px] text-indigo-400 hover:text-indigo-300"
+          >
+            + Add option
+          </button>
+        )}
+      </div>
+
+      <div className="pl-7 mb-2">
+        <textarea
+          value={explanation}
+          onChange={(e) => setExplanation(e.target.value)}
+          rows={2}
+          placeholder="Explanation (why this answer is correct)"
+          className="w-full px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[12px] text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+        />
+      </div>
+
+      {err && <p className="text-[11px] text-red-400 mb-2 pl-7">{err}</p>}
+
+      <div className="flex items-center gap-2 pl-7">
+        <button
+          onClick={save}
+          disabled={saving || !dirty}
+          className="text-[11px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 px-2.5 py-1 rounded"
+        >
+          {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+        </button>
+        <button
+          onClick={del}
+          className="text-[11px] font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-2.5 py-1 rounded ml-auto"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InlineNewQuestionForm({
+  slug,
+  moduleNumber,
+  topicNumber,
+  nextNumber,
+  idToken,
+  onCreated,
+}: {
+  slug: string;
+  moduleNumber: number;
+  topicNumber: number;
+  nextNumber: number;
+  idToken: string;
+  onCreated: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
+  const [correctIndex, setCorrectIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  function reset() {
+    setText("");
+    setOptions(["", "", "", ""]);
+    setCorrectIndex(0);
+    setErr(null);
+  }
+
+  async function submit() {
+    setErr(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicNumber}/questions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-id-token": idToken,
+          },
+          body: JSON.stringify({
+            number: nextNumber,
+            question: text.trim(),
+            options: options.map((o) => o.trim()).filter(Boolean),
+            correctIndex,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `Create failed (${res.status})`);
+      }
+      reset();
+      setOpen(false);
+      onCreated();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-3 w-full text-[12px] text-zinc-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-dashed border-white/[0.08] rounded-lg py-2"
+      >
+        + Add question
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="mt-3 rounded-lg p-3"
+      style={{
+        background: "rgba(99,102,241,0.04)",
+        border: "1px solid rgba(99,102,241,0.2)",
+      }}
+    >
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={2}
+        placeholder="Question text…"
+        className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 mb-2"
+      />
+      <div className="space-y-1.5 mb-2">
+        {options.map((opt, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={correctIndex === i}
+              onChange={() => setCorrectIndex(i)}
+              className="w-4 h-4 accent-emerald-500"
+              aria-label={`Mark option ${i + 1} as correct`}
+            />
+            <input
+              type="text"
+              value={opt}
+              onChange={(e) => {
+                const v = e.target.value;
+                setOptions((prev) => prev.map((o, idx) => (idx === i ? v : o)));
+              }}
+              placeholder={`Option ${i + 1}`}
+              className="w-full px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+            />
+            {options.length > 2 && (
+              <button
+                onClick={() => {
+                  setOptions((prev) => prev.filter((_, idx) => idx !== i));
+                  if (correctIndex >= i && correctIndex > 0)
+                    setCorrectIndex((v) => v - 1);
+                }}
+                className="text-zinc-600 hover:text-red-400 text-sm w-6 h-6"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        {options.length < 6 && (
+          <button
+            onClick={() => setOptions((prev) => [...prev, ""])}
+            className="text-[11px] text-indigo-400 hover:text-indigo-300"
+          >
+            + Add option
+          </button>
+        )}
+      </div>
+      {err && <p className="text-[11px] text-red-400 mb-2">{err}</p>}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={submit}
+          disabled={
+            submitting ||
+            !text.trim() ||
+            options.filter((o) => o.trim()).length < 2
+          }
+          className="text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 px-3 py-1.5 rounded-lg"
+        >
+          {submitting ? "Creating…" : "Create question"}
+        </button>
+        <button
+          onClick={() => {
+            reset();
+            setOpen(false);
+          }}
+          className="text-xs text-zinc-400 hover:text-white px-3 py-1.5"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}

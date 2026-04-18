@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import ModulePage from "@/components/module/ModulePage";
 import HtmlEditor from "@/components/module/HtmlEditor";
 import YourTurnChallenge from "@/components/module/YourTurnChallenge";
@@ -7,7 +8,13 @@ import BugFixChallenge from "@/components/module/BugFixChallenge";
 import { module4Challenges } from "@/data/module4-challenges";
 import { module4BugFixes } from "@/data/module4-bugfix";
 import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { useInlineEditMode } from "@/lib/use-inline-edit";
 import type { Topic } from "@/types/content";
+
+const InlineModuleEditor = dynamic(
+  () => import("@/components/admin/InlineModuleEditor"),
+  { ssr: false }
+);
 
 const editorDefaults: Record<number, string> = {
   1: '<!-- Topic 1: Try creating a basic HTML page -->\n<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Welcome to the Web!</h1>\n  <p>This is my first web page.</p>\n</body>\n</html>',
@@ -24,6 +31,10 @@ const editorDefaults: Record<number, string> = {
 };
 
 export default function Module4Client({ topics }: { topics: Topic[] }) {
+  const isEditing = useInlineEditMode();
+  if (isEditing) {
+    return <InlineModuleEditor slug={CURRENT_COURSE_SLUG} moduleNumber={4} />;
+  }
   return (
     <ModulePage
       courseSlug={CURRENT_COURSE_SLUG}

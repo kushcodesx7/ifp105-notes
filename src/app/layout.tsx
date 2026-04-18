@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { DM_Serif_Display } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import AdminBarMount from "@/components/admin/AdminBarMount";
 import { getCurrentCourse } from "@/lib/course-registry";
 import "./globals.css";
 
@@ -84,6 +85,10 @@ export default function RootLayout({
         </a>
         <AuthProvider>
           <ServiceWorkerRegister />
+          {/* Phase 6: floating admin bar. Dynamically imported so
+              non-admin users never download the chunk. Must sit inside
+              AuthProvider since it reads the signed-in user. */}
+          <AdminBarMount />
           {children}
         </AuthProvider>
       </body>
