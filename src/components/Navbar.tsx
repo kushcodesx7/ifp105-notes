@@ -202,9 +202,19 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               <span className="hidden sm:inline">Home</span>
             </Link>
           )}
-          <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white shrink-0 whitespace-nowrap">
+          {/* IFP105 course badge — also the universal "Home" link. Previously
+              a plain <span>, which left admin pages (and anywhere showBack
+              was false) with no clear way back to /. Making the badge
+              itself a Link fixes that in one place for every page without
+              cluttering the nav with a duplicate home button. */}
+          <Link
+            href="/"
+            aria-label="IFP105 — Home"
+            title="Home"
+            className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white shrink-0 whitespace-nowrap hover:scale-105 transition-transform"
+          >
             IFP105
-          </span>
+          </Link>
           {title && moduleNumber ? (
             <div className="relative">
               <button

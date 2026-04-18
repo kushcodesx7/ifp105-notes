@@ -80,6 +80,19 @@ export default function AdminSubNav() {
             </Link>
           );
         })}
+        {/* Explicit "back to the student-facing site" chip at the far
+            right. The tab labelled "Home" inside this sub-nav means
+            "admin dashboard", which was confusing teachers who expected
+            it to return to /. This link disambiguates. */}
+        <Link
+          href="/"
+          aria-label="Back to the student-facing site"
+          title="View the student-facing site"
+          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full text-zinc-500 hover:text-white hover:bg-white/[0.04] transition-all whitespace-nowrap shrink-0"
+        >
+          <span aria-hidden="true">↗</span>
+          <span>View site</span>
+        </Link>
       </nav>
     </div>
   );
