@@ -9,6 +9,7 @@ import AdminAuthGate, {
   useAdminAuth,
   adminWrite,
 } from "@/components/admin/AdminAuthGate";
+import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 
@@ -206,8 +207,6 @@ export default function CourseEditPage({
                   key={m.id}
                   slug={slug}
                   module={m}
-                  idToken={idToken}
-                  password={password}
                   onChange={() => mutate()}
                 />
               ))}
@@ -339,76 +338,89 @@ function CourseMetaEditor({
 function ModuleRowCard({
   slug,
   module: m,
-  idToken,
-  password,
   onChange,
 }: {
   slug: string;
   module: ModuleRow;
-  idToken: string | null;
-  password: string;
+  // idToken/password intentionally not threaded here — the DELETE flow
+  // routes through DangerDeleteDialog which collects a fresh password
+  // from the admin and sends it as `x-admin-password`. See runDelete.
   onChange: () => void;
 }) {
-  async function handleDelete() {
-    if (
-      !confirm(
-        `Delete module ${m.number} "${m.title}"? Cascades to ${m.topicCount} topic(s) and ${m.questionCount} question(s).`
-      )
-    ) {
-      return;
-    }
-    try {
-      await adminWrite(
-        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`,
-        "DELETE",
-        { idToken, password }
-      );
-      onChange();
-    } catch (e) {
-      alert((e as Error).message);
-    }
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Two-step delete: opens the DangerDeleteDialog which collects the
+  // admin password, then fires the DELETE with `x-admin-password`
+  // (NOT the OAuth session token — we want a fresh password check
+  // even if the admin is signed in via Google, so a misclick on a
+  // logged-in tab can't nuke a module). Throwing from onConfirm
+  // surfaces the error inline in the dialog.
+  async function runDelete(enteredPassword: string) {
+    await adminWrite(
+      `/api/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`,
+      "DELETE",
+      { idToken: null, password: enteredPassword }
+    );
+    setDeleteOpen(false);
+    onChange();
   }
 
   return (
-    <div
-      className="rounded-xl p-4 flex items-center gap-3"
-      style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}
-    >
+    <>
       <div
-        className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
+        className="rounded-xl p-4 flex items-center gap-3"
         style={{
-          background: (m.accent || "#6366F1") + "22",
-          color: m.accent || "#6366F1",
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.05)",
         }}
       >
-        {m.number}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold truncate">{m.title}</div>
-        <div className="text-[11px] text-zinc-500 truncate">
-          {m.topicCount} topic{m.topicCount === 1 ? "" : "s"} ·{" "}
-          {m.questionCount} question{m.questionCount === 1 ? "" : "s"}
-          {m.subtitle && ` · ${m.subtitle}`}
+        <div
+          className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
+          style={{
+            background: (m.accent || "#6366F1") + "22",
+            color: m.accent || "#6366F1",
+          }}
+        >
+          {m.number}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold truncate">{m.title}</div>
+          <div className="text-[11px] text-zinc-500 truncate">
+            {m.topicCount} topic{m.topicCount === 1 ? "" : "s"} ·{" "}
+            {m.questionCount} question{m.questionCount === 1 ? "" : "s"}
+            {m.subtitle && ` · ${m.subtitle}`}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href={`/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`}
+            className="text-xs font-semibold text-white bg-white/[0.05] hover:bg-white/[0.1] px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Edit →
+          </Link>
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Link
-          href={`/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`}
-          className="text-xs font-semibold text-white bg-white/[0.05] hover:bg-white/[0.1] px-3 py-1.5 rounded-lg transition-colors"
-        >
-          Edit →
-        </Link>
-        <button
-          onClick={handleDelete}
-          className="text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-3 py-1.5 rounded-lg transition-colors"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
+
+      <DangerDeleteDialog
+        open={deleteOpen}
+        title={`Delete module ${m.number}?`}
+        target={`Module ${m.number}: ${m.title}`}
+        consequences={[
+          `${m.topicCount} topic${m.topicCount === 1 ? "" : "s"}`,
+          `${m.questionCount} question${m.questionCount === 1 ? "" : "s"}`,
+          `Any uploaded images for topics in this module`,
+        ]}
+        confirmLabel="Delete module"
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={runDelete}
+      />
+    </>
   );
 }
 
