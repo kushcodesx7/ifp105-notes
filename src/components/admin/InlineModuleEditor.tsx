@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import BlockEditor from "@/components/admin/BlockEditor";
 import { useAuth } from "@/lib/auth-context";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { setEditSaveStatus, markSaved } from "@/lib/edit-save-status";
 import type { ContentBlock } from "@/types/content";
 
 // Inline module editor — the "edit this page" view of a module.
@@ -123,12 +124,11 @@ export default function InlineModuleEditor({
     setActiveTopicNumber((prev) => prev ?? first);
   }, [moduleData]);
 
-  function exitEdit() {
-    const sp = new URLSearchParams(searchParams?.toString() || "");
-    sp.delete("edit");
-    const qs = sp.toString();
-    router.push(`/module/${moduleNumber}${qs ? `?${qs}` : ""}`);
-  }
+  // exitEdit lives in the AdminBar now via the animated toggle switch.
+  // Keeping this stub silences the unused-imports lint; remove once
+  // we're sure no hotkey call sites rely on it.
+  void router;
+  void searchParams;
 
   if (!idToken) {
     return (
@@ -153,37 +153,32 @@ export default function InlineModuleEditor({
     <main className="min-h-screen">
       <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
-      {/* Edit-mode banner — stays pinned under the nav so the admin
-          never forgets which mode they're in. */}
+      {/* Subtle edit-mode affordance pinned under the nav. The AdminBar
+          already shows the "EDITING" pulsing dot and save status — this
+          strip just offers the contextual link into the full admin
+          view for structural operations (rename module, reorder topics)
+          which the inline surface doesn't cover. Muted colors keep the
+          page feeling like content, not an admin console. */}
       <div
-        className="sticky top-14 z-30 px-4 sm:px-6 py-2 flex items-center justify-between gap-3 flex-wrap"
+        className="sticky top-14 z-30 px-4 sm:px-6 py-1.5 flex items-center justify-between gap-3 flex-wrap"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(124,58,237,0.08))",
-          borderBottom: "1px solid rgba(239,68,68,0.3)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(10,10,16,0.75)",
+          borderBottom: "1px solid rgba(99,102,241,0.15)",
+          backdropFilter: "blur(16px) saturate(140%)",
+          WebkitBackdropFilter: "blur(16px) saturate(140%)",
         }}
       >
-        <div className="flex items-center gap-2 text-[12px] text-zinc-200">
-          <span aria-hidden="true">✏️</span>
-          <strong className="font-semibold">Editing</strong>
-          <span className="text-zinc-400">
-            — changes auto-save and appear for students within ~30s
-          </span>
+        <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+          <span className="text-indigo-400">◆</span>
+          <span>You&apos;re editing this page — students see changes within ~30s</span>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href={`/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}`}
-            className="text-[11px] font-medium text-zinc-300 hover:text-white px-2.5 py-1 rounded-full hover:bg-white/[0.04]"
+            className="text-[11px] font-medium text-zinc-500 hover:text-white px-2.5 py-1 rounded-full hover:bg-white/[0.04] transition-colors"
           >
             Full admin view →
           </Link>
-          <button
-            onClick={exitEdit}
-            className="text-[11px] font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 rounded-full hover:opacity-90"
-          >
-            ✓ Done
-          </button>
         </div>
       </div>
 
@@ -378,6 +373,7 @@ function TopicEditor({
   function handleBlocksChange(next: ContentBlock[]) {
     setBlocks(next);
     setBlocksDirty(true);
+    setEditSaveStatus("dirty");
     // Reset debounce timer.
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => void saveBlocks(next), 2000);
@@ -385,6 +381,7 @@ function TopicEditor({
 
   async function saveBlocks(next: ContentBlock[]) {
     setBlockSaveState("saving");
+    setEditSaveStatus("saving");
     setBlockSaveError(null);
     try {
       const res = await fetch(
@@ -404,12 +401,30 @@ function TopicEditor({
       }
       setBlocksDirty(false);
       setBlockSaveState("saved");
+      markSaved();
       mutateDetail();
     } catch (e) {
       setBlockSaveError((e as Error).message);
       setBlockSaveState("error");
+      setEditSaveStatus("error");
     }
   }
+
+  // ⌘S / Ctrl-S force-saves blocks even if the 2s debounce hasn't fired.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        if (blocksDirty) {
+          e.preventDefault();
+          if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+          void saveBlocks(blocks);
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksDirty, blocks]);
 
   // Unsaved-changes warning on nav. Fires for meta dirty OR in-flight
   // block autosave. Safety net — the 2s debounce usually completes

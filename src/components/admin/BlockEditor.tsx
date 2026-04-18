@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ContentBlock, TopicCard, TableRow, StepItem } from "@/types/content";
 
 // Block editor for the topic body (`topics.content_json`).
@@ -33,15 +34,80 @@ interface BlockEditorProps {
 
 type BlockType = ContentBlock["type"];
 
-const BLOCK_MENU: { type: BlockType; label: string; icon: string }[] = [
-  { type: "text", label: "Paragraph", icon: "📝" },
-  { type: "callout", label: "Callout", icon: "💡" },
-  { type: "analogy", label: "Analogy", icon: "🧠" },
-  { type: "image", label: "Image", icon: "🖼" },
-  { type: "steps", label: "Steps", icon: "👣" },
-  { type: "table", label: "Table", icon: "📊" },
-  { type: "cards", label: "Cards grid", icon: "🃏" },
+interface BlockMenuEntry {
+  type: BlockType;
+  label: string;
+  icon: string;
+  hint: string;
+  // Space-separated keywords for the command-palette filter.
+  keywords: string;
+}
+
+const BLOCK_MENU: BlockMenuEntry[] = [
+  {
+    type: "text",
+    label: "Paragraph",
+    icon: "📝",
+    hint: "Plain text with bold + highlight",
+    keywords: "text paragraph body prose copy",
+  },
+  {
+    type: "callout",
+    label: "Callout",
+    icon: "💡",
+    hint: "Coloured info box (amber, blue, red, purple…)",
+    keywords: "callout info warning note tip aside",
+  },
+  {
+    type: "analogy",
+    label: "Analogy",
+    icon: "🧠",
+    hint: "Labelled analogy — real-world comparison",
+    keywords: "analogy example comparison metaphor",
+  },
+  {
+    type: "image",
+    label: "Image",
+    icon: "🖼",
+    hint: "Upload + caption",
+    keywords: "image picture photo diagram upload",
+  },
+  {
+    type: "steps",
+    label: "Steps",
+    icon: "👣",
+    hint: "Numbered step-by-step list",
+    keywords: "steps list procedure walkthrough tutorial",
+  },
+  {
+    type: "table",
+    label: "Table",
+    icon: "📊",
+    hint: "Headers + rows + cells",
+    keywords: "table grid rows columns data",
+  },
+  {
+    type: "cards",
+    label: "Cards grid",
+    icon: "🃏",
+    hint: "Icon + title + description cards",
+    keywords: "cards grid tiles features highlights",
+  },
 ];
+
+// Icon + colour metadata keyed by block type — used for the per-row
+// pill and the drag-handle gutter so each block type is recognisable
+// at a glance without reading the tiny type label.
+const BLOCK_META: Record<BlockType, { icon: string; accent: string }> = {
+  text: { icon: "📝", accent: "#818CF8" },
+  callout: { icon: "💡", accent: "#FCD34D" },
+  analogy: { icon: "🧠", accent: "#F472B6" },
+  image: { icon: "🖼", accent: "#60A5FA" },
+  steps: { icon: "👣", accent: "#34D399" },
+  table: { icon: "📊", accent: "#FB923C" },
+  cards: { icon: "🃏", accent: "#A78BFA" },
+  "era-cards": { icon: "📜", accent: "#78716C" },
+};
 
 function makeEmpty(type: BlockType): ContentBlock {
   switch (type) {
@@ -127,48 +193,237 @@ export default function BlockEditor({
       ))}
 
       {value.length === 0 && (
-        <p className="text-[12px] text-zinc-600 italic py-3">
-          No content blocks yet. Add one to start writing this topic&apos;s body.
-        </p>
+        <div
+          className="text-center py-8 rounded-2xl"
+          style={{
+            background: "rgba(99,102,241,0.03)",
+            border: "1px dashed rgba(99,102,241,0.25)",
+          }}
+        >
+          <div className="text-3xl mb-2" aria-hidden="true">✨</div>
+          <p className="text-[13px] text-zinc-400 mb-3">
+            This topic&apos;s body is empty. Add a block to start writing.
+          </p>
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="text-[12px] font-semibold text-white px-4 py-2 rounded-full inline-flex items-center gap-1.5"
+            style={{
+              background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+              boxShadow: "0 4px 16px rgba(99,102,241,0.4)",
+            }}
+          >
+            <span aria-hidden="true">+</span> Insert first block
+          </button>
+        </div>
       )}
 
-      <div className="relative">
+      {/* Add-block trigger — subtle by default, prominent on hover.
+          Styled to read as "start writing here" rather than "hit this
+          form button". */}
+      {value.length > 0 && (
         <button
-          onClick={() => setMenuOpen((v) => !v)}
-          className="w-full text-[12px] text-zinc-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-dashed border-white/[0.08] rounded-lg py-2 transition-colors"
+          onClick={() => setMenuOpen(true)}
+          className="group w-full mt-1 py-2 rounded-xl flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500 hover:text-white transition-all"
+          style={{
+            background: "transparent",
+            border: "1px dashed rgba(255,255,255,0.08)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(99,102,241,0.05)";
+            e.currentTarget.style.borderColor = "rgba(99,102,241,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+          }}
         >
-          + Add block
+          <span
+            className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+            style={{ background: "rgba(255,255,255,0.08)" }}
+          >
+            +
+          </span>
+          <span>Add block</span>
+          <kbd className="hidden sm:inline-block text-[9px] font-mono px-1.5 py-[1px] rounded bg-white/[0.04] border border-white/[0.06] text-zinc-500">
+            click
+          </kbd>
         </button>
-        {menuOpen && (
-          <>
-            <button
-              aria-label="Close block menu"
-              className="fixed inset-0 z-40 cursor-default"
-              onClick={() => setMenuOpen(false)}
-            />
-            <div
-              className="absolute left-0 right-0 top-full mt-1 rounded-lg z-50 overflow-hidden"
-              style={{
-                background: "rgba(15,15,25,0.97)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                backdropFilter: "blur(20px)",
-              }}
-            >
-              {BLOCK_MENU.map((m) => (
-                <button
-                  key={m.type}
-                  onClick={() => add(m.type)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-zinc-300 hover:bg-white/[0.06] text-left"
-                >
-                  <span>{m.icon}</span>
-                  <span>{m.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      )}
+
+      {/* Command palette — filter-as-you-type block inserter */}
+      <BlockCommandPalette
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onSelect={(type) => {
+          add(type);
+          setMenuOpen(false);
+        }}
+      />
     </div>
+  );
+}
+
+// ─── Command palette (filterable block picker) ─────────────
+
+function BlockCommandPalette({
+  open,
+  onClose,
+  onSelect,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (type: BlockType) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Reset on open, focus the input.
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    setActiveIndex(0);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return BLOCK_MENU;
+    return BLOCK_MENU.filter((m) => {
+      const hay = `${m.label} ${m.keywords} ${m.type}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [query]);
+
+  // Keep the active index in bounds as the list filters.
+  useEffect(() => {
+    if (activeIndex >= filtered.length) setActiveIndex(Math.max(0, filtered.length - 1));
+  }, [filtered.length, activeIndex]);
+
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(filtered.length - 1, i + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(0, i - 1));
+    } else if (e.key === "Enter" && filtered[activeIndex]) {
+      e.preventDefault();
+      onSelect(filtered[activeIndex].type);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+    }
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="w-full max-w-md rounded-2xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(15,15,25,0.97), rgba(10,10,18,0.98))",
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.08)",
+              backdropFilter: "blur(24px) saturate(160%)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Insert block"
+          >
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <span aria-hidden="true" className="text-zinc-500 text-sm">
+                ⌘K
+              </span>
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={onKey}
+                placeholder="Type to filter — paragraph, callout, image…"
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+              />
+              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-400">
+                Esc
+              </kbd>
+            </div>
+            <div className="max-h-[320px] overflow-y-auto py-1">
+              {filtered.length === 0 ? (
+                <p className="text-center py-6 text-[12px] text-zinc-500">
+                  No block types match &quot;{query}&quot;
+                </p>
+              ) : (
+                filtered.map((m, i) => {
+                  const active = i === activeIndex;
+                  return (
+                    <button
+                      key={m.type}
+                      onClick={() => onSelect(m.type)}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                      style={{
+                        background: active ? "rgba(99,102,241,0.12)" : "transparent",
+                      }}
+                    >
+                      <span
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                        style={{
+                          background: `${BLOCK_META[m.type].accent}1A`,
+                          border: `1px solid ${BLOCK_META[m.type].accent}30`,
+                        }}
+                      >
+                        {m.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-white">
+                          {m.label}
+                        </div>
+                        <div className="text-[11px] text-zinc-500 truncate">
+                          {m.hint}
+                        </div>
+                      </div>
+                      {active && (
+                        <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.08] text-zinc-300 shrink-0">
+                          ↵
+                        </kbd>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div
+              className="flex items-center justify-between px-4 py-2 text-[10px] text-zinc-500"
+              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <span>
+                <kbd className="font-mono px-1 py-px rounded bg-white/[0.05]">↑↓</kbd> to navigate
+              </span>
+              <span>
+                <kbd className="font-mono px-1 py-px rounded bg-white/[0.05]">↵</kbd> to insert
+              </span>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -201,82 +456,205 @@ function BlockRow({
   idToken: string | null;
   password: string;
 }) {
+  const meta = BLOCK_META[block.type];
+  const menuEntry = BLOCK_MENU.find((m) => m.type === block.type);
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <div
-      className="rounded-lg p-3"
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 360, damping: 28 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="relative group flex items-stretch rounded-xl"
       style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.05)",
+        background: hovered
+          ? "rgba(255,255,255,0.035)"
+          : "rgba(255,255,255,0.018)",
+        border: `1px solid ${
+          hovered ? `${meta.accent}30` : "rgba(255,255,255,0.05)"
+        }`,
+        boxShadow: hovered
+          ? `0 4px 20px rgba(0,0,0,0.25), 0 0 0 1px ${meta.accent}15`
+          : "none",
+        transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
       }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-          {block.type}
+      {/* Left gutter — accent stripe + drag handle + type icon.
+          Gives the block an identity at a glance and something to
+          grab when reordering. Drag-and-drop isn't wired yet (we use
+          the up/down buttons on the right), but the handle previews
+          the affordance. */}
+      <div
+        className="flex flex-col items-center gap-1 py-3 px-1.5 shrink-0 rounded-l-xl"
+        style={{
+          background: `${meta.accent}0D`,
+          borderRight: `1px solid ${meta.accent}22`,
+        }}
+      >
+        <span
+          className="text-sm"
+          aria-hidden="true"
+          title={menuEntry?.label || block.type}
+        >
+          {meta.icon}
         </span>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onMoveUp}
-            disabled={first}
-            className="w-6 h-6 rounded text-[11px] text-zinc-500 hover:text-white hover:bg-white/[0.06] disabled:opacity-30"
-            aria-label="Move up"
-          >
-            ↑
-          </button>
-          <button
-            onClick={onMoveDown}
-            disabled={last}
-            className="w-6 h-6 rounded text-[11px] text-zinc-500 hover:text-white hover:bg-white/[0.06] disabled:opacity-30"
-            aria-label="Move down"
-          >
-            ↓
-          </button>
-          <button
-            onClick={onDelete}
-            className="w-6 h-6 rounded text-[11px] text-red-400 hover:text-red-300 hover:bg-red-500/10"
-            aria-label="Delete block"
-            title="Delete block"
-          >
-            ×
-          </button>
-        </div>
+        <motion.span
+          animate={{ opacity: hovered ? 0.6 : 0.2 }}
+          className="text-[10px] font-bold tracking-tight select-none"
+          style={{ color: meta.accent }}
+          aria-hidden="true"
+          title="Drag handle (use arrow buttons to reorder)"
+        >
+          ⋮⋮
+        </motion.span>
       </div>
 
-      {block.type === "text" && (
-        <TextEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "callout" && (
-        <CalloutEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "analogy" && (
-        <AnalogyEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "image" && (
-        <ImageEditor
-          block={block}
-          onChange={onChange}
-          courseSlug={courseSlug}
-          moduleNumber={moduleNumber}
-          topicNumber={topicNumber}
-          idToken={idToken}
-          password={password}
-        />
-      )}
-      {block.type === "steps" && (
-        <StepsEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "table" && (
-        <TableEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "cards" && (
-        <CardsEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "era-cards" && (
-        <p className="text-[11px] text-zinc-500 italic">
-          era-cards editing not supported in the MVP — edit via JSON in a
-          future phase.
-        </p>
-      )}
-    </div>
+      {/* Main block editor area */}
+      <div className="flex-1 min-w-0 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span
+            className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+            style={{
+              background: `${meta.accent}14`,
+              color: meta.accent,
+              border: `1px solid ${meta.accent}28`,
+            }}
+          >
+            {menuEntry?.label || block.type}
+          </span>
+          <AnimatePresence>
+            {hovered && (
+              <motion.div
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-0.5"
+              >
+                <BlockActionBtn
+                  onClick={onMoveUp}
+                  disabled={first}
+                  label="Move up"
+                >
+                  ↑
+                </BlockActionBtn>
+                <BlockActionBtn
+                  onClick={onMoveDown}
+                  disabled={last}
+                  label="Move down"
+                >
+                  ↓
+                </BlockActionBtn>
+                <span
+                  className="mx-1 w-px h-4"
+                  style={{ background: "rgba(255,255,255,0.08)" }}
+                  aria-hidden="true"
+                />
+                <BlockActionBtn
+                  onClick={onDelete}
+                  label="Delete block"
+                  danger
+                >
+                  ×
+                </BlockActionBtn>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {block.type === "text" && (
+          <TextEditor block={block} onChange={onChange} />
+        )}
+        {block.type === "callout" && (
+          <CalloutEditor block={block} onChange={onChange} />
+        )}
+        {block.type === "analogy" && (
+          <AnalogyEditor block={block} onChange={onChange} />
+        )}
+        {block.type === "image" && (
+          <ImageEditor
+            block={block}
+            onChange={onChange}
+            courseSlug={courseSlug}
+            moduleNumber={moduleNumber}
+            topicNumber={topicNumber}
+            idToken={idToken}
+            password={password}
+          />
+        )}
+        {block.type === "steps" && (
+          <StepsEditor block={block} onChange={onChange} />
+        )}
+        {block.type === "table" && (
+          <TableEditor block={block} onChange={onChange} />
+        )}
+        {block.type === "cards" && (
+          <CardsEditor block={block} onChange={onChange} />
+        )}
+        {block.type === "era-cards" && (
+          <p className="text-[11px] text-zinc-500 italic">
+            era-cards editing not supported in the MVP — edit via JSON in a
+            future phase.
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Small primitive: row action button ─────────────────────
+
+function BlockActionBtn({
+  onClick,
+  disabled,
+  label,
+  danger,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="w-7 h-7 rounded-md text-[13px] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+      style={{
+        background: danger ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.04)",
+        color: danger ? "#F87171" : "#E4E4E7",
+        border: danger
+          ? "1px solid rgba(239,68,68,0.2)"
+          : "1px solid rgba(255,255,255,0.06)",
+      }}
+      onMouseEnter={(e) => {
+        if (disabled) return;
+        e.currentTarget.style.background = danger
+          ? "rgba(239,68,68,0.16)"
+          : "rgba(255,255,255,0.08)";
+        e.currentTarget.style.borderColor = danger
+          ? "rgba(239,68,68,0.35)"
+          : "rgba(255,255,255,0.14)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = danger
+          ? "rgba(239,68,68,0.08)"
+          : "rgba(255,255,255,0.04)";
+        e.currentTarget.style.borderColor = danger
+          ? "rgba(239,68,68,0.2)"
+          : "rgba(255,255,255,0.06)";
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -313,52 +691,154 @@ function HtmlTextarea({
     }, 0);
   }
 
+  const [focused, setFocused] = useState(false);
+  const [hasSelection, setHasSelection] = useState(false);
+
+  function checkSelection() {
+    const el = ref.current;
+    if (!el) return setHasSelection(false);
+    setHasSelection(el.selectionStart !== el.selectionEnd);
+  }
+
+  // Keyboard shortcuts inside the textarea — ⌘B / ⌘I / ⌘E (highlight).
+  // Standard Notion-ish muscle memory. Guards against triggering when
+  // the textarea isn't focused so they don't fight other hotkeys.
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const key = e.key.toLowerCase();
+    if (key === "b") {
+      e.preventDefault();
+      wrap("<strong>", "</strong>");
+    } else if (key === "i") {
+      e.preventDefault();
+      wrap("<em>", "</em>");
+    } else if (key === "e") {
+      e.preventDefault();
+      wrap("<mark>", "</mark>");
+    }
+  }
+
   return (
-    <div>
-      <div className="flex items-center gap-1 mb-1">
-        <ToolbarBtn onClick={() => wrap("<strong>", "</strong>")} title="Bold">
-          B
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => wrap("<em>", "</em>")} title="Italic">
-          <i>I</i>
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => wrap("<mark>", "</mark>")} title="Highlight">
-          H
-        </ToolbarBtn>
-        <ToolbarBtn onClick={() => wrap("<br>", "")} title="Line break">
-          ↵
-        </ToolbarBtn>
-      </div>
+    <div className="relative">
+      {/* Floating-ish toolbar — fades in on focus OR when text is
+          selected. Anchored above the textarea so it doesn't jump
+          around like a real floating toolbar would, but gives the
+          same "context-aware" vibe. */}
+      <AnimatePresence>
+        {(focused || hasSelection) && (
+          <motion.div
+            key="toolbar"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-0.5 mb-1.5 px-1 py-1 rounded-lg w-fit"
+            style={{
+              background: "rgba(15,15,25,0.85)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backdropFilter: "blur(16px)",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
+            }}
+          >
+            <FormatBtn
+              onClick={() => wrap("<strong>", "</strong>")}
+              title="Bold"
+              shortcut="⌘B"
+            >
+              <span className="font-bold">B</span>
+            </FormatBtn>
+            <FormatBtn
+              onClick={() => wrap("<em>", "</em>")}
+              title="Italic"
+              shortcut="⌘I"
+            >
+              <span className="italic font-serif">I</span>
+            </FormatBtn>
+            <FormatBtn
+              onClick={() => wrap("<mark>", "</mark>")}
+              title="Highlight"
+              shortcut="⌘E"
+            >
+              <span
+                className="font-semibold"
+                style={{ color: "#A78BFA" }}
+              >
+                H
+              </span>
+            </FormatBtn>
+            <span
+              className="mx-1 w-px h-4 self-center"
+              style={{ background: "rgba(255,255,255,0.1)" }}
+              aria-hidden="true"
+            />
+            <FormatBtn
+              onClick={() => wrap("<br>", "")}
+              title="Line break"
+            >
+              ↵
+            </FormatBtn>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <textarea
         ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          // Delay so clicks on toolbar buttons still fire before we
+          // tear down the toolbar.
+          setTimeout(() => setFocused(false), 120);
+        }}
+        onSelect={checkSelection}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 font-mono"
+        className="w-full px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[14px] leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-400/40 focus:bg-white/[0.04] transition-colors resize-y"
+        style={{
+          fontFamily: "inherit",
+        }}
       />
-      <p className="text-[10px] text-zinc-600 mt-1">
-        HTML allowed: &lt;strong&gt;, &lt;em&gt;, &lt;mark&gt;, &lt;br&gt;.
+      <p className="text-[10px] text-zinc-600 mt-1.5 flex items-center gap-2">
+        <span>
+          HTML: <code className="text-zinc-500">&lt;strong&gt;</code>{" "}
+          <code className="text-zinc-500">&lt;em&gt;</code>{" "}
+          <code className="text-zinc-500">&lt;mark&gt;</code>{" "}
+          <code className="text-zinc-500">&lt;br&gt;</code>
+        </span>
+        <span className="text-zinc-700">·</span>
+        <span>
+          <kbd className="font-mono px-1 py-px rounded bg-white/[0.05]">⌘B</kbd>{" "}
+          <kbd className="font-mono px-1 py-px rounded bg-white/[0.05]">⌘I</kbd>{" "}
+          <kbd className="font-mono px-1 py-px rounded bg-white/[0.05]">⌘E</kbd>
+        </span>
       </p>
     </div>
   );
 }
 
-function ToolbarBtn({
+function FormatBtn({
   onClick,
   title,
+  shortcut,
   children,
 }: {
   onClick: () => void;
   title: string;
+  shortcut?: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      title={title}
-      className="text-[11px] font-semibold w-7 h-6 rounded bg-white/[0.04] hover:bg-white/[0.1] text-zinc-300"
+      // onMouseDown (not onClick) so the button fires BEFORE the
+      // textarea's onBlur removes the toolbar.
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
+      title={shortcut ? `${title} (${shortcut})` : title}
+      className="w-7 h-7 rounded-md text-[12px] text-zinc-200 hover:bg-white/[0.08] transition-colors flex items-center justify-center"
     >
       {children}
     </button>
