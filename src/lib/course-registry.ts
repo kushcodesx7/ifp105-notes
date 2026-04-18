@@ -79,3 +79,56 @@ export function getCourseModule(
   const course = getCourse(slug);
   return course?.modules.find((m) => m.id === moduleId);
 }
+
+// ── Course ID resolver (DB-backed) ─────────────────────────────
+//
+// Multi-course tables (`student_progress`, `batches`, `enrollments`,
+// `student_sessions`) have a `course_id UUID` foreign key to the
+// `courses` table. The DB is the source of truth for that UUID;
+// the `slug` is the stable identifier the code knows.
+//
+// `getCourseIdBySlug` does a single lookup per cold start and caches
+// the result in-process. In practice this is called a handful of
+// times per API request (upserts + filters), and the `courses` table
+// has 1 row, so the cache is effectively free and correct.
+
+import { supabase } from "@/lib/supabase";
+
+const slugToIdCache = new Map<string, string | null>();
+
+/**
+ * Resolve a course slug to its DB-generated UUID. Returns null if the
+ * course doesn't exist in the DB yet (e.g. the Phase 3 migration
+ * hasn't been applied). Callers should handle null by falling back
+ * to the legacy no-course-id code path (same pattern as bloom_stats
+ * graceful degrade elsewhere in the codebase).
+ */
+export async function getCourseIdBySlug(
+  slug: string
+): Promise<string | null> {
+  if (slugToIdCache.has(slug)) {
+    return slugToIdCache.get(slug) ?? null;
+  }
+  try {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) {
+      slugToIdCache.set(slug, null);
+      return null;
+    }
+    const id = (data as { id: string }).id;
+    slugToIdCache.set(slug, id);
+    return id;
+  } catch {
+    slugToIdCache.set(slug, null);
+    return null;
+  }
+}
+
+/** Convenience: current course's UUID. */
+export async function getCurrentCourseId(): Promise<string | null> {
+  return getCourseIdBySlug(CURRENT_COURSE_SLUG);
+}
