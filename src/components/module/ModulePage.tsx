@@ -876,16 +876,21 @@ export default function ModulePage({
                     automatically once LinkedIn's composer opens. */}
                 <button
                   onClick={async () => {
-                    const studentName =
-                      (isLoggedIn && user?.name) || "a student at Amity Tashkent";
+                    // Caption content choices (why each line says what
+                    // it says): module NUMBER only (no title — keeps
+                    // the line scannable); no IFP105 tag (course code
+                    // is internal, student audience prefers the
+                    // human-readable "ICT Fundamentals"); teacher
+                    // mentioned via #KushagraTripathi because pasted
+                    // @-mentions don't auto-link on LinkedIn, only
+                    // hashtags do; no site URL — the notes aren't a
+                    // public resource we want indexed by strangers.
                     const caption = [
-                      `I just completed Module ${moduleNumber}: ${moduleTitle} in IFP105 (ICT Fundamentals) at Amity University Tashkent! 🎓`,
+                      `I just completed Module ${moduleNumber} in ICT Fundamentals at Amity University Tashkent! 🎓`,
                       "",
-                      `Huge thanks to Prof. Kushagra Tripathi for the interactive study notes — quizzes, flashcards, Bloom's Taxonomy tracking, and a learning flow that actually sticks.`,
+                      `Huge thanks to our professor Kushagra Tripathi for the interactive study notes — quizzes, flashcards, Bloom's Taxonomy tracking, and a learning flow that actually sticks.`,
                       "",
-                      `If you're an IFS student too, the notes are at https://ifp105-notes.vercel.app — worth a look.`,
-                      "",
-                      `#IFP105 #AmityTashkent #ICTFundamentals #LearningInPublic`,
+                      `#KushagraTripathi #AmityTashkent #ICTFundamentals #LearningInPublic`,
                     ].join("\n");
 
                     try {
@@ -896,16 +901,20 @@ export default function ModulePage({
                       // Still open LinkedIn — student can type manually.
                       setToast("Opening LinkedIn — type your caption");
                     }
-                    // Silence unused — referenced for caption above.
-                    void studentName;
 
-                    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-                      `https://ifp105-notes.vercel.app/module/${moduleNumber}`
-                    )}`;
-                    // Small delay so the toast is visible BEFORE the
-                    // new tab opens + takes focus.
+                    // Open LinkedIn's composer directly (no URL
+                    // attached to the post). The user explicitly
+                    // doesn't want the notes site previewed on
+                    // LinkedIn — so we skip the share-offsite
+                    // endpoint and land them on the feed instead.
+                    // With the caption already in their clipboard,
+                    // "Start a post" → paste is the full flow.
                     setTimeout(() => {
-                      window.open(shareUrl, "_blank", "noopener,noreferrer");
+                      window.open(
+                        "https://www.linkedin.com/feed/?shareActive=true",
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
                     }, 250);
                   }}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01]"
