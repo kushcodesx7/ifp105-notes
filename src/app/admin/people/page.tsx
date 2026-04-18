@@ -66,6 +66,10 @@ export default function PeoplePage() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
+  // Bulk-select state — tracks emails of selected students.
+  // Cleared on filter change so we never operate on invisible rows.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
   // Load password session
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
@@ -452,6 +456,17 @@ export default function PeoplePage() {
           </div>
         </div>
 
+        {/* ─── Bulk action bar (visible when rows are selected) ─── */}
+        {selected.size > 0 && (
+          <BulkActionBar
+            selectedCount={selected.size}
+            selectedStudents={(data?.students ?? []).filter((s) =>
+              selected.has(s.email)
+            )}
+            onClear={() => setSelected(new Set())}
+          />
+        )}
+
         {/* ─── Table ──────────────────────────────────────────── */}
         {isLoading && !data ? (
           <div className="space-y-2">
@@ -488,6 +503,35 @@ export default function PeoplePage() {
                     className="text-left"
                     style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
                   >
+                    <th className="px-3 py-2.5 w-8">
+                      <input
+                        type="checkbox"
+                        aria-label={
+                          selected.size === filtered.length && filtered.length > 0
+                            ? "Deselect all"
+                            : "Select all"
+                        }
+                        checked={
+                          filtered.length > 0 &&
+                          selected.size === filtered.length
+                        }
+                        ref={(el) => {
+                          if (el) {
+                            el.indeterminate =
+                              selected.size > 0 &&
+                              selected.size < filtered.length;
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelected(new Set(filtered.map((s) => s.email)));
+                          } else {
+                            setSelected(new Set());
+                          }
+                        }}
+                        className="cursor-pointer accent-indigo-500"
+                      />
+                    </th>
                     <Th>Student</Th>
                     <Th>Section</Th>
                     <Th align="right">Progress</Th>
@@ -496,7 +540,9 @@ export default function PeoplePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((s, i) => (
+                  {filtered.map((s, i) => {
+                    const checked = selected.has(s.email);
+                    return (
                     <motion.tr
                       key={s.email}
                       initial={{ opacity: 0 }}
@@ -506,8 +552,28 @@ export default function PeoplePage() {
                       className="cursor-pointer hover:bg-white/[0.02] transition-colors"
                       style={{
                         borderBottom: "1px solid rgba(255,255,255,0.03)",
+                        background: checked ? "rgba(99,102,241,0.06)" : undefined,
                       }}
                     >
+                      <td
+                        className="px-3 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${s.name}`}
+                          checked={checked}
+                          onChange={(e) => {
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(s.email);
+                              else next.delete(s.email);
+                              return next;
+                            });
+                          }}
+                          className="cursor-pointer accent-indigo-500"
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <SmallAvatar student={s} />
@@ -592,7 +658,8 @@ export default function PeoplePage() {
                           : `${s.daysSinceActive}d ago`}
                       </td>
                     </motion.tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -660,4 +727,143 @@ function SmallAvatar({ student }: { student: AdminStudent }) {
       )}
     </div>
   );
+}
+
+// ─── Bulk action bar ─────────────────────────────────────────
+
+function BulkActionBar({
+  selectedCount,
+  selectedStudents,
+  onClear,
+}: {
+  selectedCount: number;
+  selectedStudents: AdminStudent[];
+  onClear: () => void;
+}) {
+  // Build a comma-separated string of emails. Mailto has an 8k byte limit
+  // on many clients; for anything bigger than ~100 addresses we should
+  // recommend the "copy to clipboard" path instead.
+  const emails = selectedStudents.map((s) => s.email).join(", ");
+  const mailtoSafe = emails.length < 6000;
+
+  const mailtoHref = mailtoSafe
+    ? `mailto:?bcc=${encodeURIComponent(emails)}&subject=${encodeURIComponent("IFP105 — quick note")}`
+    : "#";
+
+  async function copyEmails() {
+    try {
+      await navigator.clipboard.writeText(emails);
+    } catch {
+      // fallback: select in a textarea
+      const ta = document.createElement("textarea");
+      ta.value = emails;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  }
+
+  function downloadCsv() {
+    const header = [
+      "Name",
+      "Roll",
+      "Email",
+      "Section",
+      "Batch",
+      "Registered",
+      "Completion %",
+      "MCQ avg %",
+      "Last active (days)",
+      "LinkedIn",
+      "Bio",
+      "Interests",
+    ];
+    const rows = selectedStudents.map((s) => [
+      csvCell(s.name),
+      csvCell(s.enrollmentNo),
+      csvCell(s.email),
+      csvCell(s.section),
+      csvCell(s.batchId),
+      csvCell(s.addedAt || ""),
+      s.completionPct.toString(),
+      s.avgMcq !== null ? s.avgMcq.toString() : "",
+      s.daysSinceActive !== null ? s.daysSinceActive.toString() : "",
+      csvCell(s.linkedinUrl || ""),
+      csvCell(s.bio || ""),
+      csvCell((s.skills || []).join(" ")),
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ifp105-students-${stamp}-${selectedStudents.length}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  return (
+    <div
+      className="sticky top-28 z-20 mb-3 rounded-2xl p-3 backdrop-blur-xl"
+      style={{
+        background: "rgba(99,102,241,0.12)",
+        border: "1px solid rgba(99,102,241,0.35)",
+        boxShadow: "0 8px 24px rgba(99,102,241,0.2)",
+      }}
+    >
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2 text-[12px] font-semibold text-indigo-100">
+          <span
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+            style={{ background: "rgba(99,102,241,0.4)" }}
+          >
+            {selectedCount}
+          </span>
+          selected
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {mailtoSafe && (
+            <a
+              href={mailtoHref}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all active:scale-95"
+              style={{ background: "rgba(99,102,241,0.3)" }}
+            >
+              ✉ Email
+            </a>
+          )}
+          <button
+            onClick={copyEmails}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all active:scale-95"
+            style={{ background: "rgba(99,102,241,0.3)" }}
+          >
+            📋 Copy emails
+          </button>
+          <button
+            onClick={downloadCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all active:scale-95"
+            style={{ background: "rgba(99,102,241,0.3)" }}
+          >
+            📥 Export CSV
+          </button>
+          <button
+            onClick={onClear}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-zinc-300 transition-all active:scale-95"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// CSV cell formatter — wraps in quotes and escapes interior quotes.
+function csvCell(s: string): string {
+  if (s == null) return "";
+  const needsQuote = /[",\n\r]/.test(s);
+  const escaped = s.replace(/"/g, '""');
+  return needsQuote ? `"${escaped}"` : escaped;
 }
