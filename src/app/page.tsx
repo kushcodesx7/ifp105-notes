@@ -32,6 +32,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
 import { getCurrentCourse } from "@/lib/course-registry";
 import { progressKey } from "@/lib/storage-keys";
+import { RevealOnScroll } from "@/components/ui/RevealOnScroll";
 
 // Module grid on the home page. Derived from the course registry so
 // titles / accents / topic counts can't drift between this page and
@@ -575,14 +576,22 @@ export default function Home() {
       {/* ─── MODULES ─── */}
       <section id="modules" className="relative py-16 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
+          {/* Section header reveals on scroll with an animated
+              accent underline drawing itself left-to-right. Adds
+              rhythm to the scroll experience without any per-card
+              motion cost. */}
+          <RevealOnScroll
+            as="div"
+            className="text-center mb-12 mx-auto w-fit"
+            sweep
+          >
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
               Pick a Module
             </h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
               5 modules available now. Each is self-contained with theory, analogies, and quizzes.
             </p>
-          </div>
+          </RevealOnScroll>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {modules.map((mod, i) => (
@@ -600,14 +609,14 @@ export default function Home() {
       {/* ─── FEATURES ─── */}
       <section className="relative py-20 px-6 border-t border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
+          <RevealOnScroll as="div" className="text-center mb-12 mx-auto w-fit" sweep>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
               Built for <span className="gradient-text-animated">real learning</span>
             </h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
               Not just notes &mdash; an interactive experience designed to make concepts stick.
             </p>
-          </div>
+          </RevealOnScroll>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature) => (

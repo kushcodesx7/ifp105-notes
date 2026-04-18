@@ -338,3 +338,90 @@ html {
 .ifp-tour-popover .driver-popover-arrow-side-top { border-top-color: rgba(15,15,25,0.98) !important; }
 .ifp-tour-popover .driver-popover-arrow-side-left { border-left-color: rgba(15,15,25,0.98) !important; }
 .ifp-tour-popover .driver-popover-arrow-side-right { border-right-color: rgba(15,15,25,0.98) !important; }
+
+/* ─── Skeleton pulse animation (Phase PR5 polish) ──────────
+   Glass-style loading skeleton used by src/components/ui/Skeleton.tsx.
+   The gradient sweeps left → right on a 1.6s loop, giving the dark
+   placeholders a subtle shimmer instead of a flat grey block. Respects
+   prefers-reduced-motion — users who opt out see a static glass panel
+   with no animation. */
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-pulse {
+    animation: none;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* ─── Scroll-triggered reveal (Phase PR5) ──────────────────
+   Zero-JS alternative to framer-motion's useInView: apply
+   `.reveal-on-scroll` to any element and it animates up+in the first
+   time it enters the viewport (using :has/:has pseudo-classes via an
+   IntersectionObserver set in src/components/ui/RevealOnScroll.tsx).
+   The initial state is defined here so the element doesn't flash
+   visible before the observer fires. */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll,
+  .reveal-on-scroll.revealed {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ─── Section-header sweep (Phase PR5) ─────────────────────
+   An accent-coloured underline that draws itself left→right when the
+   section becomes visible. Used on homepage section headings. */
+.section-sweep {
+  position: relative;
+}
+.section-sweep::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  height: 2px;
+  width: 0;
+  background: linear-gradient(90deg, #6366F1, #8B5CF6);
+  border-radius: 2px;
+  transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.section-sweep.revealed::after {
+  width: 56px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-sweep::after {
+    transition: none;
+    width: 56px;
+  }
+}
