@@ -417,34 +417,73 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Count before delete for audit
-      const { count: rollCount } = await supabase
-        .from("roll_list")
-        .select("id", { head: true, count: "exact" })
-        .eq("batch_id", batchId)
-        .eq("section", section);
+      // Atomic path: delegate to the admin_delete_section RPC so the
+      // roll_list delete + students.section-nulling run inside a
+      // single Postgres transaction. Before the RPC the two
+      // statements were sequential, so a failure of the second left
+      // students stuck in a section that no longer existed in the
+      // roll list. Falls back to the legacy sequential path if the
+      // migration hasn't been applied yet.
+      const { data: rpcResult, error: rpcErr } = await supabase.rpc(
+        "admin_delete_section",
+        { p_batch_id: batchId, p_section: section }
+      );
 
-      const { count: studentCount } = await supabase
-        .from("students")
-        .select("email", { head: true, count: "exact" })
-        .eq("batch_id", batchId)
-        .eq("section", section);
+      let removedRolls: number;
+      let detachedStudents: number;
 
-      const { error: rErr } = await supabase
-        .from("roll_list")
-        .delete()
-        .eq("batch_id", batchId)
-        .eq("section", section);
-      if (rErr) return Response.json({ error: rErr.message }, { status: 500 });
+      if (!rpcErr && rpcResult) {
+        const r = rpcResult as {
+          rolls_removed?: number;
+          students_detached?: number;
+        };
+        removedRolls = r.rolls_removed ?? 0;
+        detachedStudents = r.students_detached ?? 0;
+      } else {
+        const migrationPending =
+          rpcErr &&
+          /function.*admin_delete_section.*does not exist|PGRST202/i.test(
+            rpcErr.message
+          );
+        if (rpcErr && !migrationPending) {
+          return Response.json({ error: rpcErr.message }, { status: 500 });
+        }
+        if (migrationPending) {
+          console.warn(
+            "[delete-section] admin_delete_section RPC missing — falling back to non-atomic sequential path. Run migration-admin-atomic-rpcs.sql."
+          );
+        }
 
-      // Detach students — clear their section field (batch stays).
-      // They become visible in the admin as "section pending" so the
-      // teacher can re-assign or unlink.
-      await supabase
-        .from("students")
-        .update({ section: null })
-        .eq("batch_id", batchId)
-        .eq("section", section);
+        // Count before delete for audit (legacy path).
+        const { count: rollCount } = await supabase
+          .from("roll_list")
+          .select("id", { head: true, count: "exact" })
+          .eq("batch_id", batchId)
+          .eq("section", section);
+
+        const { count: studentCount } = await supabase
+          .from("students")
+          .select("email", { head: true, count: "exact" })
+          .eq("batch_id", batchId)
+          .eq("section", section);
+
+        const { error: rErr } = await supabase
+          .from("roll_list")
+          .delete()
+          .eq("batch_id", batchId)
+          .eq("section", section);
+        if (rErr)
+          return Response.json({ error: rErr.message }, { status: 500 });
+
+        await supabase
+          .from("students")
+          .update({ section: null })
+          .eq("batch_id", batchId)
+          .eq("section", section);
+
+        removedRolls = rollCount || 0;
+        detachedStudents = studentCount || 0;
+      }
 
       await logAdminAction({
         actorEmail: actor,
@@ -452,15 +491,15 @@ export async function POST(req: NextRequest) {
         subjectBatchId: batchId,
         subjectSection: section,
         details: {
-          removedRolls: rollCount || 0,
-          detachedStudents: studentCount || 0,
+          removedRolls,
+          detachedStudents,
         },
       });
 
       return Response.json({
         success: true,
-        removedRolls: rollCount || 0,
-        detachedStudents: studentCount || 0,
+        removedRolls,
+        detachedStudents,
       });
     }
 
