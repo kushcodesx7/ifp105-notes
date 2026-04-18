@@ -2,46 +2,76 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { TOTAL_TOPICS } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
+import { isHiddenSection } from "@/lib/hidden-sections";
+import { compareSections } from "@/lib/sections";
 
 // GET /api/admin/summary
-// Lightweight endpoint for the /admin landing page — returns only the 4 KPIs
-// the page displays. Avoids fetching the full student list (hundreds of KB)
-// just to compute "Total Students" etc.
+// Powers the new /admin Home page. Returns in ONE roundtrip:
+//   - kpis: registered / activeThisWeek / avgCompletion / avgMcq (+ totals)
+//   - needsAttention[]: students at risk (low progress + stale activity)
+//   - topPerformers[]: top 5 by blended progress+mcq score
+//   - sectionHealth[]: per-section rolls / registered / registered%
+//   - pendingRegistration[]: signed-in but unregistered (for follow-up)
 //
-// Auth: either an admin Google ID token OR the legacy admin password.
+// All hidden sections (e.g. "Test Section") are excluded from every count
+// and every surfaced list so the teacher sees real class data.
+//
+// Auth: admin Google ID token OR legacy admin password.
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
 export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
 
-  const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const now = Date.now();
+  const weekAgoIso = new Date(now - WEEK_MS).toISOString();
 
-  // All queries run in parallel.
-  // - Registered students: emails from `students` table (finished registration)
-  // - Active sessions: student_sessions updated in last 7d (unique emails)
-  // - Completion + MCQ: progress rows for the aggregates
-  //
-  // IMPORTANT: "Active this week" must intersect with registered students.
-  // Otherwise signed-in-but-unregistered users (students who saw the modal
-  // and bailed) inflate the count — producing the nonsense state where
-  // Active > Total, which makes the whole dashboard look broken.
-  const [studentsRes, sessionsRes, progressRes] = await Promise.all([
-    supabase.from("students").select("email"),
-    supabase
-      .from("student_sessions")
-      .select("student_email, last_active_at")
-      .gte("last_active_at", weekAgoIso),
-    supabase
-      .from("student_progress")
-      .select("student_email, completed, mcq_score, mcq_total"),
-  ]);
+  const [studentsRes, rollsRes, sessionsRes, progressRes, fullSessionsRes] =
+    await Promise.all([
+      supabase
+        .from("students")
+        .select("email, name, section, batch_id, added_at"),
+      supabase.from("roll_list").select("batch_id, section"),
+      supabase
+        .from("student_sessions")
+        .select("student_email, last_active_at")
+        .gte("last_active_at", weekAgoIso),
+      supabase
+        .from("student_progress")
+        .select("student_email, completed, mcq_score, mcq_total"),
+      supabase.from("student_sessions").select("student_email, last_active_at"),
+    ]);
 
-  const registeredEmails = new Set<string>();
-  for (const s of studentsRes.data || []) {
-    if (s.email) registeredEmails.add(s.email);
-  }
+  type Student = {
+    email: string | null;
+    name: string | null;
+    section: string | null;
+    batch_id: string | null;
+    added_at: string | null;
+  };
+
+  // ─── Build registered set (visible sections only) ───────────────
+  const registeredStudents = ((studentsRes.data || []) as Student[]).filter(
+    (s) => s.email && !isHiddenSection(s.section)
+  );
+  const registeredEmails = new Set(
+    registeredStudents.map((s) => s.email!) as string[]
+  );
   const totalStudents = registeredEmails.size;
 
-  // Unique active emails in the last 7 days, filtered to registered only.
+  // ─── Roll list totals + per-section counts ──────────────────────
+  const rollsBySection: Record<string, number> = {};
+  let totalRolls = 0;
+  for (const r of rollsRes.data || []) {
+    const section = (r as { section?: string | null }).section || "Section 1";
+    if (isHiddenSection(section)) continue;
+    rollsBySection[section] = (rollsBySection[section] || 0) + 1;
+    totalRolls += 1;
+  }
+
+  // ─── Active this week (intersect with registered) ───────────────
   const activeSet = new Set<string>();
   for (const s of sessionsRes.data || []) {
     if (s.student_email && registeredEmails.has(s.student_email)) {
@@ -50,18 +80,34 @@ export async function GET(req: NextRequest) {
   }
   const activeThisWeek = activeSet.size;
 
-  // Aggregate completion + MCQ per-student from the progress rows.
-  type Agg = { completed: number; mcqSum: number; mcqCount: number };
+  // ─── Last-active map (all sessions, for stale detection) ────────
+  const lastActiveMap: Record<string, string> = {};
+  for (const s of fullSessionsRes.data || []) {
+    if (s.student_email && s.last_active_at) {
+      lastActiveMap[s.student_email] = s.last_active_at;
+    }
+  }
+
+  // ─── Progress aggregation per registered student ────────────────
+  type Agg = {
+    completed: number;
+    mcqSum: number;
+    mcqCount: number;
+  };
   const byStudent = new Map<string, Agg>();
   for (const row of progressRes.data || []) {
-    if (!row.student_email) continue;
+    if (!row.student_email || !registeredEmails.has(row.student_email)) continue;
     let agg = byStudent.get(row.student_email);
     if (!agg) {
       agg = { completed: 0, mcqSum: 0, mcqCount: 0 };
       byStudent.set(row.student_email, agg);
     }
     if (row.completed) agg.completed += 1;
-    if (row.mcq_score !== null && row.mcq_total !== null && row.mcq_total > 0) {
+    if (
+      row.mcq_score !== null &&
+      row.mcq_total !== null &&
+      row.mcq_total > 0
+    ) {
       agg.mcqSum += (row.mcq_score / row.mcq_total) * 100;
       agg.mcqCount += 1;
     }
@@ -77,18 +123,116 @@ export async function GET(req: NextRequest) {
       mcqStudentCount += 1;
     }
   }
-
   const denom = byStudent.size || 1;
   const avgCompletion = Math.round(completionSum / denom);
   const avgMcq =
     mcqStudentCount > 0 ? Math.round(mcqSumAll / mcqStudentCount) : 0;
 
+  // ─── Student-level derived scores ───────────────────────────────
+  type StudentScore = {
+    email: string;
+    name: string;
+    section: string;
+    completionPct: number;
+    avgMcq: number | null;
+    lastActive: string | null;
+    daysSinceActive: number | null;
+  };
+
+  const studentScores: StudentScore[] = registeredStudents.map((s) => {
+    const email = s.email!;
+    const agg = byStudent.get(email);
+    const completionPct = agg
+      ? Math.round((agg.completed / TOTAL_TOPICS) * 100)
+      : 0;
+    const avg =
+      agg && agg.mcqCount > 0 ? Math.round(agg.mcqSum / agg.mcqCount) : null;
+    const lastActive = lastActiveMap[email] || null;
+    const daysSinceActive = lastActive
+      ? Math.floor((now - new Date(lastActive).getTime()) / 86400000)
+      : null;
+    return {
+      email,
+      name: s.name || "(no name)",
+      section: s.section || "Section 1",
+      completionPct,
+      avgMcq: avg,
+      lastActive,
+      daysSinceActive,
+    };
+  });
+
+  // ─── Needs attention: 0% progress OR 14+ days inactive ──────────
+  const needsAttention = studentScores
+    .filter((s) => {
+      if (s.completionPct === 0) return true;
+      if (s.daysSinceActive !== null && s.daysSinceActive >= 14) return true;
+      return false;
+    })
+    .sort((a, b) => {
+      // Worst offenders first: lowest completion, then longest inactivity
+      if (a.completionPct !== b.completionPct)
+        return a.completionPct - b.completionPct;
+      return (b.daysSinceActive ?? 0) - (a.daysSinceActive ?? 0);
+    })
+    .slice(0, 10);
+
+  // ─── Top performers: blend completion + mcq, need some progress ─
+  const topPerformers = studentScores
+    .filter((s) => s.completionPct > 0 && s.avgMcq !== null)
+    .map((s) => ({
+      ...s,
+      blended: s.completionPct * 0.6 + (s.avgMcq ?? 0) * 0.4,
+    }))
+    .sort((a, b) => b.blended - a.blended)
+    .slice(0, 5);
+
+  // ─── Section health: rolls vs registered per section ────────────
+  const registeredBySection: Record<string, number> = {};
+  for (const s of registeredStudents) {
+    const section = s.section || "Section 1";
+    if (isHiddenSection(section)) continue;
+    registeredBySection[section] = (registeredBySection[section] || 0) + 1;
+  }
+  const sectionNames = new Set<string>([
+    ...Object.keys(rollsBySection),
+    ...Object.keys(registeredBySection),
+  ]);
+  const sectionHealth = Array.from(sectionNames)
+    .sort(compareSections)
+    .map((name) => {
+      const rolls = rollsBySection[name] || 0;
+      const registered = registeredBySection[name] || 0;
+      const pct = rolls > 0 ? Math.round((registered / rolls) * 100) : 0;
+      return { name, rolls, registered, pct };
+    });
+
+  // ─── Pending registration: signed-in without a students row ─────
+  const pendingEmails: Set<string> = new Set();
+  for (const s of fullSessionsRes.data || []) {
+    if (s.student_email && !registeredEmails.has(s.student_email)) {
+      pendingEmails.add(s.student_email);
+    }
+  }
+  const pendingRegistration = Array.from(pendingEmails).map((email) => ({
+    email,
+    lastActive: lastActiveMap[email] || null,
+  }));
+
   return Response.json(
     {
-      totalStudents,
-      activeThisWeek,
-      avgCompletion,
-      avgMcq,
+      kpis: {
+        totalStudents,
+        totalRolls,
+        activeThisWeek,
+        avgCompletion,
+        avgMcq,
+        pendingRegistration: pendingRegistration.length,
+      },
+      needsAttention,
+      topPerformers,
+      sectionHealth,
+      pendingRegistration: pendingRegistration.slice(0, 100),
     },
     {
       headers: {
