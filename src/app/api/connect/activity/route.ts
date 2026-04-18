@@ -1,6 +1,8 @@
+import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { getCurrentCourse } from "@/lib/course-registry";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/connect/activity
 // Recent peer activity for the home page glimpse. Two event types:
@@ -35,7 +37,17 @@ interface ActivityEvent {
   at: string; // ISO
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Rate limit — home page polls this every minute via SWR. 120/min
+  // covers multiple tabs open + the small burst on first load.
+  const rl = await rateLimit({
+    bucket: "public:connect-activity",
+    id: ipFromRequest(req),
+    limit: 120,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 120);
+
   const sinceIso = new Date(Date.now() - WINDOW_MS).toISOString();
 
   // Map of email → {name, section, photoUrl} so we can join progress → student.

@@ -1,6 +1,8 @@
+import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/connect/glimpse
 // Tiny endpoint for the home-page IFS Connect teaser.
@@ -11,7 +13,17 @@ import { TOTAL_TOPICS } from "@/lib/course-registry";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Rate limit — home-page teaser, hit once per visit. 60/min is
+  // generous enough for multiple tabs + refresh bursts.
+  const rl = await rateLimit({
+    bucket: "public:connect-glimpse",
+    id: ipFromRequest(req),
+    limit: 60,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 60);
+
   const now = Date.now();
   const weekAgo = new Date(now - WEEK_MS).toISOString();
   const twoWeeksAgo = new Date(now - TWO_WEEKS_MS).toISOString();
