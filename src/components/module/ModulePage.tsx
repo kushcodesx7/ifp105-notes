@@ -138,9 +138,16 @@ export default function ModulePage({
     setBookmarkedTopics(bm);
   }, [moduleNumber, TOTAL_TOPICS]);
 
-  // Save to localStorage
+  // Save to localStorage. We write on EVERY change (including empty) so
+  // that an admin-initiated reset — which clears the server and then
+  // clears local via the effect below — actually persists to disk
+  // instead of leaving the stale "[1,2,3]" blob behind.
   useEffect(() => {
-    if (done.size > 0) localStorage.setItem(LS_KEY, JSON.stringify([...done]));
+    if (done.size > 0) {
+      localStorage.setItem(LS_KEY, JSON.stringify([...done]));
+    } else {
+      localStorage.removeItem(LS_KEY);
+    }
   }, [done, LS_KEY]);
 
   // Auto-dismiss toast
@@ -150,7 +157,11 @@ export default function ModulePage({
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Load Supabase progress on mount when logged in (merge with localStorage, Supabase wins)
+  // Load Supabase progress on mount when logged in. Server is the source
+  // of truth: we REPLACE local state (not merge) so that an admin reset
+  // on the server actually removes completed topics from the user's
+  // view. The old merge-only-add logic left stale completions visible
+  // for days after a reset because localStorage won silently.
   useEffect(() => {
     if (!isLoggedIn || !user || supabaseLoaded.current) return;
 
@@ -167,30 +178,28 @@ export default function ModulePage({
         // Only mark as loaded on success so we retry on next mount if the
         // first attempt fails (network / 5xx).
         supabaseLoaded.current = true;
-        const remoteProgress = data.progress as Record<
+        const remoteProgress = (data.progress ?? {}) as Record<
           number,
           { completed: boolean; mcqScore: number | null; mcqTotal: number | null }
         >;
 
-        if (!remoteProgress || Object.keys(remoteProgress).length === 0) return;
+        // Replace local `done` with exactly what the server has. Empty
+        // server → empty local (which also purges the ifp105_mN_progress
+        // localStorage key via the save effect above).
+        const remoteDone = new Set<number>();
+        for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
+          if (tp.completed) remoteDone.add(Number(topicIdStr));
+        }
+        setDone(remoteDone);
 
-        // Merge: Supabase wins on conflict
-        setDone((prev) => {
-          const merged = new Set(prev);
-          for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
-            if (tp.completed) merged.add(Number(topicIdStr));
-          }
-          return merged;
-        });
-
-        // Merge MCQ scores
+        // MCQ scores: replace, not merge, for the same reason as `done`.
         const scores: Record<number, { score: number; total: number }> = {};
         for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
           if (tp.mcqScore !== null && tp.mcqTotal !== null) {
             scores[Number(topicIdStr)] = { score: tp.mcqScore, total: tp.mcqTotal };
           }
         }
-        setMcqScores((prev) => ({ ...prev, ...scores }));
+        setMcqScores(scores);
       } catch {}
     }
 
