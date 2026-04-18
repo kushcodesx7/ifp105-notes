@@ -13,7 +13,7 @@ export interface BloomsRadarLevel {
 
 interface Props {
   levels: BloomsRadarLevel[];
-  size?: number; // px, defaults to 280
+  size?: number; // viewBox size in SVG units; defaults to 280
 }
 
 // Pure SVG hexagonal radar chart — one axis per Bloom's level.
@@ -41,9 +41,13 @@ export default function BloomsRadar({ levels, size = 280 }: Props) {
     return map;
   }, [levels]);
 
+  // On a 375px phone with px-5 (home padding) + p-5 card, ~315px is usable.
+  // The labels need margin on the left/right edge so the % text isn't clipped.
+  // Shrinking radius to 0.32 of the viewBox gives more room for labels and
+  // the icon + label fit comfortably even on the narrowest supported screen.
   const cx = size / 2;
   const cy = size / 2;
-  const radius = size * 0.35; // axis length — leaves room for labels
+  const radius = size * 0.32; // axis length — more breathing room for labels
 
   // 6 evenly-spaced axes; start at -90° (top) so "Remember" sits at 12 o'clock
   // and the ladder winds clockwise: Remember → Understand → Apply → Analyze →
@@ -81,7 +85,9 @@ export default function BloomsRadar({ levels, size = 280 }: Props) {
     <svg
       viewBox={`0 0 ${size} ${size}`}
       width="100%"
-      height={size}
+      height="auto"
+      preserveAspectRatio="xMidYMid meet"
+      style={{ maxWidth: "100%", display: "block" }}
       role="img"
       aria-label="Bloom's Taxonomy radar showing your per-level performance"
     >
