@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
   // at the call site so TS stays happy without a type churn PR.
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "create_course" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "create_course",
     subjectEmail: null,
     details: { slug, code, name },
   });

@@ -166,6 +166,7 @@ const ACTION_META: Record<
   AdminActionKind,
   { icon: string; label: string; color: string }
 > = {
+  // People / roster
   change_section: { icon: "↔", label: "Section changed", color: "#818CF8" },
   change_roll: { icon: "#", label: "Roll changed", color: "#818CF8" },
   change_email: { icon: "✉", label: "Email changed", color: "#818CF8" },
@@ -178,6 +179,21 @@ const ACTION_META: Record<
   remove_rolls: { icon: "➖", label: "Rolls removed", color: "#F59E0B" },
   rename_section: { icon: "✏", label: "Section renamed", color: "#818CF8" },
   delete_section: { icon: "🗑", label: "Section deleted", color: "#F87171" },
+  // Course CMS — green for creates, indigo for updates, red for deletes.
+  create_course: { icon: "📚", label: "Course created", color: "#34D399" },
+  update_course: { icon: "✏", label: "Course updated", color: "#818CF8" },
+  delete_course: { icon: "🗑", label: "Course deleted", color: "#F87171" },
+  create_module: { icon: "🧱", label: "Module created", color: "#34D399" },
+  update_module: { icon: "✏", label: "Module updated", color: "#818CF8" },
+  delete_module: { icon: "🗑", label: "Module deleted", color: "#F87171" },
+  create_topic: { icon: "📝", label: "Topic created", color: "#34D399" },
+  update_topic: { icon: "✏", label: "Topic updated", color: "#818CF8" },
+  delete_topic: { icon: "🗑", label: "Topic deleted", color: "#F87171" },
+  create_question: { icon: "❓", label: "Question created", color: "#34D399" },
+  update_question: { icon: "✏", label: "Question updated", color: "#818CF8" },
+  delete_question: { icon: "🗑", label: "Question deleted", color: "#F87171" },
+  // Content migration / one-shot actions
+  seed_ict: { icon: "📥", label: "ICT seeded to DB", color: "#A78BFA" },
 };
 
 const ACTION_FILTER_OPTIONS: { value: string; label: string }[] = [

@@ -867,15 +867,62 @@ export default function ModulePage({
 
               {/* Action buttons */}
               <div className="px-6 pb-6 space-y-3">
-                <a
-                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`I just completed Module ${moduleNumber}: ${moduleTitle} on IFP105 Study Notes!`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* LinkedIn share — copies a pre-written celebratory
+                    caption to the clipboard, then opens the share
+                    dialog with the real module URL. LinkedIn removed
+                    the `summary` URL parameter in 2021, so the only
+                    reliable way to pre-fill a post is the clipboard
+                    trick. Most students see the paste suggestion
+                    automatically once LinkedIn's composer opens. */}
+                <button
+                  onClick={async () => {
+                    // Caption content choices (why each line says what
+                    // it says): module NUMBER only (no title — keeps
+                    // the line scannable); no IFP105 tag (course code
+                    // is internal, student audience prefers the
+                    // human-readable "ICT Fundamentals"); teacher
+                    // mentioned via #KushagraTripathi because pasted
+                    // @-mentions don't auto-link on LinkedIn, only
+                    // hashtags do; no site URL — the notes aren't a
+                    // public resource we want indexed by strangers.
+                    const caption = [
+                      `I just completed Module ${moduleNumber} in ICT Fundamentals at Amity University Tashkent! 🎓`,
+                      "",
+                      `Huge thanks to our professor Kushagra Tripathi for the interactive study notes — quizzes, flashcards, Bloom's Taxonomy tracking, and a learning flow that actually sticks.`,
+                      "",
+                      `#KushagraTripathi #AmityTashkent #ICTFundamentals #LearningInPublic`,
+                    ].join("\n");
+
+                    try {
+                      await navigator.clipboard.writeText(caption);
+                      setToast("Caption copied — paste it on LinkedIn ✨");
+                    } catch {
+                      // Clipboard API can fail (old iOS Safari, etc.).
+                      // Still open LinkedIn — student can type manually.
+                      setToast("Opening LinkedIn — type your caption");
+                    }
+
+                    // Open LinkedIn's composer directly (no URL
+                    // attached to the post). The user explicitly
+                    // doesn't want the notes site previewed on
+                    // LinkedIn — so we skip the share-offsite
+                    // endpoint and land them on the feed instead.
+                    // With the caption already in their clipboard,
+                    // "Start a post" → paste is the full flow.
+                    setTimeout(() => {
+                      window.open(
+                        "https://www.linkedin.com/feed/?shareActive=true",
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                    }, 250);
+                  }}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01]"
-                  style={{ background: '#0A66C2' }}
+                  style={{ background: "#0A66C2" }}
                 >
+                  <span aria-hidden="true">📋</span>
                   Share on LinkedIn
-                </a>
+                </button>
                 {moduleNumber < 5 && (
                   <a
                     href={`/module/${moduleNumber + 1}`}

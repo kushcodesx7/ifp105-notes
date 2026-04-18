@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "seed_ict" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "seed_ict",
     subjectEmail: null,
     details: {
       modulesUpserted,

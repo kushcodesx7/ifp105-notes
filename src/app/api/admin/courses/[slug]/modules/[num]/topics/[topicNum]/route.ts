@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { cleanupTopicImages } from "@/lib/storage-cleanup";
 
 // /api/admin/courses/[slug]/modules/[num]/topics/[topicNum]
 //   GET    — topic detail (includes content_json for Phase 5 block editor)
@@ -155,17 +156,28 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
   if (!data) return Response.json({ error: "Topic not found" }, { status: 404 });
 
-  await logAdminAction({
-    actorEmail: actorFromAuth(admin),
-    action: "update_topic" as unknown as Parameters<typeof logAdminAction>[0]["action"],
-    subjectEmail: null,
-    details: {
-      courseSlug: slug,
-      moduleNumber: res.moduleNumber,
-      topicNumber: res.topicNumber,
-      patch,
-    },
-  });
+  // Audit log — but skip content-json-only patches to avoid flooding
+  // the log with every 2-second auto-save the inline editor fires
+  // while the admin is typing. Meta changes (title / hook / timeMin /
+  // order / number) still get logged so we can reconstruct structural
+  // edits. Rule: if the ONLY key in `patch` is `content_json`, skip.
+  const patchKeys = Object.keys(patch);
+  const contentOnly =
+    patchKeys.length === 1 && patchKeys[0] === "content_json";
+
+  if (!contentOnly) {
+    await logAdminAction({
+      actorEmail: actorFromAuth(admin),
+      action: "update_topic",
+      subjectEmail: null,
+      details: {
+        courseSlug: slug,
+        moduleNumber: res.moduleNumber,
+        topicNumber: res.topicNumber,
+        patchKeys,
+      },
+    });
+  }
 
   return Response.json({
     topic: {
@@ -191,19 +203,26 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const res = await resolveTopicId(slug, num, topicNum);
   if (!res.ok) return res.response;
 
+  // Clean orphan images from the course-content bucket BEFORE the row
+  // delete. If the order were reversed, the DB cascade would take the
+  // row + content_json away and we'd lose the info needed to find the
+  // storage paths.
+  const cleanedImages = await cleanupTopicImages(res.topicId);
+
   const { error } = await supabase.from("topics").delete().eq("id", res.topicId);
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "delete_topic" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "delete_topic",
     subjectEmail: null,
     details: {
       courseSlug: slug,
       moduleNumber: res.moduleNumber,
       topicNumber: res.topicNumber,
+      cleanedImages,
     },
   });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, cleanedImages });
 }

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { cleanupModuleImages } from "@/lib/storage-cleanup";
 
 // /api/admin/courses/[slug]/modules/[num]
 //   GET    — module detail + its topics (with question counts)
@@ -222,7 +223,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "update_module" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "update_module",
     subjectEmail: null,
     details: { courseSlug: slug, moduleNumber: res.moduleNumber, patch },
   });
@@ -252,6 +253,10 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const res = await resolveCourseAndModule(slug, num);
   if (!res.ok) return res.response;
 
+  // Clean orphan images from all topics under this module BEFORE the
+  // DB cascade removes the rows we need to find URLs on.
+  const cleanedImages = await cleanupModuleImages(res.moduleId);
+
   const { error } = await supabase.from("modules").delete().eq("id", res.moduleId);
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -259,10 +264,14 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
 
   await logAdminAction({
     actorEmail: actorFromAuth(admin),
-    action: "delete_module" as unknown as Parameters<typeof logAdminAction>[0]["action"],
+    action: "delete_module",
     subjectEmail: null,
-    details: { courseSlug: slug, moduleNumber: res.moduleNumber },
+    details: {
+      courseSlug: slug,
+      moduleNumber: res.moduleNumber,
+      cleanedImages,
+    },
   });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, cleanedImages });
 }
