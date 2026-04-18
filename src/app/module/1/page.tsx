@@ -1,36 +1,22 @@
-"use client";
-import ModulePage from "@/components/module/ModulePage";
-import { topics } from "@/data/module1-topics";
-import { getCurrentCourse, getCourseModule, CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import Module1Client from "./ClientModule";
+import { topics as fallbackTopics } from "@/data/module1-topics";
+import { loadModuleFromDB } from "@/lib/module-loader";
 
-// Module 1 entry point. Structural metadata (accent, topic count,
-// full title) comes from the course registry so adding a course in
-// Phase 3 doesn't require editing this file. Module-specific copy
-// (moduleSubtitle, moduleDescription) stays here because it's
-// authoring content, not structural data.
+// Module 1 entry point — SERVER COMPONENT (Phase 5.5).
 //
-// MCQ data is lazy-loaded by ModulePage via src/data/load-mcq.ts —
-// see Phase 1 perf work.
-export default function Module1() {
-  const course = getCurrentCourse();
-  const meta = getCourseModule(CURRENT_COURSE_SLUG, 1);
-  return (
-    <ModulePage
-      courseSlug={course.slug}
-      moduleNumber={1}
-      moduleTitle={meta?.fullTitle ?? "Hardware & Software"}
-      moduleSubtitle="The Big Picture"
-      moduleDescription="Everything your computer does — from Netflix to assignments — comes down to hardware and software working together."
-      accentFrom={meta?.accent ?? "#6366F1"}
-      accentTo="#7C3AED"
-      orbColor1="rgba(99,102,241,0.15)"
-      orbColor2="rgba(124,58,237,0.1)"
-      topics={topics}
-      stats={[
-        { n: String(meta?.topicCount ?? topics.length), l: "Topics" },
-        { n: `~${(meta?.topicCount ?? topics.length) * 5}`, l: "Minutes" },
-        { n: String((meta?.topicCount ?? topics.length) * 7), l: "Practice Qs" },
-      ]}
-    />
-  );
+// Reads topics from the DB first (Phase 4/5 tables via module-loader).
+// If the DB is empty for ICT module 1 — because the teacher hasn't
+// run the seeder yet, or the tables aren't populated — falls back to
+// the legacy `src/data/module1-topics.ts`. Either way, the student
+// sees content.
+//
+// `revalidate = 30` makes the page ISR: regenerated at most once every
+// 30s, so teacher edits in /admin propagate to students within half a
+// minute. Between regenerations, the page is served from the Vercel
+// edge cache — no DB round-trip per page view.
+export const revalidate = 30;
+
+export default async function Module1Page() {
+  const db = await loadModuleFromDB("ict", 1);
+  return <Module1Client topics={db?.topics ?? fallbackTopics} />;
 }
