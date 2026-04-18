@@ -68,6 +68,11 @@ export async function POST(req: NextRequest) {
     mcqScore,
     mcqTotal,
     challengeAttempted,
+    // Phase 3: Bloom's per-level stats and confidence calibration from the
+    // quiz. Both are JSON-shaped payloads — the caller computes them so the
+    // server stays dumb. Safe to omit; older clients don't send them.
+    bloomStats,
+    confidenceStats,
   } = body;
 
   if (!email || !moduleNumber || !topicId) {
@@ -96,13 +101,31 @@ export async function POST(req: NextRequest) {
   if (mcqTotal !== undefined) upsertData.mcq_total = mcqTotal;
   if (challengeAttempted !== undefined)
     upsertData.challenge_attempted = challengeAttempted;
+  if (bloomStats !== undefined && bloomStats !== null)
+    upsertData.bloom_stats = bloomStats;
+  if (confidenceStats !== undefined && confidenceStats !== null)
+    upsertData.confidence_stats = confidenceStats;
 
-  const { error } = await supabase.from("student_progress").upsert(
+  let { error } = await supabase.from("student_progress").upsert(
     upsertData,
     {
       onConflict: "student_email,module_number,topic_id",
     }
   );
+
+  // Graceful degradation: if the Bloom's migration hasn't run yet, Supabase
+  // returns PGRST204 / PGRST116 complaining about an unknown column. Retry
+  // once without the new JSONB fields so the student's progress still saves.
+  if (error && /bloom_stats|confidence_stats/i.test(error.message)) {
+    console.warn(
+      "[progress] bloom_stats/confidence_stats columns missing — retrying without them. Run migration-add-bloom-stats.sql to enable Bloom's radar."
+    );
+    delete upsertData.bloom_stats;
+    delete upsertData.confidence_stats;
+    ({ error } = await supabase.from("student_progress").upsert(upsertData, {
+      onConflict: "student_email,module_number,topic_id",
+    }));
+  }
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });

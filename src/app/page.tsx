@@ -25,6 +25,9 @@ const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse
 const HomeCompareWithClass = dynamic(() => import("@/components/HomeCompareWithClass"), {
   ssr: false,
 });
+const HomeBloomsProfile = dynamic(() => import("@/components/HomeBloomsProfile"), {
+  ssr: false,
+});
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
 
@@ -459,6 +462,9 @@ export default function Home() {
 
       {/* ─── COMPARE WITH CLASS ─── (signed-in students only) */}
       <HomeCompareWithClass />
+
+      {/* ─── BLOOM'S THINKING PROFILE ─── (signed-in + has quiz data) */}
+      <HomeBloomsProfile />
 
       {/* ─── SAVED TOPICS (Bookmarks) ─── */}
       {bookmarks.length > 0 && (
