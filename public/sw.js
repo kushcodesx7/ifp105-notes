@@ -1,4 +1,4 @@
-// IFP105 service worker — v4
+// IFP105 service worker — v5
 //
 // Strategy:
 //   • stale-while-revalidate for HTML navigations and cached static assets
@@ -11,7 +11,7 @@
 //
 // Bump CACHE_NAME on every cache-shape change so old clients purge cleanly.
 
-const CACHE_NAME = "ifp105-v4";
+const CACHE_NAME = "ifp105-v5";
 const STATIC_ASSETS = [
   "/",
   "/module/1",
