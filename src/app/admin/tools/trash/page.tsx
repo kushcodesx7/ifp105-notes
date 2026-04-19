@@ -50,7 +50,25 @@ interface TrashedQuestionItem {
   courseTitle: string;
   deletedAt: string;
 }
-type TrashItem = TrashedTopicItem | TrashedQuestionItem;
+interface TrashedFlashcardItem {
+  kind: "flashcard";
+  id: string; // composite "topicId:flashcardIdx"
+  topicId: string;
+  flashcardIndex: number;
+  front: string;
+  back: string;
+  topicNumber: number;
+  topicTitle: string;
+  moduleNumber: number;
+  moduleTitle: string;
+  courseSlug: string;
+  courseTitle: string;
+  deletedAt: string;
+}
+type TrashItem =
+  | TrashedTopicItem
+  | TrashedQuestionItem
+  | TrashedFlashcardItem;
 
 interface TrashResponse {
   items: TrashItem[];
@@ -94,13 +112,13 @@ export default function TrashPage() {
         { idToken, password },
         { kind: item.kind, id: item.id }
       );
-      toast({
-        kind: "success",
-        message:
-          item.kind === "topic"
-            ? `Restored topic "${item.title}"`
-            : `Restored question`,
-      });
+      const label =
+        item.kind === "topic"
+          ? `Restored topic "${item.title}"`
+          : item.kind === "flashcard"
+            ? `Restored flashcard`
+            : `Restored question`;
+      toast({ kind: "success", message: label });
       mutate();
     } catch (e) {
       toast({ kind: "error", message: (e as Error).message });
@@ -146,7 +164,7 @@ export default function TrashPage() {
               <span aria-hidden="true">🗑️</span> Trash
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Soft-deleted topics and questions. Restore anytime, or permanently delete to free up the slot.
+              Soft-deleted topics, questions, and flashcards. Restore anytime, or permanently delete to free up the slot.
             </p>
           </div>
           <div className="text-[11px] text-zinc-500">
@@ -186,8 +204,8 @@ export default function TrashPage() {
             <div className="text-4xl mb-3">✨</div>
             <h2 className="text-base font-bold mb-1">Bin is empty</h2>
             <p className="text-sm text-zinc-500 max-w-sm mx-auto">
-              Deleted topics and questions show up here. Every delete goes to
-              the bin first — nothing is lost on a misclick.
+              Deleted topics, questions, and flashcards show up here. Every
+              delete goes to the bin first — nothing is lost on a misclick.
             </p>
           </div>
         )}
@@ -212,27 +230,51 @@ export default function TrashPage() {
                     background:
                       item.kind === "topic"
                         ? "rgba(99,102,241,0.12)"
-                        : "rgba(16,185,129,0.12)",
-                    color: item.kind === "topic" ? "#A5B4FC" : "#6EE7B7",
+                        : item.kind === "flashcard"
+                          ? "rgba(244,114,182,0.12)"
+                          : "rgba(16,185,129,0.12)",
+                    color:
+                      item.kind === "topic"
+                        ? "#A5B4FC"
+                        : item.kind === "flashcard"
+                          ? "#F9A8D4"
+                          : "#6EE7B7",
                   }}
-                  title={item.kind === "topic" ? "Topic" : "Question"}
+                  title={
+                    item.kind === "topic"
+                      ? "Topic"
+                      : item.kind === "flashcard"
+                        ? "Flashcard"
+                        : "Question"
+                  }
                   aria-label={item.kind}
                 >
-                  {item.kind === "topic" ? "📘" : "❓"}
+                  {item.kind === "topic"
+                    ? "📘"
+                    : item.kind === "flashcard"
+                      ? "🃏"
+                      : "❓"}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5">
                     {item.courseTitle} › Module {item.moduleNumber}: {item.moduleTitle}
-                    {item.kind === "question" && (
+                    {(item.kind === "question" || item.kind === "flashcard") && (
                       <> › Topic {item.topicNumber}: {item.topicTitle}</>
                     )}
                   </div>
                   <div className="text-sm font-semibold text-zinc-200 line-clamp-2">
                     {item.kind === "topic"
                       ? `Topic ${item.topicNumber}: ${item.title}`
-                      : `Q${item.questionNumber}: ${item.question}`}
+                      : item.kind === "flashcard"
+                        ? `Flashcard: ${item.front}`
+                        : `Q${item.questionNumber}: ${item.question}`}
                   </div>
+                  {item.kind === "flashcard" && (
+                    <div className="text-[11px] text-zinc-500 mt-0.5 line-clamp-1 italic">
+                      → {item.back}
+                    </div>
+                  )}
                   <div className="text-[11px] text-zinc-500 mt-1">
                     Deleted{" "}
                     <time dateTime={item.deletedAt}>
@@ -244,10 +286,8 @@ export default function TrashPage() {
                 <div className="flex items-center gap-2 ml-auto shrink-0">
                   {/* Peek — jumps to the course context, useful when the
                        trash row title alone isn't enough to recognise
-                       what you're about to restore / purge. Only for
-                       topics (questions live inside topics which may
-                       also be trashed; we already filter those out). */}
-                  {item.kind === "topic" && (
+                       what you're about to restore / purge. */}
+                  {(item.kind === "topic" || item.kind === "flashcard") && (
                     <Link
                       href={`/admin/courses/${encodeURIComponent(
                         item.courseSlug
@@ -285,7 +325,9 @@ export default function TrashPage() {
           purgeItem
             ? purgeItem.kind === "topic"
               ? `Topic ${purgeItem.topicNumber}: "${purgeItem.title}" will be gone forever.`
-              : `Q${purgeItem.questionNumber} from Topic ${purgeItem.topicNumber} will be gone forever.`
+              : purgeItem.kind === "flashcard"
+                ? `Flashcard "${purgeItem.front.slice(0, 80)}" will be gone forever.`
+                : `Q${purgeItem.questionNumber} from Topic ${purgeItem.topicNumber} will be gone forever.`
             : ""
         }
         warning="This can't be undone. If you might want it back, use Restore instead."

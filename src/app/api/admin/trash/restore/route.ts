@@ -91,5 +91,58 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: true });
   }
 
-  return Response.json({ error: "kind must be 'topic' or 'question'" }, { status: 400 });
+  // Flashcard restore: id is `topicId:flashcardIdx`. Read the topic's
+  // current flashcards_json, clear deletedAt on the targeted card, and
+  // write the array back. Index-based addressing is fine because
+  // saves are linearised by the editor and the trash list shows the
+  // current snapshot.
+  if (kind === "flashcard") {
+    const [topicId, idxStr] = id.split(":");
+    const idx = parseInt(idxStr, 10);
+    if (!topicId || Number.isNaN(idx)) {
+      return Response.json(
+        { error: "id must be in 'topicId:flashcardIndex' form" },
+        { status: 400 }
+      );
+    }
+    const { data: row, error: readErr } = await supabase
+      .from("topics")
+      .select("flashcards_json")
+      .eq("id", topicId)
+      .maybeSingle();
+    if (readErr) return Response.json({ error: readErr.message }, { status: 500 });
+    if (!row) return Response.json({ error: "Topic not found" }, { status: 404 });
+    const arr = (row as { flashcards_json: unknown }).flashcards_json;
+    if (!Array.isArray(arr) || idx < 0 || idx >= arr.length) {
+      return Response.json(
+        { error: "Flashcard slot not found" },
+        { status: 404 }
+      );
+    }
+    const next = arr.map((c, i) => {
+      if (i !== idx || !c || typeof c !== "object") return c;
+      const { deletedAt: _omit, ...rest } = c as Record<string, unknown>;
+      // Touch the var so TS doesn't complain about the underscore strip.
+      void _omit;
+      return rest;
+    });
+    const { error: writeErr } = await supabase
+      .from("topics")
+      .update({ flashcards_json: next })
+      .eq("id", topicId);
+    if (writeErr) return Response.json({ error: writeErr.message }, { status: 500 });
+
+    await logAdminAction({
+      actorEmail: actorFromAuth(admin),
+      action: "restore_flashcard",
+      subjectEmail: null,
+      details: { topicId, flashcardIndex: idx },
+    });
+    return Response.json({ ok: true });
+  }
+
+  return Response.json(
+    { error: "kind must be 'topic', 'question', or 'flashcard'" },
+    { status: 400 }
+  );
 }

@@ -44,8 +44,10 @@ export type AdminActionKind =
   | "soft_delete_question"
   | "restore_topic"
   | "restore_question"
+  | "restore_flashcard"
   | "purge_topic"
   | "purge_question"
+  | "purge_flashcard"
   // ── Content migration / one-shot actions (Phase 5.5) ──
   | "seed_ict";
 

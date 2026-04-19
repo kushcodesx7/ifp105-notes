@@ -38,7 +38,28 @@ export interface TrashedQuestionItem {
   deletedAt: string;
 }
 
-export type TrashItem = TrashedTopicItem | TrashedQuestionItem;
+export interface TrashedFlashcardItem {
+  kind: "flashcard";
+  /** Composite id `topicId:flashcardIdx` so restore/purge can reach
+   *  back to the right slot inside the JSONB array. */
+  id: string;
+  topicId: string;
+  flashcardIndex: number;
+  front: string;
+  back: string;
+  topicNumber: number;
+  topicTitle: string;
+  moduleNumber: number;
+  moduleTitle: string;
+  courseSlug: string;
+  courseTitle: string;
+  deletedAt: string;
+}
+
+export type TrashItem =
+  | TrashedTopicItem
+  | TrashedQuestionItem
+  | TrashedFlashcardItem;
 
 export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
@@ -161,9 +182,71 @@ export async function GET(req: NextRequest) {
     })
     .filter((q): q is TrashedQuestionItem => q !== null);
 
+  // Flashcards (layer-2 trash, in-array). Pull every topic that has a
+  // non-empty flashcards_json with at least one card carrying
+  // deletedAt. Each trashed card becomes its own row keyed by
+  // `topicId:idx` so restore/purge can address it precisely.
+  const flashcards: TrashedFlashcardItem[] = [];
+  const { data: fcTopicRows, error: fcErr } = await supabase
+    .from("topics")
+    .select(
+      `id, number, title, deleted_at, flashcards_json,
+       module:modules!inner(number, title,
+         course:courses!inner(slug, title))`
+    )
+    // Skip topics that are themselves trashed — restoring the topic
+    // brings their flashcards back, no need to surface those cards
+    // separately. (Same rationale as the question section above.)
+    .is("deleted_at", null);
+
+  if (!fcErr && fcTopicRows) {
+    for (const row of fcTopicRows as unknown as Array<{
+      id: string;
+      number: number;
+      title: string;
+      flashcards_json: unknown;
+      module: unknown;
+    }>) {
+      const cards = Array.isArray(row.flashcards_json)
+        ? (row.flashcards_json as Array<{
+            front: string;
+            back: string;
+            deletedAt?: string | null;
+          }>)
+        : [];
+      if (cards.length === 0) continue;
+      const mod = pickOne<{ number: number; title: string; course: unknown }>(
+        row.module as never
+      );
+      if (!mod) continue;
+      const course = pickOne<{ slug: string; title: string }>(
+        mod.course as never
+      );
+      if (!course) continue;
+      cards.forEach((card, idx) => {
+        if (!card.deletedAt) return;
+        flashcards.push({
+          kind: "flashcard",
+          id: `${row.id}:${idx}`,
+          topicId: row.id,
+          flashcardIndex: idx,
+          front: card.front,
+          back: card.back,
+          topicNumber: row.number,
+          topicTitle: row.title,
+          moduleNumber: mod.number,
+          moduleTitle: mod.title,
+          courseSlug: course.slug,
+          courseTitle: course.title,
+          deletedAt: card.deletedAt,
+        });
+      });
+    }
+  }
+
   // Unified list sorted by most-recent-deletion.
-  const items: TrashItem[] = [...topics, ...questions].sort((a, b) =>
-    b.deletedAt.localeCompare(a.deletedAt)
+  const items: TrashItem[] = [...topics, ...questions, ...flashcards].sort(
+    (a, b) => b.deletedAt.localeCompare(a.deletedAt)
   );
 
   return Response.json({ items });

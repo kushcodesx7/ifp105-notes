@@ -75,10 +75,18 @@ export async function GET(
   }
 
   const raw = (topicRow as { flashcards_json: unknown } | null)?.flashcards_json;
-  const cards =
+  // Filter out cards moved to in-array trash (deletedAt is set). Layer
+  // 2 of the trash feature stores deleted cards alongside live ones in
+  // the same JSONB column so they can be restored — but students must
+  // never see them.
+  type CardRow = { front: string; back: string; deletedAt?: string | null };
+  const liveCards =
     Array.isArray(raw) && raw.length > 0
-      ? (raw as Array<{ front: string; back: string }>)
+      ? (raw as CardRow[])
+          .filter((c) => !c.deletedAt)
+          .map(({ front, back }) => ({ front, back }))
       : null;
+  const cards = liveCards && liveCards.length > 0 ? liveCards : null;
 
   return Response.json({ cards }, cacheHeaders());
 }
