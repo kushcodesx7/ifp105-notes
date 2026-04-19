@@ -16,24 +16,35 @@ export default function BatchesPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Tick bumps trigger a fresh fetch without a full page reload — keeps
+  // any ambient state (orbs, framer animations) alive across a retry.
+  const [retryTick, setRetryTick] = useState(0);
   // Gate the ambient orb drift on prefers-reduced-motion.
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
+    let alive = true;
     fetch("/api/batches")
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load batches");
         return r.json();
       })
       .then((d) => {
+        if (!alive) return;
         setBatches(d.batches);
         setLoading(false);
       })
       .catch((err) => {
+        if (!alive) return;
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [retryTick]);
 
   return (
     <main className="relative min-h-screen">
@@ -83,7 +94,7 @@ export default function BatchesPage() {
           <div className="text-center py-20">
             <p className="text-red-400 mb-4">{error}</p>
             <button
-              onClick={() => { setLoading(true); setError(""); location.reload(); }}
+              onClick={() => setRetryTick((x) => x + 1)}
               className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
             >
               Try again

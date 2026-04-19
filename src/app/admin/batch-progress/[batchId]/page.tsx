@@ -157,7 +157,7 @@ export default function BatchProgressDetailPage() {
   // Prefer fresh data from SWR; fall back to the localStorage cache for instant paint
   const batch = detailData?.batch ?? cachedBatch;
   const students = detailData?.students ?? cachedStudents;
-  void fetchError; // surfaced by SWR error boundary; no custom handling needed now
+  // fetchError is used below for the 404 / load-failed card.
 
   // Force re-render every 30s so timeAgo displays update
   const [, setTick] = useState(0);
@@ -255,6 +255,57 @@ export default function BatchProgressDetailPage() {
   }
 
   if (!ready) return <AdminAuthGate />;
+
+  // 404 / batch-not-found state — previously the page rendered an empty
+  // header + zero-student table which was indistinguishable from a live
+  // batch with zero enrollments. Show a real "not found" card so the
+  // admin knows to go back and pick a different batch.
+  if (fetchError && !batch) {
+    const is404 =
+      "status" in (fetchError as object) &&
+      (fetchError as { status?: number }).status === 404;
+    return (
+      <main className="min-h-screen">
+        <Navbar showBack title="Batch" />
+        <div className="pt-8 pb-16 px-6 max-w-2xl mx-auto">
+          <Link
+            href="/admin/batch-progress"
+            className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1 mb-5"
+          >
+            ← All Batches
+          </Link>
+          <div
+            className="rounded-2xl p-6 text-center"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <div className="text-4xl mb-3" aria-hidden="true">
+              {is404 ? "🔍" : "⚠️"}
+            </div>
+            <h1 className="text-lg font-bold mb-1">
+              {is404 ? `Batch "${batchId}" not found` : "Couldn't load this batch"}
+            </h1>
+            <p className="text-sm text-zinc-500 mb-4">
+              {is404
+                ? "It may have been renamed or deleted. Pick a different batch from the list."
+                : (fetchError as Error)?.message ||
+                  "Check the server logs or try again."}
+            </p>
+            {!is404 && (
+              <button
+                onClick={() => refreshData()}
+                className="text-xs font-semibold text-indigo-300 hover:text-indigo-200 underline underline-offset-4"
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen">
