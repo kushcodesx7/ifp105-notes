@@ -10,6 +10,7 @@ import AccordionRenderer from "@/components/module/AccordionRenderer";
 import McqQuiz from "@/components/module/McqQuiz";
 import XpBar from "@/components/XpBar";
 import LoginPrompt from "@/components/module/LoginPrompt";
+import StudyStreak from "@/components/module/StudyStreak";
 import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
@@ -114,6 +115,11 @@ export default function ModulePage({
   const [done, setDone] = useState<Set<number>>(new Set());
   const [isCheatSheet, setIsCheatSheet] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
+  // "normal" = standard per-topic burst, "module" = bigger celebration
+  // when the last topic is marked done. Stored alongside the trigger
+  // so the Confetti component can pick the right particle count +
+  // banner on each re-fire.
+  const [confettiVariant, setConfettiVariant] = useState<"normal" | "module">("normal");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [useAccordion, setUseAccordion] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -412,6 +418,10 @@ export default function ModulePage({
       updateStreak();
       return next;
     });
+    // Per-topic celebration. Module-tier celebration (bigger burst +
+    // "MODULE COMPLETE" banner) is reserved for the last topic.
+    const isLast = topicId >= TOTAL_TOPICS;
+    setConfettiVariant(isLast ? "module" : "normal");
     setConfettiTrigger((prev) => prev + 1);
 
     // Save to Supabase if logged in
@@ -419,14 +429,14 @@ export default function ModulePage({
       saveToSupabase({ topicId, completed: true });
     }
 
-    if (topicId < TOTAL_TOPICS) {
+    if (!isLast) {
       setTimeout(() => { switchTab(topicId + 1); }, 400);
     } else {
-      // Last topic done — show certificate!
+      // Last topic done — show certificate after the banner has had
+      // time to breathe.
       setTimeout(() => {
         setShowCertificate(true);
-        setConfettiTrigger((prev) => prev + 1);
-      }, 600);
+      }, 1400);
     }
   }
 
@@ -461,7 +471,7 @@ export default function ModulePage({
 
   return (
     <main id="main-content" className="relative min-h-screen">
-      <Confetti trigger={confettiTrigger} />
+      <Confetti trigger={confettiTrigger} variant={confettiVariant} />
       <XpBar />
       <Navbar showBack title={`Module ${moduleNumber}`} moduleNumber={moduleNumber} />
 
@@ -580,6 +590,7 @@ export default function ModulePage({
             ★ Cheat Sheet
           </button>
           <div data-tour="progress" className="flex items-center gap-2 px-4 shrink-0" style={{ borderLeft: '1px solid #1e1e28' }}>
+            <StudyStreak />
             <span className="text-[11px] font-bold" style={{ color: accentFrom }}>{done.size}/{TOTAL_TOPICS}</span>
             <div
               role="progressbar"

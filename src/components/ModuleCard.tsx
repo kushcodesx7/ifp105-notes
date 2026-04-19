@@ -50,9 +50,14 @@ export default function ModuleCard({
     <motion.div
       whileHover={locked ? {} : { y: -4 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      // `animated-border` paints a rotating conic-gradient ring on hover
+      // (see globals.css). The per-card `--accent` CSS custom property
+      // lets each module's ring glow in its own brand colour — locked
+      // cards opt out so they don't look interactive.
       className={`group relative overflow-hidden rounded-2xl card-glass ${
-        locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+        locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer animated-border"
       }`}
+      style={{ ["--accent" as string]: accent } as React.CSSProperties}
     >
       {/* Gradient top line */}
       <div
