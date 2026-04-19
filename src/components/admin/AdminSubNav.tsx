@@ -80,6 +80,23 @@ export default function AdminSubNav() {
             </Link>
           );
         })}
+        {/* ⌘K hint — static, zero interaction. Teaches the shortcut the
+            first time the admin opens the sub-nav without spending a tab
+            slot or a click surface. The actual keyboard handler lives
+            in AdminCommandPaletteMount. Hidden on narrow screens where
+            there's no keyboard anyway. */}
+        <span
+          className="ml-auto hidden md:inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-full text-zinc-500 whitespace-nowrap shrink-0"
+          title="Press ⌘K (or Ctrl-K) to jump to any student, course, or page"
+        >
+          <span aria-hidden="true">⚡</span>
+          <span>Press</span>
+          <kbd className="font-mono px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-zinc-300">
+            ⌘K
+          </kbd>
+          <span>to jump</span>
+        </span>
+
         {/* Explicit "back to the student-facing site" chip at the far
             right. The tab labelled "Home" inside this sub-nav means
             "admin dashboard", which was confusing teachers who expected
@@ -88,7 +105,7 @@ export default function AdminSubNav() {
           href="/"
           aria-label="Back to the student-facing site"
           title="View the student-facing site"
-          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full text-zinc-500 hover:text-white hover:bg-white/[0.04] transition-all whitespace-nowrap shrink-0"
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full text-zinc-500 hover:text-white hover:bg-white/[0.04] transition-all whitespace-nowrap shrink-0"
         >
           <span aria-hidden="true">↗</span>
           <span>View site</span>
