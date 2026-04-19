@@ -37,6 +37,7 @@ interface Topic {
   hook: string | null;
   orderIndex: number;
   questionCount: number;
+  flashcardCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -374,6 +375,9 @@ function TopicRow({
           <div className="text-[11px] text-zinc-500 truncate">
             {topic.questionCount} question
             {topic.questionCount === 1 ? "" : "s"}
+            {" · "}
+            {topic.flashcardCount} flashcard
+            {topic.flashcardCount === 1 ? "" : "s"}
             {topic.timeMin ? ` · ${topic.timeMin} min` : ""}
           </div>
         </div>

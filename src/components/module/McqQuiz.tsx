@@ -171,12 +171,16 @@ function rehydrateByFingerprint(
         confidences[i] = hit.confidence;
       }
     });
-    // Score is the count of correct answers among the surviving
-    // questions — recomputed here so a "score = 5" from a 6-question
-    // quiz doesn't pollute a now-5-question quiz after Q6 removal.
+    // Score recomputed from the SHUFFLED answer key for the current
+    // questions, not `q.ans` directly. The user's saved answers are
+    // indices into the shuffled options array (see handlePick), so
+    // comparing them against `q.ans` (the unshuffled correct index)
+    // mis-counts every question whose shuffle moved the answer from
+    // position `q.ans`. This was the 3/6-when-all-6-right bug.
+    const shuffled = shuffleQuestions(currentQs, saved.shuffleSeed);
     let score = 0;
-    currentQs.forEach((q, i) => {
-      if (answers[i] != null && answers[i] === q.ans) score++;
+    currentQs.forEach((_, i) => {
+      if (answers[i] != null && answers[i] === shuffled[i].ans) score++;
     });
     // `completed` only holds if every surviving slot has an answer.
     const completed = saved.completed && answers.every((a) => a !== null);

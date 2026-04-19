@@ -25,6 +25,11 @@ interface TopicLite {
   hook: string | null;
   orderIndex: number;
   questionCount: number;
+  // Number of flashcards stored for this topic. Shown in the collapsed
+  // topic row so admins know the deck exists without expanding — the
+  // flashcards editor itself lives inside the expander. Falls back to
+  // 0 on pre-flashcards-migration DBs (column doesn't exist yet).
+  flashcardCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,6 +139,26 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     }
   }
 
+  // Flashcard counts per topic. Separate select because flashcards_json
+  // is a JSONB array inside the topics table — the cheapest way to get
+  // card counts without pulling the entire JSONB payload across the
+  // wire is to use jsonb_array_length via a SQL expression. We wrap it
+  // in try/catch so pre-migration DBs (column doesn't exist) fall
+  // through to 0 counts without breaking the modules page.
+  const flashcardCounts = new Map<string, number>();
+  if (topicIds.length > 0) {
+    const { data: fcRows, error: fcErr } = await supabase
+      .from("topics")
+      .select("id, flashcards_json")
+      .in("id", topicIds);
+    if (!fcErr && fcRows) {
+      for (const row of fcRows as { id: string; flashcards_json: unknown }[]) {
+        const arr = row.flashcards_json;
+        flashcardCounts.set(row.id, Array.isArray(arr) ? arr.length : 0);
+      }
+    }
+  }
+
   const topics: TopicLite[] = (topicRows || []).map((t) => ({
     id: t.id,
     number: t.number,
@@ -142,6 +167,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     hook: t.hook,
     orderIndex: t.order_index,
     questionCount: questionCounts.get(t.id) || 0,
+    flashcardCount: flashcardCounts.get(t.id) || 0,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   }));
