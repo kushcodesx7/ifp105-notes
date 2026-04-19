@@ -48,8 +48,14 @@ export default function ModuleCard({
 
   const content = (
     <motion.div
+      // Entrance animation — fades + lifts in with a per-card delay
+      // passed by the home page (i * 0.08), so the grid cascades in
+      // instead of all five cards appearing at once. Was previously
+      // an unused prop; wiring it up adds depth without new deps.
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
       whileHover={locked ? {} : { y: -4 }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
       // `animated-border` paints a rotating conic-gradient ring on hover
       // (see globals.css). The per-card `--accent` CSS custom property
       // lets each module's ring glow in its own brand colour — locked

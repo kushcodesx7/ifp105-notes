@@ -19,7 +19,6 @@ import { compareSections } from "@/lib/sections";
 // Auth: admin Google ID token OR legacy admin password.
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);

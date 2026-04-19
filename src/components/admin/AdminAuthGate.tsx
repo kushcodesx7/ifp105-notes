@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
