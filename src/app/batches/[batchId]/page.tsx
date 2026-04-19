@@ -381,9 +381,27 @@ export default function BatchDetailPage() {
               <span className="text-xs font-medium text-zinc-400 tracking-wide">IFP105 · {batch.id}</span>
             </div>
 
+            {/*
+              Render the batch name with "Batch" (case-insensitive) highlighted
+              via the animated gradient. If the name doesn't contain "Batch" at
+              all — e.g. a renamed cohort like "Founders 2026" — just gradient
+              the whole thing instead of splitting to "" + "Batch" (which would
+              hard-code the literal word into the heading).
+            */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4">
-              {batch.name.split("Batch")[0]}
-              <span className="gradient-text-animated">Batch</span>
+              {(() => {
+                const m = batch.name.match(/^(.*?)(Batch)(.*)$/i);
+                if (!m) {
+                  return <span className="gradient-text-animated">{batch.name}</span>;
+                }
+                return (
+                  <>
+                    {m[1]}
+                    <span className="gradient-text-animated">{m[2]}</span>
+                    {m[3]}
+                  </>
+                );
+              })()}
             </h1>
 
             <p className="text-base text-zinc-400 max-w-md mx-auto mb-8">

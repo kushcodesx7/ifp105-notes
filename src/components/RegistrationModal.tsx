@@ -395,10 +395,12 @@ export default function RegistrationModal({
               className="mb-4 p-3 rounded-lg text-[11px] leading-relaxed"
               style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}
             >
-              <span className="text-amber-400 font-bold">⚠️ Important:</span>{" "}
+              <span className="text-amber-400 font-bold">⚠️ Please double-check:</span>{" "}
               <span className="text-zinc-400">
-                Your batch, section, and roll number are <strong className="text-white">locked forever</strong>{" "}
-                once set. Double-check with your teacher if unsure.
+                Your batch, section, and roll number are{" "}
+                <strong className="text-white">locked once set</strong>. If
+                you spot a mistake later, just ask your teacher — they can
+                fix it for you.
               </span>
             </div>
 

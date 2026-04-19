@@ -288,7 +288,18 @@ export default function ModulePage({
   // Keyboard navigation: left/right arrows to switch tabs
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+      // Don't hijack arrows when the user is typing in a field. This
+      // already covered inputs/textareas; also guard contenteditable
+      // (rich-text admin editors) and select elements so cursor-based
+      // navigation inside those still works.
+      const t = e.target as HTMLElement | null;
+      if (
+        t instanceof HTMLTextAreaElement ||
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLSelectElement ||
+        t?.isContentEditable
+      )
+        return;
       if (e.key === "ArrowRight" && activeTab < TOTAL_TOPICS) switchTab(activeTab + 1);
       if (e.key === "ArrowLeft" && activeTab > 1) switchTab(activeTab - 1);
     }

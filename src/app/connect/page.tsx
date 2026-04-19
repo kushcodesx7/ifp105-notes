@@ -107,8 +107,12 @@ export default function IFSConnectPage() {
     const tick = setInterval(() => {
       if (document.visibilityState === "visible") loadConnect();
     }, 60_000);
-    // Also refetch immediately when the tab regains focus
-    const onFocus = () => loadConnect();
+    // Also refetch immediately when the tab regains focus. Gate on
+    // `visibilityState === "visible"` so we don't double-fetch — the
+    // event fires on BOTH hide and show transitions.
+    const onFocus = () => {
+      if (document.visibilityState === "visible") loadConnect();
+    };
     document.addEventListener("visibilitychange", onFocus);
     return () => {
       alive = false;

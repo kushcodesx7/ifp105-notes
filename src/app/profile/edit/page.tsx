@@ -183,8 +183,17 @@ export default function EditProfilePage() {
   }
 
   async function handleSave() {
-    if (!profile.linkedinUrl.trim()) {
+    const liRaw = profile.linkedinUrl.trim();
+    if (!liRaw) {
       showToast("error", "LinkedIn URL is required");
+      return;
+    }
+    // Shape check before server round-trip. Accept linkedin.com and the
+    // regional/mobile variants (uk.linkedin.com, m.linkedin.com). If a
+    // student pastes garbage like "my linkedin page", give them a clear
+    // error immediately instead of writing it to Supabase.
+    if (!/^https?:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(liRaw)) {
+      showToast("error", "LinkedIn URL must look like https://linkedin.com/in/yourname");
       return;
     }
 
