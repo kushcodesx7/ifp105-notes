@@ -76,16 +76,22 @@ export async function logAdminAction(input: LogAdminActionInput): Promise<void> 
       // "relation does not exist" means the migration hasn't run yet.
       // Don't explode — just note it and move on.
       if (/relation.*admin_actions|42P01/i.test(error.message)) {
+        // eslint-disable-next-line no-console
         console.warn(
           "[admin-audit] admin_actions table missing — run migration-add-admin-actions.sql"
         );
       } else {
-        console.error("[admin-audit] insert failed:", error.message);
+        const { logError } = await import("@/lib/log-error");
+        logError("admin-audit.insert", new Error(error.message), {
+          action: input.action,
+          actorEmail: input.actorEmail,
+        });
       }
     }
   } catch (e) {
     // Never let audit logging break the actual operation
-    console.error("[admin-audit] threw:", e);
+    const { logError } = await import("@/lib/log-error");
+    logError("admin-audit.threw", e, { action: input.action });
   }
 }
 

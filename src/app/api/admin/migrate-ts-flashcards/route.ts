@@ -8,12 +8,13 @@ import { flashcardData } from "@/data/flashcards";
 // helper is for single-deck reads. Duplicating the iteration in the
 // helper would be more code, not less.
 
-// POST /api/admin/migrate-ts-flashcards
+// POST /api/admin/migrate-ts-flashcards?course=<slug>
 //
 // One-shot migration: walks every TS-defined flashcard deck in
 // src/data/flashcards.ts and POSTs them into topics.flashcards_json
-// for the matching ICT topic. Skips topics whose DB row already has
-// flashcards (so re-running won't blow away admin edits).
+// for matching topics in the named course (defaults to "ict"). Skips
+// topics whose DB row already has flashcards (so re-running won't
+// blow away admin edits).
 //
 // Returns a per-topic report:
 //   { migrated: [{moduleNumber, topicNumber, cardCount}], skipped: [...], errors: [...] }
@@ -41,22 +42,26 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
 
-  // Resolve the ICT course id once. The TS file is ICT-specific (the
-  // legacy hard-coded data); future courses author straight into DB.
+  // Course is configurable via ?course=<slug> so future courses can
+  // also migrate bundled decks if they ever exist. Defaults to ICT
+  // (today the only course with a bundled TS deck).
+  const url = new URL(req.url);
+  const slug = (url.searchParams.get("course") || "ict").trim();
+
   const { data: course } = await supabase
     .from("courses")
     .select("id")
-    .eq("slug", "ict")
+    .eq("slug", slug)
     .maybeSingle();
   const courseId = (course as { id: string } | null)?.id;
   if (!courseId) {
     return Response.json(
-      { error: "ICT course not found in DB — run seed-ict first" },
+      { error: `Course '${slug}' not found in DB — run seed-ict first if migrating ICT.` },
       { status: 404 }
     );
   }
 
-  // Pull every (module_number, topic_number, id) for ICT topics in
+  // Pull every (module_number, topic_number, id) for the course in
   // one query so we can match TS keys to DB rows without N+1 reads.
   const { data: modRows } = await supabase
     .from("modules")
@@ -70,7 +75,7 @@ export async function POST(req: NextRequest) {
   const moduleIds = Array.from(moduleIdByNumber.values());
   if (moduleIds.length === 0) {
     return Response.json(
-      { error: "No ICT modules in DB — run seed-ict first" },
+      { error: `No modules found for course '${slug}'. Seed the course first.` },
       { status: 404 }
     );
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import QuickLoginPasswordCard from "@/components/QuickLoginPasswordCard";
 import { useAuth } from "@/lib/auth-context";
@@ -345,10 +346,22 @@ export default function EditProfilePage() {
           {/* Photo */}
           <div className="flex items-center gap-5 mb-8">
             <div className="relative cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/[0.08] group-hover:border-indigo-500/50 transition-colors"
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/[0.08] group-hover:border-indigo-500/50 transition-colors relative"
                 style={{ background: "rgba(255,255,255,0.04)" }}>
                 {profile.photoUrl ? (
-                  <img src={profile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                  // next/image with `fill` so the avatar fits the
+                  // 80x80 parent regardless of the source aspect.
+                  // unoptimized for Supabase storage URLs to skip the
+                  // Vercel image proxy (avatars are tiny + already
+                  // CDN-cached upstream).
+                  <Image
+                    src={profile.photoUrl}
+                    alt="Profile"
+                    fill
+                    sizes="80px"
+                    unoptimized
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-zinc-600">
                     {profile.name ? profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "?"}
