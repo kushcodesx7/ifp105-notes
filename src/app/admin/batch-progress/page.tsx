@@ -190,8 +190,8 @@ export default function BatchProgressListPage() {
             <div className="text-4xl mb-4">🎓</div>
             <p className="text-zinc-500">
               No batches yet. Create one in{" "}
-              <Link href="/admin/batches" className="text-indigo-400 hover:text-indigo-300">
-                Batches & Enrollments
+              <Link href="/admin/roster" className="text-indigo-400 hover:text-indigo-300">
+                Roster
               </Link>
               .
             </p>
