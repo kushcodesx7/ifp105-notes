@@ -49,7 +49,8 @@ export type AdminActionKind =
   | "purge_question"
   | "purge_flashcard"
   // ── Content migration / one-shot actions (Phase 5.5) ──
-  | "seed_ict";
+  | "seed_ict"
+  | "migrate_ts_flashcards";
 
 export interface LogAdminActionInput {
   actorEmail: string;
