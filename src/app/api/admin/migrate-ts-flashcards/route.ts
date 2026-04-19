@@ -3,6 +3,10 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { flashcardData } from "@/data/flashcards";
+// migrate-ts-flashcards intentionally still imports flashcardData
+// directly because it walks EVERY (module, topic) entry — the lookup
+// helper is for single-deck reads. Duplicating the iteration in the
+// helper would be more code, not less.
 
 // POST /api/admin/migrate-ts-flashcards
 //

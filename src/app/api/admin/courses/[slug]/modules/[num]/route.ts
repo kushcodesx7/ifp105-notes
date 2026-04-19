@@ -162,8 +162,8 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     if (!fcErr && fcRows) {
       const tsLookup =
         slug === "ict"
-          ? await import("@/data/flashcards")
-              .then((m) => m.flashcardData[res.moduleNumber] || {})
+          ? await import("@/lib/flashcards-lookup")
+              .then((m) => m.getTsFlashcardModule(res.moduleNumber))
               .catch(() => ({} as Record<number, unknown>))
           : ({} as Record<number, unknown>);
       for (const row of fcRows as {
