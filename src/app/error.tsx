@@ -25,9 +25,12 @@ export default function GlobalError({
     // Surface to Vercel logs so the teacher can grep for student-side
     // crashes during the day. The `digest` is the hash Next generates
     // when masking error messages in production — useful for matching
-    // a student report back to a specific build.
-    // eslint-disable-next-line no-console
-    console.error("[GlobalError]", error.message, error.digest);
+    // a student report back to a specific build. Routes through the
+    // central logError so future Sentry/Logflare wiring is a one-file
+    // change.
+    import("@/lib/log-error").then(({ logError }) => {
+      logError("GlobalError", error, { digest: error.digest });
+    });
   }, [error]);
 
   return (

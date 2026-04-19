@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdminFetch } from "@/lib/useAdminFetch";
@@ -342,8 +343,18 @@ function Avatar({
         }}
       >
         {photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photoUrl} alt="" className="w-full h-full object-cover" />
+          // 36px tile; unoptimized so we don't pay for the Vercel image
+          // proxy on a fixed-size avatar that's already CDN-cached at
+          // its source (Supabase storage / Google googleusercontent).
+          <Image
+            src={photoUrl}
+            alt=""
+            width={36}
+            height={36}
+            sizes="36px"
+            unoptimized
+            className="w-full h-full object-cover"
+          />
         ) : (
           initials || "?"
         )}
