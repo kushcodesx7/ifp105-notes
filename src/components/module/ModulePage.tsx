@@ -15,7 +15,8 @@ import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { CURRENT_COURSE_SLUG, getCurrentCourse } from "@/lib/course-registry";
-import { progressKey, activeTabKey, quizStateKey } from "@/lib/storage-keys";
+import { activeTabKey } from "@/lib/storage-keys";
+import { useStudentProgress } from "@/lib/use-student-progress";
 import type { ContentBlock, Question as CanonicalQuestion } from "@/types/content";
 
 // Heavy widgets split out of the main bundle. Each carries its own data
@@ -98,11 +99,13 @@ export default function ModulePage({
   // LS keys derived via the central helper so adding a second course
   // later is a one-line change (flip LEGACY_PREFIX in storage-keys.ts
   // to use the slug). Today these still resolve to the exact
-  // `ifp105_m{N}_progress` / `ifp105_m{N}_active_tab` strings every
-  // existing student already has in their browser.
-  const LS_KEY = progressKey(courseSlug, moduleNumber);
+  // `ifp105_m{N}_active_tab` string every existing student already
+  // has in their browser. The `done` set's LS key now lives inside
+  // useStudentProgress.
   const LS_ACTIVE_TAB_KEY = activeTabKey(courseSlug, moduleNumber);
 
+  // getIdToken is still used here for the session-ping (the hook owns
+  // the progress save-path's own token check).
   const { user, isLoggedIn, getIdToken } = useAuth();
   // Respect prefers-reduced-motion for the always-on hero orb drift +
   // any other ambient loop in this component. Framer-motion's JS-rAF
@@ -112,17 +115,8 @@ export default function ModulePage({
 
   const [activeTab, setActiveTab] = useState(1);
   const [direction, setDirection] = useState(1);
-  const [done, setDone] = useState<Set<number>>(new Set());
   const [isCheatSheet, setIsCheatSheet] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
-  // True when the user object exists in localStorage (so isLoggedIn=true)
-  // but the in-memory ID token is null — happens on every page reload
-  // since tokens aren't persisted. Without surfacing this state, any
-  // saveToSupabase silently bails, the local progress bar fills, and
-  // the admin /people view shows "0 / Never" for the student. Surfacing
-  // it via a sticky banner + forcing the LoginPrompt on action recovers
-  // the silent-fail.
-  const [needsReauth, setNeedsReauth] = useState(false);
   // "normal" = standard per-topic burst, "module" = bigger celebration
   // when the last topic is marked done. Stored alongside the trigger
   // so the Confetti component can pick the right particle count +
@@ -135,9 +129,32 @@ export default function ModulePage({
   const [bookmarkedTopics, setBookmarkedTopics] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
   const [mcqAnswerCounts, setMcqAnswerCounts] = useState<Record<number, { answered: number; total: number }>>({});
-  // `mcqScores` state + `hasShownLoginPrompt` ref removed in Phase 1 —
-  // written to but never read; dead state flagged by the audit.
-  const supabaseLoaded = useRef(false);
+
+  // Progress state (done set + remote sync + needsReauth flag) lives
+  // in a custom hook now. ModulePage delegates everything that touches
+  // localStorage / /api/progress / silent-fail recovery to it.
+  // ModulePage just observes the values and pops the LoginPrompt when
+  // the hook fires onAuthRequired.
+  const {
+    done,
+    needsReauth,
+    setNeedsReauth,
+    addDone,
+    recordQuiz,
+  } = useStudentProgress({
+    courseSlug,
+    moduleNumber,
+    onAdminResetDetected: () => {
+      // Clear per-topic answer-count UI state so the table doesn't
+      // still show "7/7 answered" for a freshly-reset topic.
+      setMcqAnswerCounts({});
+    },
+    onAuthRequired: () => {
+      // Token missing on a save attempt — surface the LoginPrompt so
+      // the student can re-authenticate immediately.
+      setShowLoginPrompt(true);
+    },
+  });
 
   // MCQ data — either eagerly supplied by the caller (legacy / tests)
   // or dynamically imported at runtime. Dynamic path splits each
@@ -161,13 +178,8 @@ export default function ModulePage({
     };
   }, [moduleNumber, mcqDataProp]);
 
-  // Load localStorage progress
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) setDone(new Set(JSON.parse(saved)));
-    } catch {}
-  }, [LS_KEY]);
+  // (Localstorage progress load + persistence + remote Supabase sync
+  // all moved into useStudentProgress above.)
 
   // Restore last viewed topic on mount so refresh stays on same topic
   useEffect(() => {
@@ -198,17 +210,7 @@ export default function ModulePage({
     setBookmarkedTopics(bm);
   }, [moduleNumber, TOTAL_TOPICS]);
 
-  // Save to localStorage. We write on EVERY change (including empty) so
-  // that an admin-initiated reset — which clears the server and then
-  // clears local via the effect below — actually persists to disk
-  // instead of leaving the stale "[1,2,3]" blob behind.
-  useEffect(() => {
-    if (done.size > 0) {
-      localStorage.setItem(LS_KEY, JSON.stringify([...done]));
-    } else {
-      localStorage.removeItem(LS_KEY);
-    }
-  }, [done, LS_KEY]);
+  // (LocalStorage save of `done` moved into useStudentProgress.)
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -217,124 +219,8 @@ export default function ModulePage({
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Load Supabase progress when logged in. Server is the source of truth:
-  // we REPLACE local state (not merge) so that an admin reset on the
-  // server actually removes completed topics from the user's view.
-  //
-  // Fires on mount AND every time the tab regains focus — so an admin
-  // that resets a student's progress in one tab doesn't need the student
-  // to manually refresh the other tab. Switching back to the module tab
-  // (or alt-tabbing into the window) auto-syncs within a second.
-  useEffect(() => {
-    if (!isLoggedIn || !user) return;
-
-    async function loadProgress() {
-      try {
-        const token = getIdToken();
-        if (!token) return;
-        const res = await fetch(
-          `/api/progress?email=${encodeURIComponent(user!.email)}&module=${moduleNumber}&course=${encodeURIComponent(courseSlug)}`,
-          {
-            headers: { "x-id-token": token },
-            // Skip any HTTP/SW cache so stale empty responses can't pin
-            // a just-reset student into a "still done" state.
-            cache: "no-store",
-          }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const wasFirstLoad = !supabaseLoaded.current;
-        supabaseLoaded.current = true;
-        const remoteProgress = (data.progress ?? {}) as Record<
-          number,
-          { completed: boolean; mcqScore: number | null; mcqTotal: number | null }
-        >;
-
-        const remoteCount = Object.keys(remoteProgress).length;
-
-        const remoteDone = new Set<number>();
-        for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
-          if (tp.completed) remoteDone.add(Number(topicIdStr));
-        }
-
-        // ───── Silent-fail recovery ─────
-        // If this is the FIRST successful sync this session AND server is
-        // empty AND localStorage has progress, that progress was almost
-        // certainly accumulated while saveToSupabase was silently bailing
-        // on a missing token (the bug fixed in #118). Push the local set
-        // UP to the server instead of wiping it.
-        //
-        // Read from localStorage directly (not React state) to dodge
-        // stale-closure timing — the local-load effect may not have
-        // populated `done` by the time this fetch resolves.
-        //
-        // The teacher's "reset progress" admin action still works on
-        // subsequent loads — by then supabaseLoaded.current is true so
-        // we treat empty as a genuine reset.
-        let localDoneFromLs = new Set<number>();
-        try {
-          const saved = localStorage.getItem(LS_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved) as number[];
-            if (Array.isArray(parsed)) localDoneFromLs = new Set(parsed);
-          }
-        } catch {}
-        const isLikelySilentFailRecovery =
-          wasFirstLoad && remoteCount === 0 && localDoneFromLs.size > 0;
-
-        if (isLikelySilentFailRecovery) {
-          // Push each locally-completed topic up to the server. Fire
-          // and forget — failures will retry on the next markDone.
-          for (const topicId of localDoneFromLs) {
-            saveToSupabase({ topicId, completed: true });
-          }
-          // Keep local state as-is; ensure React state reflects what's
-          // in localStorage in case the local-load effect hasn't run.
-          setDone(localDoneFromLs);
-          return;
-        }
-
-        // Normal path: server is the source of truth. Replace local.
-        setDone(remoteDone);
-
-        // Detected reset: server came back empty AFTER a previous
-        // successful sync (so this is a real admin reset, not a
-        // first-time sync). Purge the per-quiz localStorage keys.
-        if (remoteCount === 0 && !wasFirstLoad) {
-          try {
-            const quizPrefix = quizStateKey(courseSlug, moduleNumber, 0).replace(
-              /0$/,
-              ""
-            );
-            const keysToClear: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (!key) continue;
-              if (key.startsWith(quizPrefix)) {
-                keysToClear.push(key);
-              }
-            }
-            keysToClear.forEach((k) => localStorage.removeItem(k));
-          } catch {}
-          setMcqAnswerCounts({});
-        }
-      } catch {}
-    }
-
-    loadProgress();
-
-    // Auto-sync when the tab regains focus (admin reset in another tab,
-    // device woke from sleep, etc.).
-    const onFocus = () => {
-      if (document.visibilityState === "visible") loadProgress();
-    };
-    document.addEventListener("visibilitychange", onFocus);
-    window.addEventListener("focus", onFocus);
-    return () => {
-      document.removeEventListener("visibilitychange", onFocus);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [isLoggedIn, user, moduleNumber, getIdToken]);
+  // (Supabase remote load + silent-fail recovery + admin-reset
+  // detection all moved into useStudentProgress.)
 
   // Session ping + token presence check. Runs on mount and whenever the
   // logged-in state changes. Two jobs:
@@ -410,53 +296,11 @@ export default function ModulePage({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeTab, TOTAL_TOPICS]);
 
-  // Save progress to Supabase
-  function saveToSupabase(data: {
-    topicId: number;
-    completed?: boolean;
-    mcqScore?: number;
-    mcqTotal?: number;
-    challengeAttempted?: boolean;
-    // Phase 3: Bloom's per-level stats + calibration snapshot. Optional so
-    // non-quiz callers (e.g. Mark-as-done) don't need to pass them.
-    bloomStats?: Partial<Record<string, { correct: number; total: number }>>;
-    confidenceStats?: { rated: number; confidentWrong: number; humbleRight: number };
-  }) {
-    if (!isLoggedIn || !user) return;
-    const token = getIdToken();
-    // No token this session → user object was restored from localStorage
-    // but the in-memory token is gone (tokens are never persisted). Flip
-    // the banner state so the student sees a "your progress isn't saving"
-    // toast + a re-sign-in prompt. Local state still tracks their work
-    // so they don't lose anything once they re-auth.
-    if (!token) {
-      setNeedsReauth(true);
-      setShowLoginPrompt(true);
-      return;
-    }
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    fetch("/api/progress", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-id-token": token,
-      },
-      body: JSON.stringify({
-        email: user.email,
-        name: user.name,
-        moduleNumber,
-        // Phase 3: course slug threaded through so the server can
-        // resolve course_id and scope the upsert. Safe to omit on
-        // pre-Phase-3 servers — they ignore the field.
-        courseSlug,
-        ...data,
-      }),
-      signal: controller.signal,
-    }).catch(() => {}).finally(() => clearTimeout(timeout));
-  }
+  // (saveToSupabase moved into useStudentProgress hook.)
 
-  // Handle quiz completion
+  // Handle quiz completion. Persistence is delegated to the hook;
+  // the only local concern is showing the LoginPrompt for non-logged-in
+  // students (the hook already pops it for logged-in-but-no-token).
   function handleQuizComplete(
     topicId: number,
     score: number,
@@ -464,16 +308,8 @@ export default function ModulePage({
     bloomStats?: Partial<Record<string, { correct: number; total: number }>>,
     confidenceStats?: { rated: number; confidentWrong: number; humbleRight: number }
   ) {
-    // Score persists to Supabase — not mirrored in local state since
-    // no UI reads from it (Phase 1 cleanup).
     if (isLoggedIn) {
-      saveToSupabase({
-        topicId,
-        mcqScore: score,
-        mcqTotal: total,
-        bloomStats,
-        confidenceStats,
-      });
+      recordQuiz(topicId, score, total, bloomStats, confidenceStats);
     } else {
       // Delay slightly so quiz result screen renders first
       setTimeout(() => {
@@ -483,23 +319,24 @@ export default function ModulePage({
   }
 
   function markDone(topicId: number) {
-    setDone((prev) => {
-      const next = new Set([...prev, topicId]);
-      // Phase 1 gamification: streak only. XP and badges were dropped
-      // per product decision; `updateStreak()` is now the single
-      // side-effect on every topic completion.
-      updateStreak();
-      return next;
-    });
+    // addDone updates the `done` Set AND fires the remote save.
+    addDone(topicId);
+    // Phase 1 gamification: streak only. XP and badges were dropped
+    // per product decision; updateStreak() is now the single
+    // side-effect on every topic completion.
+    updateStreak();
     // Per-topic celebration. Module-tier celebration (bigger burst +
     // "MODULE COMPLETE" banner) is reserved for the last topic.
     const isLast = topicId >= TOTAL_TOPICS;
     setConfettiVariant(isLast ? "module" : "normal");
     setConfettiTrigger((prev) => prev + 1);
 
-    // Save to Supabase if logged in
+    // (Save to Supabase happens inside addDone via the hook.)
     if (isLoggedIn) {
-      saveToSupabase({ topicId, completed: true });
+      // No-op block kept so the existing "if (!isLast)" / "else" flow
+      // below stays intact at the same line numbers — easier to diff
+      // against the previous version.
+      void 0;
     }
 
     if (!isLast) {
