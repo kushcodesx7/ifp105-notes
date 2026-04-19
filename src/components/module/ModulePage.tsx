@@ -243,6 +243,7 @@ export default function ModulePage({
         );
         if (!res.ok) return;
         const data = await res.json();
+        const wasFirstLoad = !supabaseLoaded.current;
         supabaseLoaded.current = true;
         const remoteProgress = (data.progress ?? {}) as Record<
           number,
@@ -251,31 +252,56 @@ export default function ModulePage({
 
         const remoteCount = Object.keys(remoteProgress).length;
 
-        // Replace local `done` with exactly what the server has. Empty
-        // server → empty local (which also purges the
-        // ifp105_mN_progress localStorage key via the save effect).
         const remoteDone = new Set<number>();
         for (const [topicIdStr, tp] of Object.entries(remoteProgress)) {
           if (tp.completed) remoteDone.add(Number(topicIdStr));
         }
+
+        // ───── Silent-fail recovery ─────
+        // If this is the FIRST successful sync this session AND server is
+        // empty AND localStorage has progress, that progress was almost
+        // certainly accumulated while saveToSupabase was silently bailing
+        // on a missing token (the bug fixed in #118). Push the local set
+        // UP to the server instead of wiping it.
+        //
+        // Read from localStorage directly (not React state) to dodge
+        // stale-closure timing — the local-load effect may not have
+        // populated `done` by the time this fetch resolves.
+        //
+        // The teacher's "reset progress" admin action still works on
+        // subsequent loads — by then supabaseLoaded.current is true so
+        // we treat empty as a genuine reset.
+        let localDoneFromLs = new Set<number>();
+        try {
+          const saved = localStorage.getItem(LS_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved) as number[];
+            if (Array.isArray(parsed)) localDoneFromLs = new Set(parsed);
+          }
+        } catch {}
+        const isLikelySilentFailRecovery =
+          wasFirstLoad && remoteCount === 0 && localDoneFromLs.size > 0;
+
+        if (isLikelySilentFailRecovery) {
+          // Push each locally-completed topic up to the server. Fire
+          // and forget — failures will retry on the next markDone.
+          for (const topicId of localDoneFromLs) {
+            saveToSupabase({ topicId, completed: true });
+          }
+          // Keep local state as-is; ensure React state reflects what's
+          // in localStorage in case the local-load effect hasn't run.
+          setDone(localDoneFromLs);
+          return;
+        }
+
+        // Normal path: server is the source of truth. Replace local.
         setDone(remoteDone);
 
-        // (Phase 1: `mcqScores` local state removed — it was never
-        // read for rendering. MCQ scores still save to Supabase via
-        // handleQuizComplete below.)
-
-        // Detected reset: server came back empty but we previously had
-        // local progress. Purge the per-quiz localStorage keys for this
-        // module so the student's old answers + scores in McqQuiz also
-        // disappear. Without this, reopening a quiz would still show
-        // the student's prior selections and "X/Y score" badge.
-        if (remoteCount === 0) {
+        // Detected reset: server came back empty AFTER a previous
+        // successful sync (so this is a real admin reset, not a
+        // first-time sync). Purge the per-quiz localStorage keys.
+        if (remoteCount === 0 && !wasFirstLoad) {
           try {
-            // Match all per-topic quiz blobs for this course+module.
-            // quizStateKey(slug, mod, topic) ends with `_quiz_t<topic>`;
-            // the prefix up to `_quiz_t` is stable across topic ids so
-            // we can strip the topic off the first quizStateKey we'd
-            // build and use that as the prefix to scan by.
             const quizPrefix = quizStateKey(courseSlug, moduleNumber, 0).replace(
               /0$/,
               ""
@@ -290,8 +316,6 @@ export default function ModulePage({
             }
             keysToClear.forEach((k) => localStorage.removeItem(k));
           } catch {}
-          // Also clear the per-topic answer-count state so the UI
-          // doesn't still show "7/7 answered" for a reset topic.
           setMcqAnswerCounts({});
         }
       } catch {}
