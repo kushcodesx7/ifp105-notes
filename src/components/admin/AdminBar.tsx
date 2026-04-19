@@ -265,16 +265,18 @@ export default function AdminBar() {
                 <ToggleSwitch
                   on={editMode}
                   onClick={toggleEditMode}
-                  label={editMode ? "Exit edit mode" : "Enter edit mode"}
+                  label={editMode ? "Switch to student view" : "Enter edit mode"}
                 />
-                {!editMode && (
-                  <button
-                    onClick={toggleEditMode}
-                    className="text-[12px] font-semibold text-zinc-200 hover:text-white transition-colors"
-                  >
-                    Edit
-                  </button>
-                )}
+                {/* Symmetric label — shows the action you're about to take.
+                    In view mode → "Edit". In edit mode → "👁 Preview as student"
+                    so the admin remembers they can flip without losing work
+                    (the inline editor auto-saves blocks every 2s). */}
+                <button
+                  onClick={toggleEditMode}
+                  className="text-[12px] font-semibold text-zinc-200 hover:text-white transition-colors whitespace-nowrap"
+                >
+                  {editMode ? "👁 View as student" : "✏️ Edit"}
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
