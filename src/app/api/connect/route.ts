@@ -4,12 +4,24 @@ import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
 import { verifyGoogleIdToken } from "@/lib/verify-google-token";
 import { isAdminEmail } from "@/lib/admins";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/connect — list of all registered students for IFS Connect
 // Optional query params:
 //   batchId — filter by batch
 //   section — filter by section
 export async function GET(req: NextRequest) {
+  // Rate limit — public endpoint returning student directory (no emails).
+  // 60/min is plenty for a student scrolling the Connect feed while also
+  // bounding scrapers. Fail-open if Redis unavailable.
+  const rl = await rateLimit({
+    bucket: "public:connect",
+    id: ipFromRequest(req),
+    limit: 60,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 60);
+
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("batchId");
   const section = searchParams.get("section");

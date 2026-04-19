@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
@@ -164,6 +164,8 @@ export default function BatchDetailPage() {
   const params = useParams();
   const batchId = params.batchId as string;
   const { user, isLoggedIn, getIdToken } = useAuth();
+  // Gate ambient hero orbs on prefers-reduced-motion.
+  const reduceMotion = useReducedMotion();
 
   const [batch, setBatch] = useState<Batch | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -353,13 +355,13 @@ export default function BatchDetailPage() {
         {/* Background effects */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <motion.div
-            animate={{ x: [0, 30, -20, 0], y: [0, -40, 20, 0], scale: [1, 1.1, 0.95, 1] }}
+            animate={reduceMotion ? undefined : { x: [0, 30, -20, 0], y: [0, -40, 20, 0], scale: [1, 1.1, 0.95, 1] }}
             transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-[5%] right-[10%] w-[500px] h-[500px] rounded-full blur-[120px] opacity-20"
             style={{ background: batch.accent }}
           />
           <motion.div
-            animate={{ x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
+            animate={reduceMotion ? undefined : { x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
             transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-[20%] left-[5%] w-[400px] h-[400px] rounded-full bg-violet-500/10 blur-[120px]"
           />

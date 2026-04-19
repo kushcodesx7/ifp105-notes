@@ -16,6 +16,7 @@ import LabelledInput from "@/components/admin/shared/LabelledInput";
 import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
 import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
 import TopicRenderer from "@/components/module/TopicRenderer";
+import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import type { ContentBlock } from "@/types/content";
 
 // /admin/courses/[slug]/modules/[num]
@@ -135,7 +136,14 @@ export default function ModuleEditPage({
           ]}
         />
 
-        {isLoading && !data && <p className="text-sm text-zinc-500">Loading…</p>}
+        {isLoading && !data && (
+          <div className="space-y-4">
+            <Skeleton height={32} width="50%" radius={8} />
+            <SkeletonText lines={2} />
+            <Skeleton height={120} radius={16} />
+            <Skeleton height={120} radius={16} />
+          </div>
+        )}
 
         {module_ && (
           <>

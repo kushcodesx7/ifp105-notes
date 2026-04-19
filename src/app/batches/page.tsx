@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
@@ -16,6 +16,8 @@ export default function BatchesPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Gate the ambient orb drift on prefers-reduced-motion.
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     fetch("/api/batches")
@@ -40,12 +42,12 @@ export default function BatchesPage() {
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
-          animate={{ x: [0, 30, -20, 0], y: [0, -40, 20, 0] }}
+          animate={reduceMotion ? undefined : { x: [0, 30, -20, 0], y: [0, -40, 20, 0] }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[10%] right-[15%] w-[400px] h-[400px] rounded-full bg-indigo-500/15 blur-[120px]"
         />
         <motion.div
-          animate={{ x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
+          animate={reduceMotion ? undefined : { x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
           className="absolute bottom-[20%] left-[10%] w-[350px] h-[350px] rounded-full bg-violet-500/10 blur-[120px]"
         />

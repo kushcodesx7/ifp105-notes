@@ -1,20 +1,24 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 
 export default function NotFound() {
+  // Respect prefers-reduced-motion for the drifting orbs + rotating
+  // emoji loop — framer-motion's JS-rAF animations don't auto-gate
+  // on the CSS media query.
+  const reduceMotion = useReducedMotion();
   return (
     <main className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
-          animate={{ x: [0, 30, -20, 0], y: [0, -40, 20, 0] }}
+          animate={reduceMotion ? undefined : { x: [0, 30, -20, 0], y: [0, -40, 20, 0] }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[20%] right-[20%] w-[400px] h-[400px] rounded-full bg-red-500/10 blur-[120px]"
         />
         <motion.div
-          animate={{ x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
+          animate={reduceMotion ? undefined : { x: [0, -20, 30, 0], y: [0, 30, -20, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
           className="absolute bottom-[20%] left-[15%] w-[350px] h-[350px] rounded-full bg-indigo-500/10 blur-[120px]"
         />
@@ -28,7 +32,7 @@ export default function NotFound() {
         className="relative z-10 text-center px-6"
       >
         <motion.div
-          animate={{ rotate: [0, 5, -5, 0] }}
+          animate={reduceMotion ? undefined : { rotate: [0, 5, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           className="text-8xl mb-6"
         >

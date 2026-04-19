@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { CANONICAL_SECTIONS, compareSections } from "@/lib/sections";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/batches/sections?batchId=2025-2026
 // Returns the list of sections in a batch with student counts from roll_list.
@@ -13,6 +14,17 @@ import { CANONICAL_SECTIONS, compareSections } from "@/lib/sections";
 // Additional sections that exist in roll_list but are not in the canonical
 // list (e.g., a teacher-added "Section 7") are also returned.
 export async function GET(req: NextRequest) {
+  // Rate limit — registration dropdown lookup, hit once per page load.
+  // 60/min per IP covers refresh bursts during the Monday registration
+  // surge without throttling anyone legit.
+  const rl = await rateLimit({
+    bucket: "public:sections",
+    id: ipFromRequest(req),
+    limit: 60,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 60);
+
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("batchId");
 

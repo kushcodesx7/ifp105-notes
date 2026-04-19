@@ -11,6 +11,7 @@ import AdminAuthGate, {
 } from "@/components/admin/AdminAuthGate";
 import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import { useToast } from "@/components/admin/Toast";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 
 // /admin/courses — the Phase 4 entry point.
@@ -174,7 +175,10 @@ export default function CoursesPage() {
         </AnimatePresence>
 
         {isLoading && !data && (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <div className="grid md:grid-cols-2 gap-3">
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         )}
 
         {!isLoading && courses.length === 0 && !creating && (

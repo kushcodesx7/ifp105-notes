@@ -9,6 +9,7 @@ import AdminAuthGate, {
 } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { BLOOM_ORDER, BLOOM_META, type BloomLevel } from "@/lib/blooms";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 // /admin/courses/[slug]/questions
 //
@@ -240,7 +241,11 @@ export default function QuestionBankPage({
 
         {/* ─── Question table ───────────────────────────────── */}
         {isLoading && !data ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} height={80} radius={12} />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-sm text-zinc-500">
             No questions match these filters.
