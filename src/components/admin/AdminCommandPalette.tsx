@@ -129,7 +129,7 @@ export default function AdminCommandPalette({
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setActiveIndex(0);
     const t = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(t);

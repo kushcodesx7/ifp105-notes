@@ -8,22 +8,21 @@ import { AnimatePresence, motion } from "framer-motion";
 //
 // Flow:
 //   1. Dialog opens showing what will be deleted + the cascade summary
-//      ("X topics", "Y questions", etc.). The Confirm button requires
-//      the admin password typed into the field — no auto-focus on
-//      confirm, no keyboard shortcuts that could trigger it accidentally.
-//   2. On Confirm, we call onConfirm(password) and let the caller make
-//      the DELETE request with `x-admin-password: <password>` header.
-//      The server's requireAdmin middleware validates; wrong password
-//      returns 401 and we surface the error inline.
+//      ("X topics", "Y questions", etc.). The Confirm button stays
+//      disabled until the admin retypes `confirmPhrase` exactly —
+//      usually the target's name/slug. Cognitive friction to prevent
+//      misclicks; Google sign-in already handles authentication.
+//   2. On Confirm, we call onConfirm() and let the caller fire the
+//      DELETE request with the admin's x-id-token. Errors surface
+//      inline; dialog stays open so the teacher can retry without
+//      losing context.
 //
-// Design choices:
-//   - Password is sent fresh to the server on every delete, not cached.
-//     Even an OAuth-admin has to know the password — deliberate friction.
-//   - Error is displayed inline; dialog stays open so the teacher can
-//     retry without losing context.
-//   - The "type the module name to confirm" GitHub pattern was considered
-//     but rejected: it doesn't defend against someone who can see the
-//     admin's screen. A password adds a real second factor.
+// Design note: this used to collect a fresh admin password as a second
+// factor. When the shared-password admin path was removed (Google
+// sign-in only), the password prompt broke — it sent a header the
+// server no longer honours. Replaced with the GitHub-style "type the
+// target name to confirm" pattern. It's still deliberate friction;
+// it just isn't a credential check anymore.
 
 export interface DangerDeleteDialogProps {
   open: boolean;
@@ -32,10 +31,16 @@ export interface DangerDeleteDialogProps {
   target: string;
   /** Bullet-list of cascade consequences. */
   consequences: string[];
+  /**
+   * Exact phrase the admin must type to enable Confirm. Usually the
+   * target's slug or name — something short, case-sensitive, and
+   * visible in the dialog so they can read then type.
+   */
+  confirmPhrase: string;
   confirmLabel?: string;
   onCancel: () => void;
-  /** Called with the typed password on final confirm. Throw to surface errors. */
-  onConfirm: (password: string) => Promise<void>;
+  /** Called on final confirm. Throw to surface errors inline. */
+  onConfirm: () => Promise<void>;
 }
 
 export default function DangerDeleteDialog({
@@ -43,11 +48,12 @@ export default function DangerDeleteDialog({
   title,
   target,
   consequences,
+  confirmPhrase,
   confirmLabel = "Delete permanently",
   onCancel,
   onConfirm,
 }: DangerDeleteDialogProps) {
-  const [password, setPassword] = useState("");
+  const [typed, setTyped] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -59,10 +65,8 @@ export default function DangerDeleteDialog({
   useEffect(() => {
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPassword("");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTyped("");
       setErr(null);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
     }
   }, [open]);
@@ -77,21 +81,23 @@ export default function DangerDeleteDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, loading, onCancel]);
 
+  const matches = typed === confirmPhrase;
+
   async function handleConfirm() {
-    if (!password.trim() || loading) return;
+    if (!matches || loading) return;
     setErr(null);
     setLoading(true);
     try {
-      await onConfirm(password);
+      await onConfirm();
       // onConfirm success → parent closes the dialog. If it stays open
       // (caller forgot), at least clear the loading state.
       setLoading(false);
     } catch (e) {
       const msg = (e as Error).message || "Delete failed";
-      // Friendly rewrite for the auth-failure case so the teacher
-      // realises it's a password problem, not a DB problem.
+      // Friendly rewrite for the auth-failure case — shouldn't happen
+      // under Google-only auth but keeps the UI sensible if it does.
       if (/401|unauthor/i.test(msg)) {
-        setErr("Wrong admin password. Try again.");
+        setErr("Not signed in as an admin. Refresh and sign in again.");
       } else {
         setErr(msg);
       }
@@ -175,24 +181,30 @@ export default function DangerDeleteDialog({
 
             <div className="mb-3">
               <label className="text-[11px] font-semibold text-zinc-400 block mb-1.5">
-                Enter admin password to confirm
+                Type{" "}
+                <span className="font-mono text-red-300 bg-red-500/10 px-1.5 py-0.5 rounded">
+                  {confirmPhrase}
+                </span>{" "}
+                to confirm
               </label>
               <input
-                type="password"
-                value={password}
+                type="text"
+                value={typed}
                 onChange={(e) => {
-                  setPassword(e.target.value);
+                  setTyped(e.target.value);
                   if (err) setErr(null);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && password.trim() && !loading) {
+                  if (e.key === "Enter" && matches && !loading) {
                     handleConfirm();
                   }
                 }}
-                placeholder="Admin password"
+                placeholder={confirmPhrase}
                 autoFocus
                 disabled={loading}
-                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 disabled:opacity-50"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] text-sm text-white placeholder:text-zinc-600 font-mono focus:outline-none focus:border-red-500/50 disabled:opacity-50"
               />
               {err && (
                 <p className="text-[12px] text-red-400 mt-2">{err}</p>
@@ -213,7 +225,7 @@ export default function DangerDeleteDialog({
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={loading || !password.trim()}
+                disabled={loading || !matches}
                 className="px-4 py-2 rounded-xl text-[12px] font-semibold text-white transition-all disabled:opacity-40 flex items-center gap-2"
                 style={{
                   background: "linear-gradient(135deg, #EF4444, #DC2626)",

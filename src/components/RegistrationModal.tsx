@@ -105,13 +105,13 @@ export default function RegistrationModal({
     if (!selectedBatchId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSections([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setSelectedSection("");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setSectionsLoading(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setError("");
     fetch(
       `/api/batches/sections?batchId=${encodeURIComponent(selectedBatchId)}`,
@@ -257,7 +257,7 @@ export default function RegistrationModal({
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!getIdToken()) setNeedsReauth(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     else setNeedsReauth(false);
   }, [open, getIdToken]);
 

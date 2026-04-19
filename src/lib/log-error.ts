@@ -53,7 +53,7 @@ export function logError(
 
   // Single-line JSON makes log aggregators happy. Vercel's log viewer
   // already pretty-prints JSON, so this is human-readable too.
-  // eslint-disable-next-line no-console
+   
   console.error(
     JSON.stringify({
       tag: "[ifp-error]",

@@ -214,13 +214,13 @@ export function useStudentProgress({
             saveToSupabase({ topicId, completed: true });
           }
           // Make sure React state reflects what's in localStorage.
-          // eslint-disable-next-line react-hooks/set-state-in-effect
+           
           setDone(localDoneFromLs);
           return;
         }
 
         // Normal path: server is the source of truth.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setDone(remoteDone);
 
         // Empty AFTER a previous successful sync → real admin reset.

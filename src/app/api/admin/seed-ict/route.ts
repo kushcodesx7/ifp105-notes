@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
   const { rateLimit, rateLimitResponse } = await import("@/lib/rate-limit");
   const rl = await rateLimit({
     bucket: "admin:seed-ict",
-    id: admin.email || "password-admin",
+    id: admin.email || "unknown-admin",
     limit: 2,
     windowSec: 30,
   });

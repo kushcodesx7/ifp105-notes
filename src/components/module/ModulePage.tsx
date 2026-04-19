@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
@@ -191,7 +191,7 @@ export default function ModulePage({
       }
     } catch {}
     // Only on mount per module
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [LS_ACTIVE_TAB_KEY, TOTAL_TOPICS]);
 
   // Persist active topic when it changes
