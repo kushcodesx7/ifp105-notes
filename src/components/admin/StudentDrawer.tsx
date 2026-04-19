@@ -317,16 +317,11 @@ function OverviewTab({
   ]);
 
   // Auth headers: prefer ID token (attributed in audit log), fall back to
-  // admin password in sessionStorage.
+  // Google ID token only (password admin path was removed).
   function authHeaders(): Record<string, string> {
     const h: Record<string, string> = { "Content-Type": "application/json" };
     const token = getIdToken();
-    if (token && isAdmin) {
-      h["x-id-token"] = token;
-    } else {
-      const pw = sessionStorage.getItem("admin_pw");
-      if (pw) h["x-admin-password"] = pw;
-    }
+    if (token && isAdmin) h["x-id-token"] = token;
     return h;
   }
 

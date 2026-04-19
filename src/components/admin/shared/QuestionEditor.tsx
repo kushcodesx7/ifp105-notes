@@ -8,11 +8,9 @@ import { useToast } from "@/components/admin/Toast";
 // admin module detail page and `InlineQuestionEditor` in the inline
 // editor. Unified here during Phase 2 refactor.
 //
-// Auth: the edit + delete requests send either `x-id-token` (if
-// provided) or `x-admin-password`, mirroring the adminWrite helper. In
-// practice the inline editor always has an idToken (Google OAuth), and
-// the admin panel has both idToken AND password (whichever the admin
-// logged in with). We just pick the idToken when available.
+// Auth: sends `x-id-token` only. The shared-password admin path was
+// removed — the `password` prop is kept as a legacy no-op so the ~5
+// call sites don't have to update in the same PR.
 
 export interface SharedQuestion {
   id: string;
@@ -31,7 +29,7 @@ interface Props {
   topicNumber: number;
   question: SharedQuestion;
   idToken: string | null;
-  /** Optional — falls back to x-admin-password header when idToken is null. */
+  /** Legacy no-op — password admin path removed. Kept for call-site compat. */
   password?: string;
   onChange: () => void;
   /** Compact mode trims some chrome for use inside narrow accordions. */
@@ -39,9 +37,9 @@ interface Props {
 }
 
 function authHeaders(idToken: string | null, password?: string): HeadersInit {
+  void password; // legacy no-op param (see interface comment)
   const h: Record<string, string> = { "Content-Type": "application/json" };
   if (idToken) h["x-id-token"] = idToken;
-  else if (password) h["x-admin-password"] = password;
   return h;
 }
 

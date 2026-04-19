@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
-import { useAuth } from "@/lib/auth-context";
-import { isAdminEmail } from "@/lib/admins";
 
 interface TopicProgress {
   moduleNumber: number;
@@ -81,14 +80,10 @@ function barColor(pct: number): string {
 }
 
 export default function AdminProgressPage() {
-  const { user, isLoggedIn, getIdToken } = useAuth();
-  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
-  const idToken = isAdmin ? getIdToken() : null;
+  // Shared Google-only auth gate. `password` is a legacy no-op field —
+  // the shared-password admin path was removed (see adminWrite / requireAdmin).
+  const { idToken, ready } = useAdminAuth();
 
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
   const [expandedModule, setExpandedModule] = useState<number>(1);
   const [sortBy, setSortBy] = useState<SortKey>("progress");
@@ -104,57 +99,15 @@ export default function AdminProgressPage() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Restore password session on mount (legacy path)
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
-  // Admins with Google ID token → auto-authenticated, no password prompt
-  useEffect(() => {
-    if (isAdmin && idToken) setAuthenticated(true);
-  }, [isAdmin, idToken]);
-
-  // Prefer ID token over password when available
-  const credential = idToken ? { idToken } : password;
   const { data: progressData, error: fetchError, isLoading: fetchLoading, mutate: refreshProgress } =
     useAdminFetch<{ students: StudentData[] }>(
       "/api/progress/admin",
-      credential,
-      { enabled: authenticated, refreshInterval: 20_000 }
+      { idToken },
+      { enabled: ready, refreshInterval: 20_000 }
     );
   // Memoize so dependent useMemos get a stable reference
   const students = useMemo(() => progressData?.students ?? [], [progressData]);
   const initialLoaded = !!progressData || (!fetchLoading && !!fetchError);
-
-  // If auth failed for a password user, clear session. Don't touch the
-  // Google session for admin users (their token path handles itself).
-  useEffect(() => {
-    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
-      if (!isAdmin) {
-        sessionStorage.removeItem("admin_pw");
-        setAuthenticated(false);
-      }
-    }
-  }, [fetchError, isAdmin]);
-
-  async function login() {
-    setAuthError("");
-    setLoading(true);
-    const res = await fetch("/api/progress/admin", {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
-    }
-    setLoading(false);
-  }
 
   // Force re-render every 30s so timeAgo updates
   const [, setTick] = useState(0);
@@ -299,39 +252,8 @@ export default function AdminProgressPage() {
     };
   }, [students]);
 
-  // Login screen
-  if (!authenticated) {
-    return (
-      <main className="min-h-screen">
-        <Navbar showBack title="Admin" />
-        <div className="flex items-center justify-center pt-32 px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-sm"
-          >
-            <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && login()}
-              placeholder="Enter admin password"
-              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20 mb-3"
-            />
-            {authError && <p className="text-sm text-red-400 mb-3">{authError}</p>}
-            <button
-              onClick={login}
-              disabled={loading}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.02] transition-transform disabled:opacity-50"
-            >
-              {loading ? "Checking..." : "Login"}
-            </button>
-          </motion.div>
-        </div>
-      </main>
-    );
-  }
+  // Google sign-in gate (password path removed).
+  if (!ready) return <AdminAuthGate />;
 
   return (
     <main className="min-h-screen">
@@ -367,16 +289,7 @@ export default function AdminProgressPage() {
             >
               ↻ Refresh
             </button>
-            <button
-              onClick={() => {
-                sessionStorage.removeItem("admin_pw");
-                setAuthenticated(false);
-                setPassword("");
-              }}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              Logout
-            </button>
+            {/* Sign-out is handled by the Navbar account menu. */}
           </div>
         </div>
 

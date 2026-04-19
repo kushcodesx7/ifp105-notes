@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
-import { useAuth } from "@/lib/auth-context";
-import { isAdminEmail } from "@/lib/admins";
 
 interface SectionBreakdown {
   name: string;
@@ -35,32 +34,9 @@ interface OrphanStudent {
 }
 
 export default function BatchProgressListPage() {
-  const { user, isLoggedIn, getIdToken } = useAuth();
-  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
-  const idToken = isAdmin ? getIdToken() : null;
+  // Shared Google-only auth gate. Password path removed — see adminWrite.
+  const { idToken, ready } = useAdminAuth();
 
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // Restore password session on mount
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
-  // Signed-in admin → auto-authenticate
-  useEffect(() => {
-    if (isAdmin && idToken) {
-      setAuthenticated(true);
-    }
-  }, [isAdmin, idToken]);
-
-  const credential = idToken ? { idToken } : password;
   const { data: batchData, error: fetchError, mutate: refreshData, isLoading: fetchLoading } =
     useAdminFetch<{
       batches: BatchSummary[];
@@ -68,8 +44,8 @@ export default function BatchProgressListPage() {
       orphanStudentList?: OrphanStudent[];
     }>(
       "/api/progress/batches",
-      credential,
-      { enabled: authenticated, refreshInterval: 30_000 }
+      { idToken },
+      { enabled: ready, refreshInterval: 30_000 }
     );
   const batches = batchData?.batches ?? [];
   const orphanCount = batchData?.orphanStudents ?? 0;
@@ -77,63 +53,7 @@ export default function BatchProgressListPage() {
   const [showOrphans, setShowOrphans] = useState(false);
   const initialLoaded = !!batchData || (!fetchLoading && !!fetchError);
 
-  // Clear password session on auth failure (leave Google session alone)
-  useEffect(() => {
-    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
-      if (!isAdmin) {
-        sessionStorage.removeItem("admin_pw");
-          setAuthenticated(false);
-      }
-    }
-  }, [fetchError, isAdmin]);
-
-  async function login() {
-    setAuthError("");
-    setLoading(true);
-    const res = await fetch("/api/progress/batches", {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
-    }
-    setLoading(false);
-  }
-
-  if (!authenticated) {
-    return (
-      <main className="min-h-screen">
-        <Navbar showBack title="Admin" />
-        <div className="flex items-center justify-center pt-32 px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-sm"
-          >
-            <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && login()}
-              placeholder="Enter admin password"
-              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20 mb-3"
-            />
-            {authError && <p className="text-sm text-red-400 mb-3">{authError}</p>}
-            <button
-              onClick={login}
-              disabled={loading}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.02] transition-transform disabled:opacity-50"
-            >
-              {loading ? "Checking..." : "Login"}
-            </button>
-          </motion.div>
-        </div>
-      </main>
-    );
-  }
+  if (!ready) return <AdminAuthGate />;
 
   return (
     <main className="min-h-screen">

@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 
-// Shared "add question" form. Mirrors SharedQuestionEditor's auth
-// model (idToken preferred, password fallback). Collapsed to a single
-// "+ Add question" trigger by default; opens into a compact form.
+// Shared "add question" form. Sends `x-id-token` only — the
+// shared-password admin path was removed. The `password` prop is kept
+// as a legacy no-op for call-site compat.
 
 interface Props {
   slug: string;
@@ -28,6 +28,7 @@ export default function SharedNewQuestionForm({
   onCreated,
   initialOptions = 4,
 }: Props) {
+  void password; // legacy no-op prop (see file header)
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [options, setOptions] = useState<string[]>(
@@ -52,7 +53,6 @@ export default function SharedNewQuestionForm({
         "Content-Type": "application/json",
       };
       if (idToken) headers["x-id-token"] = idToken;
-      else if (password) headers["x-admin-password"] = password;
 
       const res = await fetch(
         `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicNumber}/questions`,

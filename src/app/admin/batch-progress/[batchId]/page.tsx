@@ -5,9 +5,8 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
-import { useAuth } from "@/lib/auth-context";
-import { isAdminEmail } from "@/lib/admins";
 
 interface ModuleStats {
   done: number;
@@ -85,14 +84,9 @@ export default function BatchProgressDetailPage() {
   const params = useParams();
   const batchId = decodeURIComponent(params.batchId as string);
 
-  const { user, isLoggedIn, getIdToken } = useAuth();
-  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
-  const idToken = isAdmin ? getIdToken() : null;
+  // Shared Google-only auth gate (password path removed).
+  const { idToken, ready } = useAdminAuth();
 
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [cachedBatch, setCachedBatch] = useState<BatchInfo | null>(null);
   const [cachedStudents, setCachedStudents] = useState<StudentInBatch[]>([]);
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -132,13 +126,8 @@ export default function BatchProgressDetailPage() {
     }
   }
 
-  // Restore session + seed from localStorage cache for instant paint
+  // Seed from localStorage cache for instant paint
   useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      setPassword(saved);
-      setAuthenticated(true);
-    }
     const cached = loadCache();
     if (cached) {
       setCachedBatch(cached.batch);
@@ -147,20 +136,14 @@ export default function BatchProgressDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId]);
 
-  // Signed-in admin → auto-authenticate
-  useEffect(() => {
-    if (isAdmin && idToken) setAuthenticated(true);
-  }, [isAdmin, idToken]);
-
-  const credential = idToken ? { idToken } : password;
   const {
     data: detailData,
     error: fetchError,
     mutate: refreshData,
   } = useAdminFetch<{ batch: BatchInfo; students: StudentInBatch[] }>(
     `/api/progress/batches?batchId=${encodeURIComponent(batchId)}`,
-    credential,
-    { enabled: authenticated, refreshInterval: 20_000 }
+    { idToken },
+    { enabled: ready, refreshInterval: 20_000 }
   );
 
   // Persist fresh data to localStorage for instant next visit
@@ -171,34 +154,10 @@ export default function BatchProgressDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailData]);
 
-  // Clear password session on auth failure (leave Google session alone)
-  useEffect(() => {
-    if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
-      if (!isAdmin) {
-        sessionStorage.removeItem("admin_pw");
-        setAuthenticated(false);
-      }
-    }
-  }, [fetchError, isAdmin]);
-
   // Prefer fresh data from SWR; fall back to the localStorage cache for instant paint
   const batch = detailData?.batch ?? cachedBatch;
   const students = detailData?.students ?? cachedStudents;
-
-  async function login() {
-    setAuthError("");
-    setLoading(true);
-    const res = await fetch(`/api/progress/batches?batchId=${encodeURIComponent(batchId)}`, {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
-    }
-    setLoading(false);
-  }
+  void fetchError; // surfaced by SWR error boundary; no custom handling needed now
 
   // Force re-render every 30s so timeAgo displays update
   const [, setTick] = useState(0);
@@ -295,38 +254,7 @@ export default function BatchProgressDetailPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (!authenticated) {
-    return (
-      <main className="min-h-screen">
-        <Navbar showBack title="Admin" />
-        <div className="flex items-center justify-center pt-32 px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-sm"
-          >
-            <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && login()}
-              placeholder="Enter admin password"
-              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20 mb-3"
-            />
-            {authError && <p className="text-sm text-red-400 mb-3">{authError}</p>}
-            <button
-              onClick={login}
-              disabled={loading}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.02] transition-transform disabled:opacity-50"
-            >
-              {loading ? "Checking..." : "Login"}
-            </button>
-          </motion.div>
-        </div>
-      </main>
-    );
-  }
+  if (!ready) return <AdminAuthGate />;
 
   return (
     <main className="min-h-screen">

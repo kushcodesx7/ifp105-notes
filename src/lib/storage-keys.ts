@@ -85,5 +85,3 @@ export const ANON_SALT_KEY = `${LEGACY_PREFIX}_anon_salt`;
 export const STREAK_COUNT_KEY = `${LEGACY_PREFIX}_streak`;
 export const STREAK_DATE_KEY = `${LEGACY_PREFIX}_streak_date`;
 
-/** Admin-only, session-scoped password for the legacy fallback auth. */
-export const ADMIN_PASSWORD_KEY = "admin_pw";

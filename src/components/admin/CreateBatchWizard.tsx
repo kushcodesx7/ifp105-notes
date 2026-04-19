@@ -176,12 +176,7 @@ export default function CreateBatchWizard({ open, onClose, onCreated }: Props) {
     setSubmitting(true);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const token = getIdToken();
-    if (token && isAdmin) {
-      headers["x-id-token"] = token;
-    } else {
-      const pw = sessionStorage.getItem("admin_pw");
-      if (pw) headers["x-admin-password"] = pw;
-    }
+    if (token && isAdmin) headers["x-id-token"] = token;
     try {
       const res = await fetch("/api/batches/admin", {
         method: "POST",

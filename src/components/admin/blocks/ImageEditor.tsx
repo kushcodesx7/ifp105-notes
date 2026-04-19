@@ -19,8 +19,10 @@ export function ImageEditor({
   moduleNumber: number;
   topicNumber: number;
   idToken: string | null;
+  /** Legacy no-op — password admin path removed. Kept for call-site compat. */
   password: string;
 }) {
+  void password;
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -40,7 +42,6 @@ export function ImageEditor({
 
       const headers: Record<string, string> = {};
       if (idToken) headers["x-id-token"] = idToken;
-      else if (password) headers["x-admin-password"] = password;
 
       const res = await fetch("/api/admin/upload", {
         method: "POST",
