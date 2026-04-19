@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 // Flashcards data (~42KB) lands in this lazy chunk, not in the main
 // module bundle. ModulePage wraps this component in next/dynamic so the
 // data only loads when a student actually scrolls into a topic.
 import { flashcardData } from "@/data/flashcards";
+import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 
 interface FlashcardData {
   front: string;
@@ -19,6 +20,10 @@ interface FlashcardsProps {
   moduleNumber?: number;
   topicId?: number;
   title?: string;
+  // Course slug — used by the DB override fetch. Defaults to the
+  // current course (ICT today). Callers authoring a second course
+  // can pass it explicitly.
+  courseSlug?: string;
 }
 
 export default function Flashcards({
@@ -26,16 +31,76 @@ export default function Flashcards({
   moduleNumber,
   topicId,
   title = "Quick Review Flashcards",
+  courseSlug,
 }: FlashcardsProps) {
-  const resolved =
+  // Fallback deck — either supplied directly by the caller or resolved
+  // from the bundled TS data keyed by (moduleNumber, topicId).
+  const tsFallback =
     cardsProp ??
     (moduleNumber != null && topicId != null
       ? flashcardData[moduleNumber]?.[topicId]
       : undefined);
+
+  // DB override. Null = not fetched yet; empty array = fetched but
+  // DB had nothing (→ fall back to TS). Non-empty = use DB cards.
+  //
+  // Fetching only fires when the caller didn't already pass `cards`
+  // directly (that path is used by tests / legacy). Lets admin edits
+  // to topics.flashcards_json propagate to the student without any
+  // code change — empty DB keeps existing TS behavior identical.
+  const [dbCards, setDbCards] = useState<FlashcardData[] | null>(null);
+  const [dbFetched, setDbFetched] = useState(false);
+
+  useEffect(() => {
+    if (cardsProp) return; // caller is authoritative
+    if (moduleNumber == null || topicId == null) return;
+    let alive = true;
+    const slug = courseSlug ?? CURRENT_COURSE_SLUG;
+    fetch(
+      `/api/public/flashcards/${moduleNumber}/${topicId}?course=${encodeURIComponent(slug)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => (r.ok ? r.json() : { cards: null }))
+      .then((json: { cards: FlashcardData[] | null }) => {
+        if (!alive) return;
+        setDbCards(json.cards);
+        setDbFetched(true);
+      })
+      .catch(() => {
+        if (!alive) return;
+        // On network error, fall through silently to TS fallback.
+        setDbCards(null);
+        setDbFetched(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [cardsProp, moduleNumber, topicId, courseSlug]);
+
+  // Final card list:
+  //   - DB cards if the fetch returned any
+  //   - otherwise TS fallback
+  //   - if caller passed `cards` directly, those always win
+  const resolved = cardsProp ?? (dbCards && dbCards.length > 0 ? dbCards : tsFallback);
+
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<number>>(new Set());
 
+  // Reset review state when the underlying deck changes (topic switch
+  // or admin-edit override lands). Prevents a known-index from pointing
+  // at a deleted card after an edit.
+  useEffect(() => {
+    setCurrent(0);
+    setFlipped(false);
+    setKnown(new Set());
+  }, [moduleNumber, topicId, resolved?.length]);
+
+  // While the DB fetch is in flight AND we have no TS fallback to show
+  // meanwhile, render nothing (avoids a flash of the TS deck that then
+  // gets swapped for DB cards). If we have a TS fallback, show it
+  // immediately — the DB override lands as soon as it arrives.
+  if (!dbFetched && !tsFallback && !cardsProp) return null;
   if (!resolved || resolved.length === 0) return null;
   const cards = resolved;
 
