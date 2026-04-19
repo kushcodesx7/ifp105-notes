@@ -130,88 +130,81 @@ export async function GET(req: NextRequest) {
     avgMcqPct: number | null;
   }
 
+  // Perf (Apr 2026): collapsed 8× Array.filter passes per student into a
+  // SINGLE pass that accumulates every derived stat at once.
+  //
+  // Before:  for each of 221 students, we filtered topicRows 5× (once per
+  //          module) + 1× for completedCount + 1× for avgMcq + 1× again
+  //          for mcqRows inside each module. ≈ 8 × N scans per student,
+  //          so with ~50 topics/student ≈ 220×400 = 88k iterations.
+  //
+  // After:   one pass through topicRows per student. Module buckets,
+  //          completed count, MCQ aggregates, bloom stats, confidence,
+  //          and 14-day activity all populated in lock-step.
+  //          ≈ 220×50 = 11k iterations. ~8× fewer passes, same O(n·m)
+  //          but with a tight inner loop and no intermediate arrays.
+  const FOURTEEN_DAYS_MS = 14 * 86_400_000;
+  const cutoffTs = now - FOURTEEN_DAYS_MS;
+
   const students = (studentsRes.data || []).map((s) => {
     const email = s.email || "";
     const topicRows = progressByEmail.get(email) || [];
 
-    // Per-module breakdown
-    const moduleStats: ModuleStat[] = [1, 2, 3, 4, 5].map((mn) => {
-      const inMod = topicRows.filter((t) => t.module_number === mn);
-      const done = inMod.filter((t) => t.completed).length;
-      const total = MODULE_TOTALS[mn] || 0;
-      const mcqRows = inMod.filter(
-        (t) => t.mcq_score !== null && t.mcq_total !== null && t.mcq_total > 0
-      );
-      const avgMcqPct =
-        mcqRows.length > 0
-          ? Math.round(
-              (mcqRows.reduce(
-                (sum, t) =>
-                  sum + ((t.mcq_score || 0) / (t.mcq_total || 1)) * 100,
-                0
-              ) /
-                mcqRows.length) *
-                1
-            )
-          : null;
-      return {
-        moduleNumber: mn,
-        done,
-        total,
-        pct: total > 0 ? Math.round((done / total) * 100) : 0,
-        avgMcqPct,
-      };
-    });
+    // Per-module accumulators (indexed by module number 1..5).
+    const modDone: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const modMcqPctSum: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const modMcqCount: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
-    const completedCount = topicRows.filter((t) => t.completed).length;
-    const completionPct = Math.round((completedCount / TOTAL_TOPICS) * 100);
+    let completedCount = 0;
+    let mcqPctSumAll = 0;
+    let mcqCountAll = 0;
 
-    // Per-day completion counts for the last 14 days. Powers the
-    // mini sparkline in StudentDrawer — lets the teacher spot
-    // bursts ("they did 8 topics yesterday") vs. steady work.
-    // Days with zero completions are omitted; the client renders
-    // them as gaps in the chart.
-    const FOURTEEN_DAYS_MS = 14 * 86_400_000;
-    const cutoff = now - FOURTEEN_DAYS_MS;
-    const dayCounts: Record<string, number> = {};
-    for (const t of topicRows) {
-      if (!t.completed || !t.updated_at) continue;
-      const ts = new Date(t.updated_at).getTime();
-      if (ts < cutoff) continue;
-      // Bucket by YYYY-MM-DD so the client can render a 14-day strip
-      // without timezone surprises.
-      const day = new Date(ts).toISOString().slice(0, 10);
-      dayCounts[day] = (dayCounts[day] || 0) + 1;
-    }
-    const recentActivity = Object.entries(dayCounts)
-      .map(([day, count]) => ({ day, count }))
-      .sort((a, b) => a.day.localeCompare(b.day));
-
-    // Overall MCQ avg
-    const mcqRows = topicRows.filter(
-      (t) => t.mcq_score !== null && t.mcq_total !== null && t.mcq_total > 0
-    );
-    const avgMcq =
-      mcqRows.length > 0
-        ? Math.round(
-            mcqRows.reduce(
-              (sum, t) =>
-                sum + ((t.mcq_score || 0) / (t.mcq_total || 1)) * 100,
-              0
-            ) / mcqRows.length
-          )
-        : null;
-
-    // Aggregate bloom stats (sum correct/total across topics)
     const bloomAgg: Record<string, { correct: number; total: number }> = {};
     const confAgg = { rated: 0, confidentWrong: 0, humbleRight: 0 };
+    const dayCounts: Record<string, number> = {};
+
     for (const t of topicRows) {
+      const mn = t.module_number;
+
+      // Completed counters (overall + per-module) + 14-day activity.
+      if (t.completed) {
+        completedCount += 1;
+        if (mn in modDone) modDone[mn] += 1;
+        if (t.updated_at) {
+          const ts = new Date(t.updated_at).getTime();
+          if (ts >= cutoffTs) {
+            const day = new Date(ts).toISOString().slice(0, 10);
+            dayCounts[day] = (dayCounts[day] || 0) + 1;
+          }
+        }
+      }
+
+      // MCQ aggregates (overall + per-module).
+      if (
+        t.mcq_score !== null &&
+        t.mcq_total !== null &&
+        (t.mcq_total || 0) > 0
+      ) {
+        const pct = ((t.mcq_score || 0) / (t.mcq_total || 1)) * 100;
+        mcqPctSumAll += pct;
+        mcqCountAll += 1;
+        if (mn in modMcqPctSum) {
+          modMcqPctSum[mn] += pct;
+          modMcqCount[mn] += 1;
+        }
+      }
+
+      // Bloom + confidence aggregates.
       if (t.bloom_stats) {
         for (const [lvl, entry] of Object.entries(t.bloom_stats)) {
           if (!entry) continue;
-          if (!bloomAgg[lvl]) bloomAgg[lvl] = { correct: 0, total: 0 };
-          bloomAgg[lvl].correct += entry.correct || 0;
-          bloomAgg[lvl].total += entry.total || 0;
+          let slot = bloomAgg[lvl];
+          if (!slot) {
+            slot = { correct: 0, total: 0 };
+            bloomAgg[lvl] = slot;
+          }
+          slot.correct += entry.correct || 0;
+          slot.total += entry.total || 0;
         }
       }
       if (t.confidence_stats) {
@@ -220,6 +213,28 @@ export async function GET(req: NextRequest) {
         confAgg.humbleRight += t.confidence_stats.humbleRight || 0;
       }
     }
+
+    const moduleStats: ModuleStat[] = [1, 2, 3, 4, 5].map((mn) => {
+      const total = MODULE_TOTALS[mn] || 0;
+      const done = modDone[mn];
+      const mcqCount = modMcqCount[mn];
+      return {
+        moduleNumber: mn,
+        done,
+        total,
+        pct: total > 0 ? Math.round((done / total) * 100) : 0,
+        avgMcqPct:
+          mcqCount > 0 ? Math.round(modMcqPctSum[mn] / mcqCount) : null,
+      };
+    });
+
+    const completionPct = Math.round((completedCount / TOTAL_TOPICS) * 100);
+    const avgMcq =
+      mcqCountAll > 0 ? Math.round(mcqPctSumAll / mcqCountAll) : null;
+
+    const recentActivity = Object.entries(dayCounts)
+      .map(([day, count]) => ({ day, count }))
+      .sort((a, b) => a.day.localeCompare(b.day));
 
     const lastActive = lastActiveMap[email] || null;
     const daysSinceActive = lastActive
