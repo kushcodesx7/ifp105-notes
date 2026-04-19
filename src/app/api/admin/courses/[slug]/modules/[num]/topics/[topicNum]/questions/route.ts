@@ -63,6 +63,7 @@ async function resolveTopicId(
     .select("id")
     .eq("module_id", moduleId)
     .eq("number", topicNumber)
+    .is("deleted_at", null)
     .maybeSingle();
   const topicId = (topic as { id: string } | null)?.id;
   if (!topicId) {
@@ -117,6 +118,8 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       "id, number, question, options_json, correct_index, bloom, explanation, difficulty, order_index, created_at, updated_at"
     )
     .eq("topic_id", res.topicId)
+    // Hide soft-deleted questions from the topic editor.
+    .is("deleted_at", null)
     .order("order_index", { ascending: true })
     .order("number", { ascending: true });
 

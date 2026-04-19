@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
 import { useAdminFetch } from "@/lib/useAdminFetch";
@@ -136,6 +137,39 @@ export default function ToolsPage() {
           </p>
         </div>
 
+        {/* Trash — soft-deleted topics + questions live here until
+             restored or purged. Top of the list because it's the
+             primary safety-net surface. */}
+        <Link
+          href="/admin/tools/trash"
+          className="block mb-6 rounded-2xl p-5 transition-all hover:border-white/[0.18] hover:bg-white/[0.03] active:scale-[0.995]"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+              style={{
+                background: "rgba(99,102,241,0.12)",
+                color: "#A5B4FC",
+              }}
+              aria-hidden="true"
+            >
+              🗑️
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold mb-0.5">Trash</div>
+              <p className="text-[12px] text-zinc-500 leading-relaxed">
+                Restore or permanently delete topics and questions you&apos;ve
+                moved to the bin. Deletes are recoverable until you purge them.
+              </p>
+            </div>
+            <span className="text-zinc-500 text-sm shrink-0">→</span>
+          </div>
+        </Link>
+
         {/* Audit log — ready */}
         <AuditLogCard
           idToken={idToken}
@@ -192,6 +226,14 @@ const ACTION_META: Record<
   create_question: { icon: "❓", label: "Question created", color: "#34D399" },
   update_question: { icon: "✏", label: "Question updated", color: "#818CF8" },
   delete_question: { icon: "🗑", label: "Question deleted", color: "#F87171" },
+  // Trash — soft-delete distinguishes from hard delete (which now only
+  // fires via /admin/tools/trash purge after an explicit confirm).
+  soft_delete_topic: { icon: "🗑️", label: "Topic moved to trash", color: "#FBBF24" },
+  soft_delete_question: { icon: "🗑️", label: "Question moved to trash", color: "#FBBF24" },
+  restore_topic: { icon: "♻️", label: "Topic restored", color: "#34D399" },
+  restore_question: { icon: "♻️", label: "Question restored", color: "#34D399" },
+  purge_topic: { icon: "💥", label: "Topic purged (permanent)", color: "#F87171" },
+  purge_question: { icon: "💥", label: "Question purged (permanent)", color: "#F87171" },
   // Content migration / one-shot actions
   seed_ict: { icon: "📥", label: "ICT seeded to DB", color: "#A78BFA" },
 };

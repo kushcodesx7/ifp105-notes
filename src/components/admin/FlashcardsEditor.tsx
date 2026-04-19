@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 // Admin editor for the per-topic flashcard deck.
 //
@@ -43,6 +44,7 @@ export default function FlashcardsEditor({
   dirty,
 }: Props) {
   const [justAddedIdx, setJustAddedIdx] = useState<number | null>(null);
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
   const frontRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 
   // Auto-focus the front textarea of a freshly added card so the admin
@@ -65,12 +67,15 @@ export default function FlashcardsEditor({
     setJustAddedIdx(next.length - 1);
   }
 
-  function deleteCard(i: number) {
-    // No confirm dialog — undo is "refresh before the auto-save fires"
-    // or re-type. Confirm dialogs for one-click actions on a short list
-    // are friction for no benefit.
-    const next = value.filter((_, idx) => idx !== i);
+  function requestDelete(i: number) {
+    setConfirmDeleteIdx(i);
+  }
+
+  function confirmDelete() {
+    if (confirmDeleteIdx == null) return;
+    const next = value.filter((_, idx) => idx !== confirmDeleteIdx);
     onChange(next);
+    setConfirmDeleteIdx(null);
   }
 
   function move(i: number, dir: -1 | 1) {
@@ -207,7 +212,7 @@ export default function FlashcardsEditor({
                     ↓
                   </button>
                   <button
-                    onClick={() => deleteCard(i)}
+                    onClick={() => requestDelete(i)}
                     title="Delete card"
                     aria-label={`Delete card ${i + 1}`}
                     className="w-7 h-7 rounded-md text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center mt-1"
@@ -231,6 +236,26 @@ export default function FlashcardsEditor({
       >
         + Add card
       </button>
+
+      {/* Flashcards don't yet have a trash (layer 2), so this delete is
+          permanent — ConfirmDialog uses `kind="danger"` to make that
+          obvious. Once the save fires the card is gone; refresh before
+          saving is the only undo. */}
+      <ConfirmDialog
+        open={confirmDeleteIdx !== null}
+        title="Delete this flashcard?"
+        description={
+          confirmDeleteIdx != null && value[confirmDeleteIdx]
+            ? `"${value[confirmDeleteIdx].front.slice(0, 120) || "(empty card)"}"`
+            : ""
+        }
+        warning="Flashcards don't have a trash yet — this delete is permanent once you save."
+        confirmLabel="Delete card"
+        cancelLabel="Keep"
+        kind="danger"
+        onCancel={() => setConfirmDeleteIdx(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -69,13 +69,19 @@ export async function loadModuleFromDB(
     if (!moduleId) return null;
 
     // ── 2. Topics + their questions embedded (one round-trip) ──
+    // Soft-deleted topics are excluded up-front. Soft-deleted questions
+    // within live topics are filtered client-side after the embed —
+    // PostgREST doesn't (yet) support predicate-filtering embedded
+    // relations here, so we pull them all and drop the trashed ones
+    // during the transform below.
     const { data: topicRows } = await supabase
       .from("topics")
       .select(
         `id, number, title, time_min, hook, content_json, order_index,
-         questions(number, question, options_json, correct_index, bloom, explanation, difficulty, order_index)`
+         questions(number, question, options_json, correct_index, bloom, explanation, difficulty, order_index, deleted_at)`
       )
       .eq("module_id", moduleId)
+      .is("deleted_at", null)
       .order("order_index", { ascending: true })
       .order("number", { ascending: true });
 
@@ -105,6 +111,7 @@ export async function loadModuleFromDB(
               bloom: string | null;
               explanation: string | null;
               order_index: number;
+              deleted_at: string | null;
             }[]
           | null;
       };
@@ -117,7 +124,9 @@ export async function loadModuleFromDB(
         : [];
 
       // Stitch embedded MCQs into the bank keyed by topic number.
-      const embedded = tRow.questions || [];
+      // Drop any question the teacher has soft-deleted so students
+      // never see trashed MCQs.
+      const embedded = (tRow.questions || []).filter((q) => !q.deleted_at);
       const sorted = [...embedded].sort(
         (a, b) =>
           (a.order_index ?? 0) - (b.order_index ?? 0) ||

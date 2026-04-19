@@ -123,17 +123,23 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       "id, number, title, time_min, hook, order_index, created_at, updated_at"
     )
     .eq("module_id", res.moduleId)
+    // Hide soft-deleted topics from the normal editor view — they
+    // live in /admin/tools/trash until restored or purged.
+    .is("deleted_at", null)
     .order("order_index", { ascending: true })
     .order("number", { ascending: true });
 
-  // Question counts per topic, in one round trip.
+  // Question counts per topic, in one round trip. Soft-deleted
+  // questions are excluded so the counts match what the editor
+  // actually shows.
   const topicIds = (topicRows || []).map((t) => t.id);
   const questionCounts = new Map<string, number>();
   if (topicIds.length > 0) {
     const { data: qRows } = await supabase
       .from("questions")
       .select("topic_id")
-      .in("topic_id", topicIds);
+      .in("topic_id", topicIds)
+      .is("deleted_at", null);
     for (const q of (qRows || []) as { topic_id: string }[]) {
       questionCounts.set(q.topic_id, (questionCounts.get(q.topic_id) || 0) + 1);
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 // Shared MCQ question editor. Was duplicated as `QuestionEditor` in the
 // admin module detail page and `InlineQuestionEditor` in the inline
@@ -112,8 +113,10 @@ export default function SharedQuestionEditor({
     }
   }
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   async function del() {
-    if (!confirm(`Delete question ${q.number}?`)) return;
+    setDeleting(true);
     try {
       const res = await fetch(endpoint, {
         method: "DELETE",
@@ -123,9 +126,12 @@ export default function SharedQuestionEditor({
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || `Delete failed (${res.status})`);
       }
+      setConfirmOpen(false);
       onChange();
     } catch (e) {
       alert((e as Error).message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -259,12 +265,27 @@ export default function SharedQuestionEditor({
           {saving ? "Saving…" : dirty ? "Save" : "Saved"}
         </button>
         <button
-          onClick={del}
+          onClick={() => setConfirmOpen(true)}
           className="text-[11px] font-semibold text-red-400 hover:text-red-300 bg-red-500/[0.08] hover:bg-red-500/[0.14] px-2.5 py-1 rounded ml-auto"
         >
           Delete
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Move question ${q.number} to trash?`}
+        description={
+          q.question.length > 140 ? q.question.slice(0, 140) + "…" : q.question
+        }
+        warning="The question goes to /admin/tools/trash — restore anytime."
+        confirmLabel="Move to trash"
+        cancelLabel="Keep"
+        kind="danger"
+        loading={deleting}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={del}
+      />
     </div>
   );
 }

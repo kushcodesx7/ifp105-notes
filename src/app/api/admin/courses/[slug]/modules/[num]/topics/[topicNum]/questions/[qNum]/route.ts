@@ -79,6 +79,7 @@ async function resolveQuestionId(
     .select("id")
     .eq("module_id", moduleId)
     .eq("number", topicNumber)
+    .is("deleted_at", null)
     .maybeSingle();
   const topicId = (topic as { id: string } | null)?.id;
   if (!topicId) {
@@ -92,6 +93,9 @@ async function resolveQuestionId(
     .select("id")
     .eq("topic_id", topicId)
     .eq("number", questionNumber)
+    // Soft-deleted questions are hidden from the normal editor; the
+    // trash API reaches them directly via a different path.
+    .is("deleted_at", null)
     .maybeSingle();
   const questionId = (q as { id: string } | null)?.id;
   if (!questionId) {
@@ -286,6 +290,10 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 }
 
 // ─── DELETE ──────────────────────────────────────────────────
+// Soft-deletes by default. Pass ?permanent=1 to hard-delete (used by
+// the trash view's permanent-delete button). Soft-deleted questions
+// disappear from the normal topic editor + MCQ bank and appear in
+// /admin/tools/trash until restored or purged.
 export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
@@ -293,6 +301,37 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const { slug, num, topicNum, qNum } = await ctx.params;
   const res = await resolveQuestionId(slug, num, topicNum, qNum);
   if (!res.ok) return res.response;
+
+  const url = new URL(req.url);
+  const permanent = url.searchParams.get("permanent") === "1";
+
+  if (!permanent) {
+    const { error: softErr } = await supabase
+      .from("questions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", res.questionId);
+    if (softErr) {
+      if (/column.*deleted_at.*does not exist/i.test(softErr.message)) {
+        return Response.json(
+          { error: "soft-delete column missing — run scripts/migration-add-soft-delete.sql" },
+          { status: 503 }
+        );
+      }
+      return Response.json({ error: softErr.message }, { status: 500 });
+    }
+    await logAdminAction({
+      actorEmail: actorFromAuth(admin),
+      action: "soft_delete_question",
+      subjectEmail: null,
+      details: {
+        courseSlug: slug,
+        moduleNumber: res.moduleNumber,
+        topicNumber: res.topicNumber,
+        questionNumber: res.questionNumber,
+      },
+    });
+    return Response.json({ ok: true, softDeleted: true });
+  }
 
   const { error } = await supabase.from("questions").delete().eq("id", res.questionId);
   if (error) return Response.json({ error: error.message }, { status: 500 });
