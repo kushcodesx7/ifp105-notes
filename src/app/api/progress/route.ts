@@ -14,17 +14,21 @@ import { parseBody, ProgressSaveSchema } from "@/lib/schemas";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
-  const module = searchParams.get("module");
+  // Renamed from `module` to `moduleParam` — the bare name `module`
+  // shadows Node's CommonJS module global and is flagged by Next's
+  // no-assign-module-variable lint rule (it has historically caused
+  // weird bundler crashes on edge runtime targets).
+  const moduleParam = searchParams.get("module");
   const courseSlug = (searchParams.get("course") || "ict").trim();
 
-  if (!email || !module) {
+  if (!email || !moduleParam) {
     return Response.json(
       { error: "email and module query params required" },
       { status: 400 }
     );
   }
 
-  const moduleNumber = parseInt(module, 10);
+  const moduleNumber = parseInt(moduleParam, 10);
   if (isNaN(moduleNumber)) {
     return Response.json({ error: "Invalid module number" }, { status: 400 });
   }
