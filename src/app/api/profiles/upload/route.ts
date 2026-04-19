@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAuth } from "@/lib/verify-google-token";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // SECURITY: signed-in students only. Anonymous upload would let anyone fill
 // our Supabase storage bucket with arbitrary files. Audit-flagged CRITICAL
@@ -8,6 +9,18 @@ import { requireAuth } from "@/lib/verify-google-token";
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if (!auth.ok) return auth.response;
+
+  // Rate limit per email: legitimate use is "pick a profile photo,
+  // maybe retry once if cropped wrong". 10 per hour is generous;
+  // anything higher is a misconfigured client or abuse. Keeps a
+  // single compromised token from filling the bucket.
+  const rl = await rateLimit({
+    bucket: "profiles:upload",
+    id: auth.user.email,
+    limit: 10,
+    windowSec: 3600,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 10);
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

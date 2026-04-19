@@ -71,7 +71,7 @@ export default function CourseEditPage({
     useAdminAuth();
   const { toast } = useToast();
 
-  const credential = idToken ? { idToken } : password;
+  const credential = { idToken };
   const { data, mutate, isLoading } = useAdminFetch<CourseResponse>(
     `/api/admin/courses/${encodeURIComponent(slug)}`,
     credential,

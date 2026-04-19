@@ -53,6 +53,11 @@ export default function IFSConnectPage() {
   const [totalRolls, setTotalRolls] = useState(0);
   const [perSectionTotals, setPerSectionTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  // `loadError` distinguishes "still loading" from "finished with no data
+  // because the API failed". Previously a network failure silently
+  // flipped `loading` off and the student saw an empty grid, which made
+  // it look like their class was empty instead of offering a retry.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [skillFilter, setSkillFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,15 +76,29 @@ export default function IFSConnectPage() {
         const headers: Record<string, string> = {};
         if (token) headers["x-id-token"] = token;
         const r = await fetch("/api/connect", { headers });
-        if (!r.ok) return;
+        if (!r.ok) {
+          if (alive) {
+            setLoadError(`Couldn't load your classmates (${r.status}).`);
+            setLoading(false);
+          }
+          return;
+        }
         const data = await r.json();
         if (!alive) return;
         setStudents(data.students || []);
         setTotalRolls(data.totalRolls || 0);
         setPerSectionTotals(data.perSectionTotals || {});
+        setLoadError(null);
         setLoading(false);
-      } catch {
-        if (alive) setLoading(false);
+      } catch (e) {
+        if (alive) {
+          setLoadError(
+            (e as Error)?.message
+              ? `Couldn't load your classmates — ${(e as Error).message}`
+              : "Couldn't load your classmates. Check your connection."
+          );
+          setLoading(false);
+        }
       }
     }
     // Initial fetch
@@ -568,6 +587,49 @@ export default function IFSConnectPage() {
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          </div>
+        ) : loadError ? (
+          // Distinguishable from the empty state — previously a fetch
+          // failure silently fell through to "No registered students"
+          // which misled students whose class was actually full.
+          <div className="text-center py-16">
+            <div className="text-4xl mb-3" aria-hidden="true">⚠️</div>
+            <p className="text-sm text-zinc-300 mb-1">{loadError}</p>
+            <button
+              onClick={() => {
+                setLoading(true);
+                setLoadError(null);
+                // Trigger a fresh load by incrementing the dep-free effect.
+                // Simpler path: call the same endpoint inline.
+                (async () => {
+                  try {
+                    const token = getIdToken();
+                    const headers: Record<string, string> = {};
+                    if (token) headers["x-id-token"] = token;
+                    const r = await fetch("/api/connect", { headers });
+                    if (!r.ok) {
+                      setLoadError(`Couldn't load your classmates (${r.status}).`);
+                      return;
+                    }
+                    const data = await r.json();
+                    setStudents(data.students || []);
+                    setTotalRolls(data.totalRolls || 0);
+                    setPerSectionTotals(data.perSectionTotals || {});
+                    setLoadError(null);
+                  } catch (e) {
+                    setLoadError(
+                      (e as Error)?.message ||
+                        "Couldn't load your classmates."
+                    );
+                  } finally {
+                    setLoading(false);
+                  }
+                })();
+              }}
+              className="mt-3 text-xs font-semibold text-indigo-300 hover:text-indigo-200 underline underline-offset-4"
+            >
+              Try again
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">

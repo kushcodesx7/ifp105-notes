@@ -89,7 +89,7 @@ export default function ModuleEditPage({
     useAdminAuth();
   const { toast } = useToast();
 
-  const credential = idToken ? { idToken } : password;
+  const credential = { idToken };
   const { data, mutate, isLoading } = useAdminFetch<ModuleResponse>(
     `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}`,
     credential,
@@ -456,7 +456,7 @@ function TopicEditorPanel({
   );
   const [saving, setSaving] = useState(false);
 
-  const credential = idToken ? { idToken } : password;
+  const credential = { idToken };
 
   // Full topic detail (includes contentJson). The list endpoint used
   // by the parent doesn't return content_json to keep the payload

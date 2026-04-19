@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAuth } from "@/lib/verify-google-token";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/session/ping
 //
@@ -25,6 +26,18 @@ export async function POST(req: NextRequest) {
 
   const email = auth.user.email;
   const name = auth.user.name || "Student";
+
+  // Rate limit: module mount + tab-focus can fire this every few
+  // seconds; the legitimate pattern is ~1 per minute per student. Cap
+  // at 30/min to leave headroom for flaky reconnects without letting
+  // a buggy client (or attacker with a valid token) DoS the table.
+  const rl = await rateLimit({
+    bucket: "session:ping",
+    id: email,
+    limit: 30,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 30);
 
   // Optional `currentPath` in body — feeds the live class digest on
   // /admin so the teacher can see WHERE everyone is, not just THAT
