@@ -354,12 +354,20 @@ export default function ModulePage({
       return;
     }
     setNeedsReauth(false);
-    // Fire-and-forget; ping failure isn't user-visible.
+    // Fire-and-forget; ping failure isn't user-visible. Includes the
+    // current page path so the admin live-class-digest can show
+    // *where* each student is, not just *that* they're active.
+    const currentPath =
+      typeof window !== "undefined" ? window.location.pathname : null;
     fetch("/api/session/ping", {
       method: "POST",
-      headers: { "x-id-token": token },
+      headers: {
+        "x-id-token": token,
+        "Content-Type": "application/json",
+      },
       // Skip caches — the whole point is recording fresh activity.
       cache: "no-store",
+      body: JSON.stringify({ currentPath }),
     }).catch(() => {});
   }, [isLoggedIn, user, getIdToken]);
 

@@ -27,11 +27,19 @@ interface ActiveStudent {
   lastActiveAt: string;
   ageSec: number;
   photoUrl: string | null;
+  currentPath?: string | null;
+}
+
+interface PathDistributionEntry {
+  path: string;
+  label: string;
+  count: number;
 }
 
 interface Response {
   windowMin: number;
   items: ActiveStudent[];
+  distribution?: PathDistributionEntry[];
 }
 
 const POLL_INTERVAL_MS = 20_000;
@@ -178,6 +186,57 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
           last 10 min · refreshes every 20s
         </span>
       </div>
+
+      {/* Live class digest — shows where active students are right now,
+          grouped by friendly path label (Module N / Connect / Home).
+          Tiny horizontal bar chart so the teacher can see at a glance
+          "everyone's on Module 3" without reading the student list.
+          Only renders when the server returned distribution data
+          (post-SQL-migration) AND there's at least one entry. */}
+      {data?.distribution && data.distribution.length > 0 && (
+        <div className="mb-4">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-2">
+            Where they are
+          </div>
+          <div className="space-y-1.5">
+            {data.distribution.slice(0, 6).map((entry) => {
+              const max = Math.max(
+                1,
+                ...data.distribution!.slice(0, 6).map((e) => e.count)
+              );
+              const widthPct = Math.max(8, (entry.count / max) * 100);
+              return (
+                <div
+                  key={entry.path}
+                  className="flex items-center gap-2 text-[11px]"
+                >
+                  <span className="text-zinc-400 font-medium shrink-0 w-24 truncate">
+                    {entry.label}
+                  </span>
+                  <div
+                    className="flex-1 h-2 rounded-full overflow-hidden"
+                    style={{ background: "rgba(255,255,255,0.04)" }}
+                  >
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${widthPct}%` }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      className="h-full rounded-full"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, #6366F1, #8B5CF6)",
+                      }}
+                    />
+                  </div>
+                  <span className="text-zinc-300 font-bold tabular-nums shrink-0 w-6 text-right">
+                    {entry.count}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {isLoading && !data && (
         <div className="flex items-center justify-center py-6 text-[12px] text-zinc-500">

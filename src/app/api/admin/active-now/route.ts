@@ -24,6 +24,18 @@ export interface ActiveStudent {
   /** Seconds since last activity. Lets the client render "now" / "2m". */
   ageSec: number;
   photoUrl: string | null;
+  /** Current in-app path the student is on, e.g. "/module/3". Null
+   *  for clients that haven't been updated yet OR pre-migration DBs. */
+  currentPath: string | null;
+}
+
+/** Per-path live count + sample of students. Powers the topic
+ *  distribution chart on /admin. */
+export interface PathDistributionEntry {
+  path: string;
+  /** Friendly label derived from the path — "Module 3" / "Connect" */
+  label: string;
+  count: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -41,15 +53,43 @@ export async function GET(req: NextRequest) {
 
   // Pull active sessions in window. Light query — most students aren't
   // active in any given 10-minute slice, even on a Monday peak.
-  const { data: sessions } = await supabase
-    .from("student_sessions")
-    .select("student_email, last_active_at")
-    .gte("last_active_at", cutoffIso)
-    .order("last_active_at", { ascending: false });
+  // Try to pull current_path; fall back without it on pre-migration DBs.
+  // The Supabase client's response types narrow per-call, so we cast
+  // through `unknown` after the fallback to keep the union type.
+  type SessionRow = {
+    student_email: string;
+    last_active_at: string;
+    current_path?: string | null;
+  };
+  let sessionData: SessionRow[] | null;
+  let sessionError: { message: string } | null;
+  {
+    const r = await supabase
+      .from("student_sessions")
+      .select("student_email, last_active_at, current_path")
+      .gte("last_active_at", cutoffIso)
+      .order("last_active_at", { ascending: false });
+    sessionData = (r.data as unknown as SessionRow[]) || null;
+    sessionError = r.error;
+  }
+  if (
+    sessionError &&
+    /column.*current_path.*does not exist|PGRST204|PGRST102/i.test(
+      sessionError.message
+    )
+  ) {
+    const r = await supabase
+      .from("student_sessions")
+      .select("student_email, last_active_at")
+      .gte("last_active_at", cutoffIso)
+      .order("last_active_at", { ascending: false });
+    sessionData = (r.data as unknown as SessionRow[]) || null;
+    sessionError = r.error;
+  }
 
-  const rows = (sessions || []) as { student_email: string; last_active_at: string }[];
+  const rows = sessionData || [];
   if (rows.length === 0) {
-    return Response.json({ windowMin, items: [] });
+    return Response.json({ windowMin, items: [], distribution: [] });
   }
 
   // Hydrate student names / sections / photos in one batch.
@@ -84,11 +124,32 @@ export async function GET(req: NextRequest) {
         Math.floor((now - new Date(row.last_active_at).getTime()) / 1000)
       ),
       photoUrl: s?.photo_url || null,
+      currentPath: row.current_path || null,
     };
   });
 
+  // Live class digest — count active students by friendly path label.
+  // Excludes hidden-section students so the teacher's own test
+  // session doesn't pollute the chart. Sorted by count DESC so the
+  // hottest spots float to the top.
+  const counts = new Map<string, { label: string; count: number }>();
+  for (const item of items) {
+    if (item.hidden) continue;
+    if (!item.currentPath) continue;
+    const label = friendlyLabelForPath(item.currentPath);
+    const key = label;
+    const prev = counts.get(key);
+    counts.set(key, {
+      label,
+      count: (prev?.count || 0) + 1,
+    });
+  }
+  const distribution: PathDistributionEntry[] = Array.from(counts.entries())
+    .map(([path, v]) => ({ path, label: v.label, count: v.count }))
+    .sort((a, b) => b.count - a.count);
+
   return Response.json(
-    { windowMin, items },
+    { windowMin, items, distribution },
     {
       headers: {
         // Per-admin and time-sensitive — no shared cache. Browser
@@ -97,6 +158,22 @@ export async function GET(req: NextRequest) {
       },
     }
   );
+}
+
+// Convert "/module/3" → "Module 3", "/connect" → "IFS Connect", etc.
+// Aggregates module paths across topics so the digest groups by module
+// rather than splitting Module 3's 5 students into 5 different rows.
+function friendlyLabelForPath(path: string): string {
+  // /module/N or /c/<slug>/module/N → "Module N"
+  const moduleMatch = /^\/(?:c\/[^/]+\/)?module\/(\d+)/.exec(path);
+  if (moduleMatch) return `Module ${moduleMatch[1]}`;
+  if (path === "/") return "Home";
+  if (path === "/connect" || path.startsWith("/connect/")) return "IFS Connect";
+  if (path.startsWith("/profile")) return "Profile";
+  if (path.startsWith("/batches")) return "Batches";
+  if (path.startsWith("/admin")) return "Admin";
+  // Fallback: trim the path to a readable form.
+  return path.length > 30 ? path.slice(0, 30) + "…" : path;
 }
 
 function clampInt(v: number, min: number, max: number, fallback: number): number {
