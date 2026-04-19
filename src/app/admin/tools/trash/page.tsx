@@ -79,7 +79,7 @@ export default function TrashPage() {
   const { idToken, password, setPassword, ready, setAuthenticated } =
     useAdminAuth();
   const { toast } = useToast();
-  const credential = idToken ? { idToken } : password;
+  const credential = { idToken };
 
   const { data, mutate, isLoading } = useAdminFetch<TrashResponse>(
     "/api/admin/trash",

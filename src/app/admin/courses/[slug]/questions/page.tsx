@@ -73,7 +73,7 @@ export default function QuestionBankPage({
   const { idToken, password, setPassword, ready, setAuthenticated } =
     useAdminAuth();
 
-  const credential = idToken ? { idToken } : password;
+  const credential = { idToken };
   const { data, isLoading } = useAdminFetch<BankResponse>(
     `/api/admin/courses/${encodeURIComponent(slug)}/question-bank`,
     credential,

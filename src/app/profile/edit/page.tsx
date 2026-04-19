@@ -345,7 +345,17 @@ export default function EditProfilePage() {
 
           {/* Photo */}
           <div className="flex items-center gap-5 mb-8">
-            <div className="relative cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
+            <div
+              className={`relative group ${uploading ? "cursor-wait opacity-80" : "cursor-pointer"}`}
+              onClick={() => {
+                // Guard against double-click queueing another upload
+                // while the first POST is still in flight. Previously
+                // impatient clicks stacked requests → duplicate
+                // uploaded files + race conditions on the URL write.
+                if (uploading) return;
+                fileInputRef.current?.click();
+              }}
+            >
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/[0.08] group-hover:border-indigo-500/50 transition-colors relative"
                 style={{ background: "rgba(255,255,255,0.04)" }}>
                 {profile.photoUrl ? (
@@ -371,7 +381,7 @@ export default function EditProfilePage() {
               <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <span className="text-white text-xs font-medium">{uploading ? "..." : "Edit"}</span>
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
             </div>
             <div>
               <input type="text" value={profile.name} onChange={e => updateField("name", e.target.value)}

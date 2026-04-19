@@ -50,7 +50,7 @@ export default function CoursesPage() {
     useAdminAuth();
   const { toast } = useToast();
 
-  const credential = idToken ? { idToken } : password;
+  const credential = { idToken };
   const { data, isLoading, mutate } = useAdminFetch<CoursesResponse>(
     "/api/admin/courses",
     credential,
