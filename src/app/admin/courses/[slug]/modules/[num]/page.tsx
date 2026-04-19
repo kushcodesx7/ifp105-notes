@@ -419,6 +419,7 @@ interface TopicDetail {
   hook: string | null;
   contentJson: ContentBlock[];
   flashcardsJson: Flashcard[];
+  flashcardsSource?: "db" | "ts" | "empty";
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
@@ -475,6 +476,10 @@ function TopicEditorPanel({
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsDirty, setFlashcardsDirty] = useState(false);
   const [savingFlashcards, setSavingFlashcards] = useState(false);
+  // "ts" = the loaded deck came from the bundled TS file, not the DB.
+  // First Save will migrate them. UI shows a hint banner so the
+  // teacher knows why they're seeing cards that aren't yet editable.
+  const flashcardsSource = detailData?.topic.flashcardsSource ?? "empty";
 
   const serverBlocks = detailData?.topic.contentJson;
   useEffect(() => {
@@ -698,6 +703,18 @@ function TopicEditorPanel({
            independently so a half-edited card can't block body
            saves. */}
       <div className="mt-5 border-t border-white/[0.05] pt-4">
+        {flashcardsSource === "ts" && (
+          <div
+            className="mb-3 rounded-lg px-3 py-2.5 text-[11px] leading-relaxed"
+            style={{
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid rgba(245,158,11,0.25)",
+              color: "#FCD34D",
+            }}
+          >
+            <strong>📦 Loaded from bundled file</strong> — these {flashcards.length} card{flashcards.length === 1 ? "" : "s"} live in <code className="px-1 py-0.5 rounded bg-black/30">src/data/flashcards.ts</code>. Click <strong>Save cards</strong> below to migrate them to the database — then you can edit, delete, and reorder freely.
+          </div>
+        )}
         <FlashcardsEditor
           value={flashcards}
           onChange={(next) => {
@@ -706,7 +723,7 @@ function TopicEditorPanel({
           }}
           onSave={saveFlashcards}
           saving={savingFlashcards}
-          dirty={flashcardsDirty}
+          dirty={flashcardsDirty || flashcardsSource === "ts"}
         />
       </div>
 

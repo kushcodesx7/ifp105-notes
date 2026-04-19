@@ -58,6 +58,14 @@ export default function CoursesPage() {
   );
 
   const [creating, setCreating] = useState(false);
+  // Track which course (if any) is being hard-deleted via the danger
+  // dialog. `null` means the dialog is closed. Declared BEFORE the
+  // conditional auth-gate return so React's hook order stays stable
+  // across renders — the previous order (useState after the if-return)
+  // violated the rules of hooks and broke the page on React 19.
+  const [hardDeleteTarget, setHardDeleteTarget] = useState<CourseRow | null>(
+    null
+  );
 
   if (!ready) {
     return (
@@ -69,12 +77,6 @@ export default function CoursesPage() {
       />
     );
   }
-
-  // Track which course (if any) is being hard-deleted via the danger
-  // dialog. `null` means the dialog is closed.
-  const [hardDeleteTarget, setHardDeleteTarget] = useState<CourseRow | null>(
-    null
-  );
 
   // Soft delete = "Hide" — reversible, low-blast-radius. Keeps the
   // cheap confirm() path. Hard delete = cascades across modules,

@@ -146,21 +146,42 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   }
 
   // Flashcard counts per topic. Separate select because flashcards_json
-  // is a JSONB array inside the topics table — the cheapest way to get
-  // card counts without pulling the entire JSONB payload across the
-  // wire is to use jsonb_array_length via a SQL expression. We wrap it
-  // in try/catch so pre-migration DBs (column doesn't exist) fall
-  // through to 0 counts without breaking the modules page.
+  // is a JSONB array inside the topics table. Wrapped in try/catch so
+  // pre-migration DBs (column doesn't exist) fall through to 0 counts
+  // without breaking the modules page.
+  //
+  // For ICT topics whose DB count is 0, falls back to the bundled
+  // src/data/flashcards.ts so the topic row reflects what students
+  // actually see (5 cards from TS) rather than misleadingly showing 0.
   const flashcardCounts = new Map<string, number>();
   if (topicIds.length > 0) {
     const { data: fcRows, error: fcErr } = await supabase
       .from("topics")
-      .select("id, flashcards_json")
+      .select("id, number, flashcards_json")
       .in("id", topicIds);
     if (!fcErr && fcRows) {
-      for (const row of fcRows as { id: string; flashcards_json: unknown }[]) {
+      const tsLookup =
+        slug === "ict"
+          ? await import("@/data/flashcards")
+              .then((m) => m.flashcardData[res.moduleNumber] || {})
+              .catch(() => ({} as Record<number, unknown>))
+          : ({} as Record<number, unknown>);
+      for (const row of fcRows as {
+        id: string;
+        number: number;
+        flashcards_json: unknown;
+      }[]) {
         const arr = row.flashcards_json;
-        flashcardCounts.set(row.id, Array.isArray(arr) ? arr.length : 0);
+        const dbCount = Array.isArray(arr) ? arr.length : 0;
+        if (dbCount > 0) {
+          flashcardCounts.set(row.id, dbCount);
+        } else {
+          const tsCards = (tsLookup as Record<number, unknown[]>)[row.number];
+          flashcardCounts.set(
+            row.id,
+            Array.isArray(tsCards) ? tsCards.length : 0
+          );
+        }
       }
     }
   }

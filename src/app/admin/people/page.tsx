@@ -27,6 +27,7 @@ type FilterKey =
   | "mcqLow";
 
 type SortKey =
+  | "liveFirst"
   | "nameAsc"
   | "completionDesc"
   | "completionAsc"
@@ -34,6 +35,11 @@ type SortKey =
   | "mcqLow"
   | "lastActiveDesc"
   | "blendedDesc";
+
+// Cutoff for the "live now" pulse indicator + the new default sort.
+// Matches the window used by /api/admin/active-now and ActiveNowWidget
+// so all three surfaces agree on what counts as "active right now".
+const LIVE_NOW_MS = 10 * 60 * 1000;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -45,6 +51,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "liveFirst", label: "🟢 Live now first" },
   { key: "nameAsc", label: "Name A→Z" },
   { key: "completionDesc", label: "Completion ↓" },
   { key: "completionAsc", label: "Completion ↑" },
@@ -108,7 +115,9 @@ function PeoplePage() {
     searchParams?.get("section") || "all"
   );
   const [sort, setSort] = useState<SortKey>(
-    (searchParams?.get("sort") as SortKey) || "nameAsc"
+    // New default: live-now students first, then most recently active.
+    // Matches the user expectation of "show me who's working right now".
+    (searchParams?.get("sort") as SortKey) || "liveFirst"
   );
   const [query, setQuery] = useState("");
 
@@ -118,11 +127,11 @@ function PeoplePage() {
     useAdminFetch<PeopleResponse>(
       "/api/admin/people",
       credential,
-      // 2-min polling is enough: the drawer refetches on mount + tab
-      // focus already re-syncs via visibilitychange. Halving the poll
-      // rate halves this tab's /api/admin/people traffic with no
-      // perceivable latency impact.
-      { enabled: authenticated, refreshInterval: 120_000 }
+      // 30s polling so the live-now indicator + sort stays fresh
+      // without the teacher having to refresh. Bumped down from 2min
+      // when the live-now feature landed; the response is small (<100KB
+      // for a full class) so this is well within budget.
+      { enabled: authenticated, refreshInterval: 30_000 }
     );
 
   useEffect(() => {
@@ -273,6 +282,27 @@ function PeoplePage() {
           (a, b) => (a.daysSinceActive ?? 9999) - (b.daysSinceActive ?? 9999)
         );
         break;
+      case "liveFirst": {
+        // Two-stage sort: students with last_active in the LIVE_NOW
+        // window jump to the top, ordered by absolute recency among
+        // themselves. Everyone else falls below, sorted by
+        // daysSinceActive ascending. Mirrors the "Live now" widget on
+        // the admin home so the table feels like a continuation of it.
+        const now = Date.now();
+        const liveTs = (s: AdminStudent): number =>
+          s.lastActive ? new Date(s.lastActive).getTime() : 0;
+        sorted.sort((a, b) => {
+          const aLive = a.lastActive
+            ? now - liveTs(a) < LIVE_NOW_MS
+            : false;
+          const bLive = b.lastActive
+            ? now - liveTs(b) < LIVE_NOW_MS
+            : false;
+          if (aLive !== bLive) return aLive ? -1 : 1;
+          return liveTs(b) - liveTs(a); // most recent first within each band
+        });
+        break;
+      }
       case "blendedDesc":
         sorted.sort((a, b) => {
           const ba = a.completionPct * 0.6 + (a.avgMcq ?? 0) * 0.4;
@@ -613,8 +643,25 @@ function PeoplePage() {
                                 display name when no roll_list name is on
                                 file yet. The display name + roll + email
                                 go on a secondary line for disambiguation. */}
-                            <div className="text-[13px] font-semibold text-zinc-200 truncate">
-                              {s.rollListName || s.name}
+                            <div className="text-[13px] font-semibold text-zinc-200 truncate flex items-center gap-1.5">
+                              {/* Live-now pulse — green dot if the student
+                                  pinged in the last 10 minutes. Same window
+                                  the home-page widget uses. */}
+                              {s.lastActive &&
+                                Date.now() - new Date(s.lastActive).getTime() <
+                                  LIVE_NOW_MS && (
+                                  <span
+                                    className="relative inline-flex h-2 w-2 shrink-0"
+                                    title="Active right now"
+                                    aria-label="Active right now"
+                                  >
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                  </span>
+                                )}
+                              <span className="truncate">
+                                {s.rollListName || s.name}
+                              </span>
                             </div>
                             <div className="text-[10px] text-zinc-500 truncate">
                               {s.rollListName ? (
