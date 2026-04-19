@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // Flashcards data (~42KB) lands in this lazy chunk, not in the main
 // module bundle. ModulePage wraps this component in next/dynamic so the
 // data only loads when a student actually scrolls into a topic.
-import { flashcardData } from "@/data/flashcards";
+import { getTsFlashcardDeck } from "@/lib/flashcards-lookup";
 import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 import { flashcardStateKey } from "@/lib/storage-keys";
 
@@ -39,7 +39,7 @@ export default function Flashcards({
   const tsFallback =
     cardsProp ??
     (moduleNumber != null && topicId != null
-      ? flashcardData[moduleNumber]?.[topicId]
+      ? getTsFlashcardDeck(moduleNumber, topicId)
       : undefined);
 
   // DB override. Null = not fetched yet; empty array = fetched but

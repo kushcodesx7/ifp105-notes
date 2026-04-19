@@ -127,9 +127,9 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   // author straight into DB so won't have a TS file to fall back to.
   if (flashcardsSource === "empty" && slug === "ict") {
     try {
-      const { flashcardData } = await import("@/data/flashcards");
-      const tsCards = flashcardData[res.moduleNumber]?.[res.topicNumber];
-      if (tsCards && tsCards.length > 0) {
+      const { getTsFlashcardDeck } = await import("@/lib/flashcards-lookup");
+      const tsCards = getTsFlashcardDeck(res.moduleNumber, res.topicNumber);
+      if (tsCards.length > 0) {
         flashcardsJson = tsCards.map((c) => ({ front: c.front, back: c.back }));
         flashcardsSource = "ts";
       }
