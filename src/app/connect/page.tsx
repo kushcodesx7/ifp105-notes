@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useDeferredValue } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import ProfileEditModal from "@/components/ProfileEditModal";
@@ -121,15 +121,22 @@ export default function IFSConnectPage() {
     };
   }, []);
 
-  // Unique sections for filter pills (natural sort)
-  const sections = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of students) if (s.section) set.add(s.section);
+  // Unique sections for filter pills (natural sort) + precomputed
+  // per-section registered counts. Single pass over `students` so the
+  // bars render in O(n) instead of O(S·n) (was calling
+  // `students.filter(...).length` inside sections.map on every render).
+  const { sections, regCountBySection } = useMemo(() => {
+    const regCount: Record<string, number> = {};
+    for (const s of students) {
+      if (s.section) regCount[s.section] = (regCount[s.section] || 0) + 1;
+    }
+    const set = new Set<string>(Object.keys(regCount));
     // Also include any sections that have rolls but nobody registered yet
     for (const sec of Object.keys(perSectionTotals)) set.add(sec);
-    return Array.from(set).sort((a, b) =>
+    const list = Array.from(set).sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true })
     );
+    return { sections: list, regCountBySection: regCount };
   }, [students, perSectionTotals]);
 
   // Recently joined — top 5 most recent
@@ -147,6 +154,13 @@ export default function IFSConnectPage() {
     return SKILLS.filter((s) => set.has(s.id));
   }, [students]);
 
+  // Defer the search query for the filter pass. The input itself stays
+  // responsive (keystrokes update `searchQuery` instantly), but the 221-
+  // student filter + 221-card render uses the deferred copy so a burst
+  // of typing doesn't recompute/re-render per keystroke — React batches
+  // until the input idles. Zero-deps React 18 built-in.
+  const deferredSearch = useDeferredValue(searchQuery);
+
   const filtered = useMemo(() => {
     let list = students;
     if (sectionFilter !== "all") {
@@ -155,8 +169,8 @@ export default function IFSConnectPage() {
     if (skillFilter !== "all") {
       list = list.filter((s) => (s.skills || []).includes(skillFilter));
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (deferredSearch.trim()) {
+      const q = deferredSearch.toLowerCase();
       list = list.filter(
         (s) =>
           prettyName(s.name).toLowerCase().includes(q) ||
@@ -189,7 +203,7 @@ export default function IFSConnectPage() {
       return prettyName(a.name).localeCompare(prettyName(b.name));
     });
     return list;
-  }, [students, sectionFilter, skillFilter, searchQuery, user]);
+  }, [students, sectionFilter, skillFilter, deferredSearch, user]);
 
   const registeredPct = totalRolls > 0 ? Math.round((students.length / totalRolls) * 100) : 0;
 
@@ -279,7 +293,7 @@ export default function IFSConnectPage() {
             {/* Per-section mini bars */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
               {sections.map((sec) => {
-                const regCount = students.filter((s) => s.section === sec).length;
+                const regCount = regCountBySection[sec] || 0;
                 const totalInSec = perSectionTotals[sec] || 0;
                 const pct = totalInSec > 0 ? (regCount / totalInSec) * 100 : 0;
                 const col = sectionColor(sec);

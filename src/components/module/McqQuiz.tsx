@@ -338,9 +338,15 @@ export default function McqQuiz({
 
   // Per-question fingerprints — recomputed from current questions on
   // every save so edits propagate immediately. The ref keeps the save
-  // callback stable (deps only on LS_KEY + shuffleSeed).
-  const fingerprintsRef = useRef<string[]>([]);
-  fingerprintsRef.current = questions.map(questionFingerprint);
+  // callback stable (deps only on LS_KEY + shuffleSeed). Memoised on
+  // `questions` so per-answer re-renders don't re-hash every stem; was
+  // doing ~N hashes per keystroke/answer-click before.
+  const fingerprints = useMemo(
+    () => questions.map(questionFingerprint),
+    [questions]
+  );
+  const fingerprintsRef = useRef<string[]>(fingerprints);
+  fingerprintsRef.current = fingerprints;
 
   // Save state to localStorage whenever answers or confidences change
   const saveState = useCallback(

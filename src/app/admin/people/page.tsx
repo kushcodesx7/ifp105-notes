@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
@@ -96,6 +96,10 @@ function PeoplePage() {
     (searchParams?.get("sort") as SortKey) || "liveFirst"
   );
   const [query, setQuery] = useState("");
+  // Defer the filter pass so typing in the search box stays snappy even
+  // with ~220 students × sort comparator. The input updates instantly;
+  // the filtered list re-derives when typing idles. React 18 built-in.
+  const deferredQuery = useDeferredValue(query);
 
   // Heartbeat so the "live now" pulse + sort recompute on a fixed
   // cadence rather than reading Date.now() during render (which the
@@ -209,8 +213,8 @@ function PeoplePage() {
         break;
     }
 
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
+    if (deferredQuery.trim()) {
+      const q = deferredQuery.trim().toLowerCase();
       list = list.filter(
         (s) =>
           s.name.toLowerCase().includes(q) ||
@@ -272,7 +276,7 @@ function PeoplePage() {
     }
 
     return sorted;
-  }, [data, sectionFilter, filter, query, sort, nowTick]);
+  }, [data, sectionFilter, filter, deferredQuery, sort, nowTick]);
 
   // ─── Auth gate ────────────────────────────────────────────────
   if (!ready) return <AdminAuthGate />;
