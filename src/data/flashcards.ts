@@ -13,14 +13,13 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "What does 'Accuracy' mean in the context of why computers were invented?", back: "Computers follow instructions exactly every time without getting tired or making human errors." },
       { front: "How did computers solve the 'Storage' problem humans had?", back: "Paper files filled rooms and could burn. Digital storage holds more than a library on a single thumb drive." },
       { front: "What does 'Connectivity' refer to as a reason for inventing computers?", back: "Computers allow instant global communication -- a message that once took weeks now arrives in seconds." },
-      { front: "Memory trick for the 4 reasons: S.A.S.C. stands for?", back: "Speed, Accuracy, Storage, Connectivity. Mnemonic: 'Some Amazing Students Compute.'" },
     ],
 
     // Topic 2: How Computers Grew Up
     2: [
       { front: "Name the 4 eras of computer evolution in order.", back: "Mechanical Era, Electronic Era, Personal Computer Era, Mobile + Internet Era." },
       { front: "What technology defined the Electronic Era (1940s-1950s)?", back: "Vacuum tubes. ENIAC was the first electronic computer -- it filled entire buildings and cost millions." },
-      { front: "What was the main limitation of each era that the next era solved?", back: "Mechanical: too slow. Electronic: too big. PC: not portable. Mobile: solved all (portable, connected, affordable)." },
+      { front: "What problem did each new era solve?", back: "Electronic fixed Mechanical being too slow. PC fixed Electronic filling whole buildings. Mobile fixed PC not being portable. Each era shrinks the computer and adds reach." },
       { front: "What era do modern smartphones belong to?", back: "Era 4: Mobile + Internet (2000s-Now). Supercomputers in your pocket, always connected via Wi-Fi." },
       { front: "What device represents the Mechanical Era?", back: "The Abacus -- used gears, wheels, and beads. No electricity, no memory, painfully slow." },
     ],
@@ -73,7 +72,6 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "Compare HDD and SSD.", back: "HDD: spinning disk, cheap, slow, large capacity. SSD: no moving parts (chips), fast, more expensive, why modern laptops boot in seconds." },
       { front: "What is cloud storage?", back: "Files stored on internet servers (Google Drive, iCloud). Accessible from any device, anywhere, but requires internet." },
       { front: "Why does a game take time to load?", back: "Game files sit in storage (HDD/SSD). When you press Play, data moves to fast RAM for the CPU to use. Bigger game = longer load." },
-      { front: "Name 4 types of storage devices.", back: "HDD (Hard Disk Drive), SSD (Solid State Drive), USB Flash Drive, Cloud Storage." },
       { front: "What makes a USB flash drive different from HDD/SSD?", back: "USB drives are portable (pocket-sized) and plug into any USB port. HDD/SSD are typically fixed inside the computer." },
     ],
 
@@ -218,7 +216,7 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "What is Engagement Rate and how is it calculated?", back: "(Engagements / Reach) x 100. Industry average is 1-3%. Over 5% is excellent." },
       { front: "What is CTR (Click-Through Rate)?", back: "(Clicks / Impressions) x 100. Measures how many people were interested enough to click your link." },
       { front: "What are vanity metrics vs action metrics?", back: "Vanity metrics: likes, impressions -- look good but don't pay bills. Action metrics: CTR, conversions, ROI -- show actual business results." },
-      { front: "What is ROI in social media?", back: "Return on Investment = (Revenue / Cost) x 100. Tells you if you made more money than you spent." },
+      { front: "What is ROI and how is it calculated?", back: "Return on Investment = ((Revenue - Cost) / Cost) x 100. Tells you the percentage profit you made compared to what you spent. If you spent $100 and earned $150, ROI = 50%." },
     ],
 
     // Topic 5: Social Advertising
@@ -373,15 +371,18 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
     // Topic 4: Cloud Computing
     4: [
       { front: "What is Cloud Computing?", back: "Using remote servers on the internet to store, manage, and process data instead of your personal computer." },
-      { front: "What are the 3 cloud service models (IaaS, PaaS, SaaS)?", back: "IaaS: rent raw hardware (AWS). PaaS: rent a platform for building apps (Heroku). SaaS: use finished software online (Gmail, Netflix)." },
+      { front: "What does IaaS stand for and what do you get?", back: "Infrastructure as a Service -- you rent raw hardware (servers, storage) and build everything yourself on top. Example: AWS EC2." },
+      { front: "What does PaaS stand for and who uses it?", back: "Platform as a Service -- a ready-made platform for developers to build and deploy apps without managing servers. Example: Heroku, Google App Engine." },
+      { front: "SaaS stands for what? Give 3 examples.", back: "Software as a Service -- finished software used over the internet, nothing to install. Examples: Gmail, Google Docs, Netflix." },
       { front: "What are the 3 cloud deployment models?", back: "Public (shared, cheap -- AWS), Private (dedicated, secure -- banks), Hybrid (mix of both -- most large companies)." },
-      { front: "Name 3 benefits and 2 risks of cloud computing.", back: "Benefits: no upfront cost, access anywhere, auto backups. Risks: needs internet, data privacy concerns." },
-      { front: "SaaS stands for what? Give 3 examples.", back: "Software as a Service -- finished software used over the internet. Examples: Gmail, Google Docs, Netflix." },
+      { front: "Name 3 benefits of cloud computing.", back: "No upfront hardware cost, access from anywhere, automatic backups. You pay only for what you use." },
+      { front: "Name 2 risks of cloud computing.", back: "Needs internet (no connection = no access). Data privacy concerns (your files sit on someone else's servers)." },
+      { front: "You edit a Google Doc on your phone and it updates on your laptop. Which cloud model?", back: "SaaS (Software as a Service). Google Docs runs on Google's servers; you just use the finished product from any device." },
     ],
 
     // Topic 5: Blockchain
     5: [
-      { front: "What is Blockchain?", back: "A decentralized, distributed digital ledger that records transactions across many computers. Once added, records cannot be changed or deleted." },
+      { front: "What is Blockchain, in plain English?", back: "A digital record book copied across many computers. Once something is written in, no one can change or delete it -- everyone would see the tampering." },
       { front: "Is Blockchain the same as Bitcoin?", back: "No. Bitcoin is one application that USES blockchain. Blockchain is the underlying technology -- like the internet is technology and email is one app." },
       { front: "What are the 4 key features of Blockchain?", back: "Decentralized (no single authority), Immutable (cannot be changed), Transparent (everyone sees transactions), Secure (uses cryptography)." },
       { front: "Name 3 applications of Blockchain beyond cryptocurrency.", back: "Supply chain tracking, digital voting, medical records, smart contracts, land registry, digital identity verification." },
