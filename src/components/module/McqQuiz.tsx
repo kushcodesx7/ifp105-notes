@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, animate as fmAnimate } from "framer-motion";
 // Phase 1: XP + badges removed. Quiz completion no longer awards points.
 import { useAuth } from "@/lib/auth-context";
 import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
@@ -29,6 +29,30 @@ function hashString(s: string): number {
 }
 
 export type { BloomLevel };
+
+// Count-up animation for the results-screen score. Tween from 0 → value
+// over ~0.9s using framer-motion's imperative `animate()` so the number
+// "earns" itself rather than popping in. Honours prefers-reduced-motion
+// by snapping straight to the final value.
+function CountUp({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setDisplay(value);
+      return;
+    }
+    const controls = fmAnimate(0, value, {
+      duration: 0.9,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => setDisplay(Math.round(v)),
+    });
+    return () => controls.stop();
+  }, [value]);
+  return <>{display}</>;
+}
 
 // Local Question shape — mirrors the canonical one in src/types/content.ts
 // so McqQuiz can be tested in isolation without the whole type graph.
@@ -897,7 +921,10 @@ export default function McqQuiz({
               }`}
               style={{ textShadow: `0 0 30px ${pct >= 80 ? 'rgba(74,222,128,0.3)' : pct >= 60 ? 'rgba(250,204,21,0.3)' : 'rgba(248,113,113,0.3)'}` }}
             >
-              {score}/{total}
+              {/* Count-up: the score number tweens from 0 → final over
+                   ~0.9s so the reveal feels earned instead of instant.
+                   `/total` stays static — only the "X" in X/Y animates. */}
+              <CountUp value={score} />/{total}
             </motion.div>
             <p className="text-sm text-zinc-500 mb-6">
               {pct === 100 ? 'Perfect score! Outstanding! 🎉' :
