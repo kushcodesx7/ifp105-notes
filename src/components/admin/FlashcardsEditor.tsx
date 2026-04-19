@@ -84,17 +84,22 @@ export default function FlashcardsEditor({
   return (
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div>
-          <h3 className="text-[13px] font-bold">Flashcards</h3>
-          <p className="text-[11px] text-zinc-500">
-            Quick-review cards shown below the topic body. Empty deck → the
-            Flashcards section hides on the student page.
-          </p>
+        <div className="flex items-center gap-2">
+          <span className="text-lg" aria-hidden="true">🃏</span>
+          <div>
+            <h3 className="text-[13px] font-bold">
+              Flashcards{" "}
+              <span className="text-[11px] font-semibold text-indigo-400 ml-1">
+                {value.length} card{value.length === 1 ? "" : "s"}
+              </span>
+            </h3>
+            <p className="text-[11px] text-zinc-500">
+              Quick-review cards shown below the topic body. Empty deck → the
+              Flashcards section hides on the student page.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-zinc-500">
-            {value.length} card{value.length === 1 ? "" : "s"}
-          </span>
           <button
             onClick={onSave}
             disabled={!dirty || saving}
