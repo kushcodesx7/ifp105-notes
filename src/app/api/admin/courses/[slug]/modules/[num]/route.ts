@@ -172,7 +172,14 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         flashcards_json: unknown;
       }[]) {
         const arr = row.flashcards_json;
-        const dbCount = Array.isArray(arr) ? arr.length : 0;
+        // Count LIVE cards only (exclude in-array trash). Layer-2 trash
+        // marks cards with deletedAt rather than removing them, so a
+        // raw .length would include deleted ones.
+        const dbCount = Array.isArray(arr)
+          ? (arr as Array<{ deletedAt?: string | null }>).filter(
+              (c) => !c.deletedAt
+            ).length
+          : 0;
         if (dbCount > 0) {
           flashcardCounts.set(row.id, dbCount);
         } else {

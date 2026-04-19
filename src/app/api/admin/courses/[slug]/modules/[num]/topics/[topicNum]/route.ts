@@ -100,7 +100,12 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  let flashcardsJson: Array<{ front: string; back: string }> = [];
+  // Flashcards may now carry a `deletedAt` field (in-array trash, layer
+  // 2). Editor and student need the FULL array (live + trash) so the
+  // editor can preserve trash on saves and the trash UI can list it.
+  // The student-facing /api/public/flashcards endpoint filters out
+  // trashed cards before returning to students.
+  let flashcardsJson: Array<{ front: string; back: string; deletedAt?: string | null }> = [];
   let flashcardsSource: "db" | "ts" | "empty" = "empty";
   const { data: fcData, error: fcError } = await supabase
     .from("topics")
@@ -180,10 +185,12 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // content_json is the Phase 5 content-block array. We accept any JSON
   // array here; the block editor will validate structure client-side.
   if (Array.isArray(body.contentJson)) patch.content_json = body.contentJson;
-  // flashcards_json — array of { front, back } strings. Validate the
-  // inner shape here so malformed payloads from a bad editor state can't
-  // ever reach the DB and break the student render. Drop anything that
-  // isn't a trimmed non-empty front+back pair.
+  // flashcards_json — array of { front, back, deletedAt? }. The optional
+  // deletedAt field (ISO string) marks the card as in-trash (layer 2).
+  // Validate the inner shape so malformed payloads can't reach the DB
+  // and break the student render. Drop anything that isn't a trimmed
+  // non-empty front+back pair; preserve deletedAt as-is when present
+  // (it's only ever set by our own delete handler).
   if (Array.isArray(body.flashcardsJson)) {
     const cleaned = body.flashcardsJson
       .map((c: unknown) => {
@@ -192,7 +199,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
         const front = typeof obj.front === "string" ? obj.front.trim() : "";
         const back = typeof obj.back === "string" ? obj.back.trim() : "";
         if (!front || !back) return null;
-        return { front, back };
+        const out: { front: string; back: string; deletedAt?: string } = {
+          front,
+          back,
+        };
+        if (typeof obj.deletedAt === "string" && obj.deletedAt.length > 0) {
+          out.deletedAt = obj.deletedAt;
+        }
+        return out;
       })
       .filter(Boolean);
     patch.flashcards_json = cleaned;

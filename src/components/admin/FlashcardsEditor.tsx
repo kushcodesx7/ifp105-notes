@@ -13,16 +13,45 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 // surfaced for the impatient and to let the admin see dirty/saved
 // status.
 //
-// Shape in DB: [{ front: string, back: string }, ...]
+// Shape in DB: [{ front: string, back: string, deletedAt?: string }, ...]
 //
-// Operations exposed: add card, delete card, edit front, edit back,
-// move up, move down. Reordering is a keyboard-friendly up/down arrow
-// pair — no drag-and-drop because the list is short (typically 5-8)
-// and drag-drop would drag in another dependency.
+// `deletedAt` (ISO string) marks a card as trashed. The editor surfaces
+// only LIVE cards (deletedAt undefined/null); the trash page surfaces
+// only TRASHED cards. Layer-2 trash uses an in-array flag instead of a
+// separate column so it ships without a DB migration — `flashcards_json`
+// already accepts arbitrary JSON.
+//
+// Operations exposed: add card, delete card (→ trash), edit front, edit
+// back, move up, move down. Reordering is a keyboard-friendly up/down
+// arrow pair — no drag-and-drop because the list is short (typically
+// 5-8) and drag-drop would drag in another dependency.
 
 export interface Flashcard {
   front: string;
   back: string;
+  /** ISO timestamp when the card was moved to the per-topic trash.
+   *  Undefined / null = live. Saves keep the card so it can be restored
+   *  via /admin/tools/trash without losing its content. */
+  deletedAt?: string | null;
+}
+
+// Helpers — split the parent-supplied `value` array into the two views
+// the editor needs to manage. Trash retains original insertion order so
+// a restore brings it back in the same slot.
+function isLive(c: Flashcard): boolean {
+  return !c.deletedAt;
+}
+function liveOf(all: Flashcard[]): Flashcard[] {
+  return all.filter(isLive);
+}
+function trashOf(all: Flashcard[]): Flashcard[] {
+  return all.filter((c) => !!c.deletedAt);
+}
+// Rebuild the full storage array: live cards (in their new display
+// order) followed by trashed cards (preserved as-is). Saving this back
+// to the server keeps trash intact so /admin/tools/trash can list it.
+function compose(newLive: Flashcard[], originalAll: Flashcard[]): Flashcard[] {
+  return [...newLive, ...trashOf(originalAll)];
 }
 
 interface Props {
@@ -47,6 +76,11 @@ export default function FlashcardsEditor({
   const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
   const frontRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 
+  // Editor always operates on the LIVE subset — trashed cards stay in
+  // `value` but are invisible in the UI. Mutations write back via
+  // `compose(newLive, value)` which preserves the trash array.
+  const live = liveOf(value);
+
   // Auto-focus the front textarea of a freshly added card so the admin
   // can start typing immediately instead of hunting for the field.
   useEffect(() => {
@@ -57,14 +91,14 @@ export default function FlashcardsEditor({
   }, [justAddedIdx]);
 
   function setCard(i: number, patch: Partial<Flashcard>) {
-    const next = value.map((c, idx) => (idx === i ? { ...c, ...patch } : c));
-    onChange(next);
+    const newLive = live.map((c, idx) => (idx === i ? { ...c, ...patch } : c));
+    onChange(compose(newLive, value));
   }
 
   function addCard() {
-    const next = [...value, { front: "", back: "" }];
-    onChange(next);
-    setJustAddedIdx(next.length - 1);
+    const newLive = [...live, { front: "", back: "" } as Flashcard];
+    onChange(compose(newLive, value));
+    setJustAddedIdx(newLive.length - 1);
   }
 
   function requestDelete(i: number) {
@@ -73,17 +107,26 @@ export default function FlashcardsEditor({
 
   function confirmDelete() {
     if (confirmDeleteIdx == null) return;
-    const next = value.filter((_, idx) => idx !== confirmDeleteIdx);
-    onChange(next);
+    // Move the card to trash by stamping deletedAt. The card's content
+    // is preserved so /admin/tools/trash can restore it byte-for-byte.
+    const cardToTrash = live[confirmDeleteIdx];
+    const trashedCard: Flashcard = {
+      ...cardToTrash,
+      deletedAt: new Date().toISOString(),
+    };
+    const newLive = live.filter((_, idx) => idx !== confirmDeleteIdx);
+    // Append the trashed card to the existing trash list (newest last)
+    // so /admin/tools/trash can sort by deletedAt DESC.
+    onChange([...newLive, ...trashOf(value), trashedCard]);
     setConfirmDeleteIdx(null);
   }
 
   function move(i: number, dir: -1 | 1) {
     const j = i + dir;
-    if (j < 0 || j >= value.length) return;
-    const next = [...value];
-    [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
+    if (j < 0 || j >= live.length) return;
+    const newLive = [...live];
+    [newLive[i], newLive[j]] = [newLive[j], newLive[i]];
+    onChange(compose(newLive, value));
   }
 
   return (
@@ -95,8 +138,20 @@ export default function FlashcardsEditor({
             <h3 className="text-[13px] font-bold">
               Flashcards{" "}
               <span className="text-[11px] font-semibold text-indigo-400 ml-1">
-                {value.length} card{value.length === 1 ? "" : "s"}
+                {live.length} card{live.length === 1 ? "" : "s"}
               </span>
+              {trashOf(value).length > 0 && (
+                <span
+                  className="text-[10px] font-semibold ml-1.5 px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(245,158,11,0.12)",
+                    color: "#FBBF24",
+                  }}
+                  title={`${trashOf(value).length} card(s) in trash — restore from /admin/tools/trash`}
+                >
+                  {trashOf(value).length} in trash
+                </span>
+              )}
             </h3>
             <p className="text-[11px] text-zinc-500">
               Quick-review cards shown below the topic body. Empty deck → the
@@ -115,7 +170,7 @@ export default function FlashcardsEditor({
         </div>
       </div>
 
-      {value.length === 0 && (
+      {live.length === 0 && (
         <div
           className="rounded-lg px-4 py-6 text-center text-[12px] text-zinc-500 italic mb-3"
           style={{
@@ -129,7 +184,7 @@ export default function FlashcardsEditor({
 
       <div className="space-y-2">
         <AnimatePresence initial={false}>
-          {value.map((card, i) => (
+          {live.map((card, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: -4 }}
@@ -204,7 +259,7 @@ export default function FlashcardsEditor({
                   </button>
                   <button
                     onClick={() => move(i, 1)}
-                    disabled={i === value.length - 1}
+                    disabled={i === live.length - 1}
                     title="Move down"
                     aria-label="Move card down"
                     className="w-7 h-7 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
@@ -237,20 +292,21 @@ export default function FlashcardsEditor({
         + Add card
       </button>
 
-      {/* Flashcards don't yet have a trash (layer 2), so this delete is
-          permanent — ConfirmDialog uses `kind="danger"` to make that
-          obvious. Once the save fires the card is gone; refresh before
-          saving is the only undo. */}
+      {/* Flashcards trash (layer 2) — delete now stamps the card with
+          deletedAt instead of dropping it from the array. The card
+          stays in flashcards_json so it can be restored from
+          /admin/tools/trash. Permanent removal happens via Purge in
+          the trash page. */}
       <ConfirmDialog
         open={confirmDeleteIdx !== null}
-        title="Delete this flashcard?"
+        title="Move this flashcard to trash?"
         description={
-          confirmDeleteIdx != null && value[confirmDeleteIdx]
-            ? `"${value[confirmDeleteIdx].front.slice(0, 120) || "(empty card)"}"`
+          confirmDeleteIdx != null && live[confirmDeleteIdx]
+            ? `"${live[confirmDeleteIdx].front.slice(0, 120) || "(empty card)"}"`
             : ""
         }
-        warning="Flashcards don't have a trash yet — this delete is permanent once you save."
-        confirmLabel="Delete card"
+        warning="The card moves to /admin/tools/trash and can be restored anytime — students stop seeing it as soon as you Save."
+        confirmLabel="Move to trash"
         cancelLabel="Keep"
         kind="danger"
         onCancel={() => setConfirmDeleteIdx(null)}

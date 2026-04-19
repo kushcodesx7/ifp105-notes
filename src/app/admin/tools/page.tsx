@@ -232,8 +232,10 @@ const ACTION_META: Record<
   soft_delete_question: { icon: "🗑️", label: "Question moved to trash", color: "#FBBF24" },
   restore_topic: { icon: "♻️", label: "Topic restored", color: "#34D399" },
   restore_question: { icon: "♻️", label: "Question restored", color: "#34D399" },
+  restore_flashcard: { icon: "♻️", label: "Flashcard restored", color: "#34D399" },
   purge_topic: { icon: "💥", label: "Topic purged (permanent)", color: "#F87171" },
   purge_question: { icon: "💥", label: "Question purged (permanent)", color: "#F87171" },
+  purge_flashcard: { icon: "💥", label: "Flashcard purged (permanent)", color: "#F87171" },
   // Content migration / one-shot actions
   seed_ict: { icon: "📥", label: "ICT seeded to DB", color: "#A78BFA" },
 };
