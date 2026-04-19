@@ -12,7 +12,7 @@ import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import BlockEditor from "@/components/admin/BlockEditor";
 import FlashcardsEditor, { type Flashcard } from "@/components/admin/FlashcardsEditor";
-import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import LabelledInput from "@/components/admin/shared/LabelledInput";
 import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
 import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
@@ -562,20 +562,28 @@ function TopicEditorPanel({
     }
   }
 
-  // Two-step delete: opens DangerDeleteDialog, which collects a fresh
-  // admin password and calls runDeleteTopic below with it. Using the
-  // entered password as x-admin-password (not the OAuth token) forces
-  // the teacher to re-prove identity — friction is the point.
+  // Move-to-trash is reversible, so the heavy password-reprompt dialog
+  // got swapped for a light ConfirmDialog. Permanent delete still
+  // requires a trip through /admin/tools/trash (where a second confirm
+  // fires before the row actually dies).
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  async function runDeleteTopic(enteredPassword: string) {
-    await adminWrite(
-      `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
-      "DELETE",
-      { idToken: null, password: enteredPassword }
-    );
-    setDeleteOpen(false);
-    onChange();
+  async function runDeleteTopic() {
+    setDeleting(true);
+    try {
+      await adminWrite(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
+        "DELETE",
+        { idToken, password }
+      );
+      setDeleteOpen(false);
+      onChange();
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -614,16 +622,15 @@ function TopicEditorPanel({
         </button>
       </div>
 
-      <DangerDeleteDialog
+      <ConfirmDialog
         open={deleteOpen}
-        title={`Delete topic ${topic.number}?`}
-        target={`Topic ${topic.number}: ${topic.title}`}
-        consequences={[
-          `${topic.questionCount} question${topic.questionCount === 1 ? "" : "s"} in this topic`,
-          `The topic body content (paragraphs, callouts, images, etc.)`,
-          `Any uploaded images attached to this topic`,
-        ]}
-        confirmLabel="Delete topic"
+        title={`Move topic ${topic.number} to trash?`}
+        description={`"${topic.title}" and its ${topic.questionCount} question${topic.questionCount === 1 ? "" : "s"} will be moved to /admin/tools/trash. You can restore them anytime.`}
+        warning="Students won't see this topic or its questions until it's restored."
+        confirmLabel="Move to trash"
+        cancelLabel="Keep topic"
+        kind="danger"
+        loading={deleting}
         onCancel={() => setDeleteOpen(false)}
         onConfirm={runDeleteTopic}
       />

@@ -36,6 +36,16 @@ export type AdminActionKind =
   | "create_question"
   | "update_question"
   | "delete_question"
+  // ── Trash (soft-delete layer) ──
+  // Soft-delete variants fire from the regular DELETE endpoints when
+  // the `?permanent=1` flag is absent. The `purge_*` + `restore_*`
+  // pair fire from the /api/admin/trash/* endpoints.
+  | "soft_delete_topic"
+  | "soft_delete_question"
+  | "restore_topic"
+  | "restore_question"
+  | "purge_topic"
+  | "purge_question"
   // ── Content migration / one-shot actions (Phase 5.5) ──
   | "seed_ict";
 

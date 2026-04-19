@@ -90,10 +90,13 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     const questionCounts = new Map<string, number>();
 
     if (moduleIds.length > 0) {
+      // Live topics only — soft-deleted ones don't count toward
+      // per-module totals shown on the courses list.
       const { data: topicRows } = await supabase
         .from("topics")
         .select("id, module_id")
-        .in("module_id", moduleIds);
+        .in("module_id", moduleIds)
+        .is("deleted_at", null);
       const topicIds = (topicRows || []).map((t) => t.id);
       for (const t of (topicRows || []) as { id: string; module_id: string }[]) {
         topicCounts.set(t.module_id, (topicCounts.get(t.module_id) || 0) + 1);
@@ -103,7 +106,8 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         const { data: qRows } = await supabase
           .from("questions")
           .select("topic_id")
-          .in("topic_id", topicIds);
+          .in("topic_id", topicIds)
+          .is("deleted_at", null);
         // Map question → module via topic_id→module_id lookup.
         const topicToModule = new Map<string, string>();
         for (const t of (topicRows || []) as { id: string; module_id: string }[]) {

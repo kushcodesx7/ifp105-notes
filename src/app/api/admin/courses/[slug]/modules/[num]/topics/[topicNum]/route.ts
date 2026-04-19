@@ -54,11 +54,16 @@ async function resolveTopicId(
       response: Response.json({ error: "Module not found" }, { status: 404 }),
     };
   }
+  // Only resolve LIVE (non-trashed) topics here. The trash API
+  // reaches deleted rows directly via a separate path. This keeps
+  // editors + student-facing APIs from accidentally re-hydrating a
+  // topic the teacher put in the bin.
   const { data: topic } = await supabase
     .from("topics")
     .select("id")
     .eq("module_id", moduleId)
     .eq("number", topicNumber)
+    .is("deleted_at", null)
     .maybeSingle();
   const topicId = (topic as { id: string } | null)?.id;
   if (!topicId) {
@@ -245,6 +250,11 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 }
 
 // ─── DELETE ──────────────────────────────────────────────────
+// Now soft-deletes by default. Pass ?permanent=1 to hard-delete (used
+// by the /admin/tools/trash permanent-delete button; still gated by
+// admin auth + a password re-prompt on the client). Soft-deleted
+// topics disappear from the normal module view and appear in the
+// trash list until restored or purged.
 export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
@@ -253,10 +263,50 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   const res = await resolveTopicId(slug, num, topicNum);
   if (!res.ok) return res.response;
 
-  // Clean orphan images from the course-content bucket BEFORE the row
-  // delete. If the order were reversed, the DB cascade would take the
-  // row + content_json away and we'd lose the info needed to find the
-  // storage paths.
+  const url = new URL(req.url);
+  const permanent = url.searchParams.get("permanent") === "1";
+
+  if (!permanent) {
+    // Soft delete. Cascade to questions in the same topic — marking
+    // them deleted_at too keeps the trash UI consistent (question
+    // counts don't show inside a deleted topic) and makes Restore
+    // straightforward (flip both back).
+    const now = new Date().toISOString();
+    const { error: topicErr } = await supabase
+      .from("topics")
+      .update({ deleted_at: now })
+      .eq("id", res.topicId);
+    if (topicErr) {
+      if (/column.*deleted_at.*does not exist/i.test(topicErr.message)) {
+        return Response.json(
+          { error: "soft-delete column missing — run scripts/migration-add-soft-delete.sql" },
+          { status: 503 }
+        );
+      }
+      return Response.json({ error: topicErr.message }, { status: 500 });
+    }
+    await supabase
+      .from("questions")
+      .update({ deleted_at: now })
+      .eq("topic_id", res.topicId)
+      .is("deleted_at", null);
+
+    await logAdminAction({
+      actorEmail: actorFromAuth(admin),
+      action: "soft_delete_topic",
+      subjectEmail: null,
+      details: {
+        courseSlug: slug,
+        moduleNumber: res.moduleNumber,
+        topicNumber: res.topicNumber,
+      },
+    });
+
+    return Response.json({ ok: true, softDeleted: true });
+  }
+
+  // Permanent path — same behaviour as before this migration. Images
+  // cleaned first so the cascade doesn't orphan them.
   const cleanedImages = await cleanupTopicImages(res.topicId);
 
   const { error } = await supabase.from("topics").delete().eq("id", res.topicId);

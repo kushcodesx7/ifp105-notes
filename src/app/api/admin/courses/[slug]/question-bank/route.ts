@@ -67,9 +67,15 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     .from("questions")
     .select(
       `id, number, question, options_json, correct_index, bloom, explanation, difficulty,
-       topic:topics!inner(number, title, module:modules!inner(number, title, course_id))`
+       topic:topics!inner(number, title, deleted_at, module:modules!inner(number, title, course_id))`
     )
     .eq("topic.module.course_id", courseId)
+    // Hide questions that have themselves been trashed, or whose
+    // parent topic is trashed. Belt and braces — the inner join's
+    // `deleted_at IS NULL` check on `topic` prevents orphaned
+    // questions-in-trashed-topics from surfacing in the bank view.
+    .is("deleted_at", null)
+    .is("topic.deleted_at", null)
     .order("number", { ascending: true });
 
   if (error) {
