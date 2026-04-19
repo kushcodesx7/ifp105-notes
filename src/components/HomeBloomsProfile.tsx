@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// useEffect/useState removed — token now read inline; SWR re-keys on it.
 import { motion } from "framer-motion";
 import useSWR from "swr";
 import { useAuth } from "@/lib/auth-context";
@@ -31,11 +31,12 @@ async function fetcher([url, token]: [string, string]): Promise<BloomsResponse> 
 // Bloom's data. Silent for everyone else so the home page isn't polluted.
 export default function HomeBloomsProfile() {
   const { user, isLoggedIn, getIdToken } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isLoggedIn) setToken(getIdToken());
-  }, [isLoggedIn, getIdToken]);
+  // Read the token directly each render. SWR re-keys on the token
+  // string so a fresh sign-in re-fetches naturally; no need for a
+  // separate useState + effect. Drops the React Compiler's
+  // setState-in-effect flag.
+  const token = isLoggedIn ? getIdToken() : null;
 
   const { data, error } = useSWR<BloomsResponse>(
     isLoggedIn && token ? ["/api/me/blooms", token] : null,

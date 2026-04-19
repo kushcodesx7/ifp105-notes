@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -31,20 +31,22 @@ export default function ModuleCard({
   lsKey,
   totalTopics,
 }: ModuleCardProps) {
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-
-  useEffect(() => {
-    if (!lsKey || !totalTopics) return;
+  // Read progress from localStorage in the lazy useState initializer
+  // instead of an effect. Localstorage is a synchronous external store
+  // and lazy initializers are React's blessed pattern for it — fixes
+  // the React Compiler's setState-in-effect flag.
+  const [progress] = useState<{ done: number; total: number } | null>(() => {
+    if (typeof window === "undefined" || !lsKey || !totalTopics) return null;
     try {
       const saved = localStorage.getItem(lsKey);
-      if (saved) {
-        const completed = new Set(JSON.parse(saved));
-        if (completed.size > 0) {
-          setProgress({ done: completed.size, total: totalTopics });
-        }
-      }
-    } catch {}
-  }, [lsKey, totalTopics]);
+      if (!saved) return null;
+      const completed = new Set(JSON.parse(saved));
+      if (completed.size === 0) return null;
+      return { done: completed.size, total: totalTopics };
+    } catch {
+      return null;
+    }
+  });
 
   const content = (
     <motion.div
