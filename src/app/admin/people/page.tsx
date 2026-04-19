@@ -458,8 +458,174 @@ function PeoplePage() {
             </p>
           </div>
         ) : (
-          <div
-            className="rounded-2xl overflow-hidden"
+          <>
+            {/* ─── Mobile card layout (< md / 768px) ───────────────
+                 Desktop table below is hidden on phones — the six
+                 columns were unreadable at 375px even with scroll.
+                 Each card stacks name/section/progress/MCQ/active in
+                 a vertically-legible format and keeps the checkbox
+                 + tap-to-open behaviour of the table row. */}
+            <div className="md:hidden space-y-2">
+              {filtered.map((s) => {
+                const checked = selected.has(s.email);
+                const live =
+                  s.lastActive &&
+                  nowTick - new Date(s.lastActive).getTime() < LIVE_NOW_MS;
+                return (
+                  <div
+                    key={s.email}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open details for ${s.name}`}
+                    onClick={() => openStudent(s.email)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openStudent(s.email);
+                      }
+                    }}
+                    className="rounded-xl p-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                    style={{
+                      background: checked
+                        ? "rgba(99,102,241,0.06)"
+                        : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${
+                        checked
+                          ? "rgba(99,102,241,0.25)"
+                          : "rgba(255,255,255,0.05)"
+                      }`,
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.name}`}
+                        checked={checked}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(s.email);
+                            else next.delete(s.email);
+                            return next;
+                          });
+                        }}
+                        className="mt-1 cursor-pointer accent-indigo-500 shrink-0"
+                      />
+                      <SmallAvatar student={s} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {live && (
+                            <span
+                              className="relative inline-flex h-2 w-2 shrink-0"
+                              aria-label="Active right now"
+                            >
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                            </span>
+                          )}
+                          <span className="text-[13px] font-semibold text-zinc-200 truncate">
+                            {s.rollListName || s.name}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate mt-0.5">
+                          #{s.enrollmentNo} · {s.section}
+                          {s.hidden && (
+                            <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">
+                              HIDDEN
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-zinc-600 truncate mt-0.5">
+                          {s.email}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/[0.05]">
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-0.5">
+                          Progress
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-[12px] font-bold tabular-nums"
+                            style={{
+                              color:
+                                s.completionPct >= 80
+                                  ? "#22c55e"
+                                  : s.completionPct >= 40
+                                  ? "#f59e0b"
+                                  : s.completionPct > 0
+                                  ? "#ef4444"
+                                  : "#71717a",
+                            }}
+                          >
+                            {s.completionPct}%
+                          </span>
+                          <div
+                            className="flex-1 h-1 rounded-full overflow-hidden"
+                            style={{ background: "rgba(255,255,255,0.05)" }}
+                          >
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${s.completionPct}%`,
+                                background:
+                                  s.completionPct >= 80
+                                    ? "#22c55e"
+                                    : s.completionPct >= 40
+                                    ? "#f59e0b"
+                                    : s.completionPct > 0
+                                    ? "#ef4444"
+                                    : "rgba(255,255,255,0.15)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-0.5">
+                          MCQ
+                        </div>
+                        <span
+                          className="text-[12px] font-bold tabular-nums"
+                          style={{
+                            color:
+                              s.avgMcq === null
+                                ? "#71717a"
+                                : s.avgMcq >= 80
+                                ? "#22c55e"
+                                : s.avgMcq >= 50
+                                ? "#f59e0b"
+                                : "#ef4444",
+                          }}
+                        >
+                          {s.avgMcq === null ? "—" : `${s.avgMcq}%`}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-0.5">
+                          Active
+                        </div>
+                        <span className="text-[11px] tabular-nums text-zinc-400 whitespace-nowrap">
+                          {s.daysSinceActive === null
+                            ? "Never"
+                            : s.daysSinceActive === 0
+                            ? "Today"
+                            : `${s.daysSinceActive}d ago`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ─── Desktop table (md+) ───────────────────────────── */}
+            <div
+            className="hidden md:block rounded-2xl overflow-hidden"
             style={{
               background: "rgba(255,255,255,0.02)",
               border: "1px solid rgba(255,255,255,0.05)",
@@ -675,6 +841,7 @@ function PeoplePage() {
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
 

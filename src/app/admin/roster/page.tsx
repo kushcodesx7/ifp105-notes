@@ -138,10 +138,52 @@ export default function RosterPage() {
           <EmptyState onCreate={() => setWizardOpen(true)} />
         ) : (
           <div className="grid md:grid-cols-[220px_1fr] gap-4">
-            {/* Batch sidebar */}
+            {/* ─── Batch picker ────────────────────────────────────
+                 Desktop: 220px sticky sidebar with full-width buttons.
+                 Mobile: horizontal-scroll pill row so the detail
+                 panel starts visible (previously you had to scroll
+                 past the whole batch list every time you tapped one). */}
             <aside className="md:sticky md:top-28 md:self-start">
+              {/* Mobile pill row */}
+              <div className="md:hidden -mx-2 px-2 overflow-x-auto no-scrollbar">
+                <div className="inline-flex gap-2 pb-1">
+                  {batches.map((b) => {
+                    const active = b.id === activeBatchId;
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => setActiveBatchId(b.id)}
+                        className={`shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-xl transition-all active:scale-[0.97] ${
+                          active
+                            ? "bg-white/[0.08]"
+                            : "bg-white/[0.02] hover:bg-white/[0.04]"
+                        }`}
+                        style={{
+                          border: `1px solid ${
+                            active
+                              ? "rgba(99,102,241,0.35)"
+                              : "rgba(255,255,255,0.05)"
+                          }`,
+                        }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: b.accent || "#6366F1" }}
+                        />
+                        <span className="text-[12px] font-semibold text-zinc-200 whitespace-nowrap">
+                          {b.name}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 whitespace-nowrap">
+                          {b.students.length}/{b.rolls.length}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Desktop sidebar */}
               <div
-                className="rounded-2xl p-1.5"
+                className="hidden md:block rounded-2xl p-1.5"
                 style={{
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid rgba(255,255,255,0.05)",
