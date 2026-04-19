@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdminFetch } from "@/lib/useAdminFetch";
@@ -72,8 +72,92 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
   const items = data?.items || [];
   const liveItems = items; // already filtered server-side
 
+  // ─── "Class is waking up" notification ─────────────────────────
+  // When the active count crosses thresholds (5, 10, 20+) UPWARD
+  // between polls, fire a one-shot toast / banner. Tells the teacher
+  // class is in session without them having to watch the widget.
+  // Hidden-section students are excluded from the count so the
+  // teacher's own test session doesn't trigger the alert.
+  const realActiveCount = liveItems.filter((s) => !s.hidden).length;
+  const prevCountRef = useRef<number>(0);
+  const [classAlert, setClassAlert] = useState<{
+    threshold: number;
+    seenAt: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const prev = prevCountRef.current;
+    const curr = realActiveCount;
+    // Only fire when crossing UPWARD past a threshold. Thresholds are
+    // 5, 10, 20 — picked to match meaningful classroom moments
+    // (small group, full session, packed lab).
+    const thresholds = [5, 10, 20];
+    for (const t of thresholds) {
+      if (prev < t && curr >= t) {
+        setClassAlert({ threshold: t, seenAt: Date.now() });
+        break; // one alert per render even if we crossed multiple
+      }
+    }
+    prevCountRef.current = curr;
+  }, [realActiveCount]);
+
+  // Auto-dismiss the alert after 8s.
+  useEffect(() => {
+    if (!classAlert) return;
+    const t = setTimeout(() => setClassAlert(null), 8000);
+    return () => clearTimeout(t);
+  }, [classAlert]);
+
   return (
-    <div
+    <>
+      {/* Class-waking-up banner — fires when the live count crosses a
+          threshold upward. Auto-dismisses after 8s. Pinned just above
+          the widget so it's visually contiguous with the activity it
+          describes. */}
+      <AnimatePresence>
+        {classAlert && (
+          <motion.div
+            key={`alert-${classAlert.threshold}-${classAlert.seenAt}`}
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="mb-3 rounded-2xl px-5 py-3 flex items-center gap-3"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(16,185,129,0.18), rgba(34,197,94,0.10))",
+              border: "1px solid rgba(16,185,129,0.35)",
+              boxShadow: "0 0 24px rgba(16,185,129,0.15)",
+            }}
+          >
+            <span className="text-xl" aria-hidden="true">
+              📈
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-bold text-emerald-200">
+                {classAlert.threshold === 5
+                  ? "Class is waking up — 5 students active"
+                  : classAlert.threshold === 10
+                    ? "Class is in session — 10 students active"
+                    : "Packed house — 20+ students active"}
+              </div>
+              <div className="text-[11px] text-emerald-300/70 mt-0.5">
+                Live now in the last 10 min · {realActiveCount} active right
+                now
+              </div>
+            </div>
+            <button
+              onClick={() => setClassAlert(null)}
+              className="text-[11px] font-medium text-emerald-300/70 hover:text-emerald-200 px-2 py-1 rounded-md hover:bg-emerald-500/10 transition-colors"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div
       className="mb-8 rounded-2xl p-5 card-glass"
       style={{ border: "1px solid rgba(255,255,255,0.06)" }}
     >
@@ -160,6 +244,7 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
         </div>
       )}
     </div>
+    </>
   );
 }
 
