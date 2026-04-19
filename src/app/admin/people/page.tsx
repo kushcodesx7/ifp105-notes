@@ -121,6 +121,19 @@ function PeoplePage() {
   );
   const [query, setQuery] = useState("");
 
+  // Heartbeat so the "live now" pulse + sort recompute on a fixed
+  // cadence rather than reading Date.now() during render (which the
+  // React Compiler flags as impure). Updates every 30s — same cadence
+  // as the data poll, so render output is stable between ticks.
+  const [nowTick, setNowTick] = useState<number>(() =>
+    typeof window === "undefined" ? 0 : Date.now()
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const t = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
   // ─── Fetch ───────────────────────────────────────────────────
   const credential = idToken ? { idToken } : password;
   const { data, error: fetchError, isLoading, mutate } =
@@ -288,15 +301,15 @@ function PeoplePage() {
         // themselves. Everyone else falls below, sorted by
         // daysSinceActive ascending. Mirrors the "Live now" widget on
         // the admin home so the table feels like a continuation of it.
-        const now = Date.now();
+        // `nowTick` is used instead of Date.now() so render stays pure.
         const liveTs = (s: AdminStudent): number =>
           s.lastActive ? new Date(s.lastActive).getTime() : 0;
         sorted.sort((a, b) => {
           const aLive = a.lastActive
-            ? now - liveTs(a) < LIVE_NOW_MS
+            ? nowTick - liveTs(a) < LIVE_NOW_MS
             : false;
           const bLive = b.lastActive
-            ? now - liveTs(b) < LIVE_NOW_MS
+            ? nowTick - liveTs(b) < LIVE_NOW_MS
             : false;
           if (aLive !== bLive) return aLive ? -1 : 1;
           return liveTs(b) - liveTs(a); // most recent first within each band
@@ -313,7 +326,7 @@ function PeoplePage() {
     }
 
     return sorted;
-  }, [data, sectionFilter, filter, query, sort]);
+  }, [data, sectionFilter, filter, query, sort, nowTick]);
 
   // ─── Auth gate ────────────────────────────────────────────────
   if (!authenticated) {
@@ -646,9 +659,11 @@ function PeoplePage() {
                             <div className="text-[13px] font-semibold text-zinc-200 truncate flex items-center gap-1.5">
                               {/* Live-now pulse — green dot if the student
                                   pinged in the last 10 minutes. Same window
-                                  the home-page widget uses. */}
+                                  the home-page widget uses. Driven by
+                                  `nowTick` (updates every 30s) so render
+                                  output is pure. */}
                               {s.lastActive &&
-                                Date.now() - new Date(s.lastActive).getTime() <
+                                nowTick - new Date(s.lastActive).getTime() <
                                   LIVE_NOW_MS && (
                                   <span
                                     className="relative inline-flex h-2 w-2 shrink-0"
