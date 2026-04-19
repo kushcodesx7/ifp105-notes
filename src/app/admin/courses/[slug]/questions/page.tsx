@@ -35,6 +35,12 @@ interface BankQuestion {
   moduleTitle: string;
   topicNumber: number;
   topicTitle: string;
+  attemptCount?: number;
+  approxCorrectPct?: number | null;
+  /** Server-flagged when the topic this question belongs to has a
+   *  >70% wrong-answer rate across 5+ student attempts. Likely a
+   *  bad distractor or unclear wording. */
+  trap?: boolean;
 }
 
 interface BloomDistribution {
@@ -54,6 +60,7 @@ interface BankResponse {
   bloomDistribution: BloomDistribution[];
   moduleBreakdown: ModuleBreakdown[];
   total: number;
+  trapCount?: number;
   migrationPending?: string;
 }
 
@@ -293,10 +300,48 @@ export default function QuestionBankPage({
                             · {q.difficulty}
                           </span>
                         )}
+                        {/* Trap detector badge — fires when the topic
+                            this question lives in has <30% correct
+                            (>70% wrong) across 5+ attempts. Likely a
+                            bad distractor or unclear wording. The
+                            attribution is per-topic not per-question
+                            because we don't store per-question scores;
+                            still surfaces the right neighbourhood. */}
+                        {q.trap && (
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{
+                              background: "rgba(239,68,68,0.15)",
+                              color: "#FCA5A5",
+                              border: "1px solid rgba(239,68,68,0.3)",
+                            }}
+                            title={`Topic average ${q.approxCorrectPct}% correct across ${q.attemptCount} attempts. Review this question's wording / distractors.`}
+                          >
+                            🚨 Needs review
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-zinc-200">{q.question}</p>
                       <p className="text-[11px] text-zinc-600 mt-1 truncate">
                         {q.topicTitle} · correct: {q.options[q.correctIndex] || "—"}
+                        {q.attemptCount && q.attemptCount > 0 ? (
+                          <span className="ml-2 text-zinc-500">
+                            · {q.attemptCount} attempt{q.attemptCount === 1 ? "" : "s"}
+                            {q.approxCorrectPct !== null && q.approxCorrectPct !== undefined ? (
+                              <span
+                                className={
+                                  q.approxCorrectPct < 30
+                                    ? "text-red-400 ml-1"
+                                    : q.approxCorrectPct < 60
+                                      ? "text-amber-400 ml-1"
+                                      : "text-emerald-400 ml-1"
+                                }
+                              >
+                                {q.approxCorrectPct}% correct
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : null}
                       </p>
                     </div>
                     <span className="text-zinc-600 shrink-0">→</span>

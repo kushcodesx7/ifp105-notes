@@ -28,6 +28,20 @@ interface BankRow {
   moduleTitle: string;
   topicNumber: number;
   topicTitle: string;
+  /** Number of student attempts on this question. Null when no MCQ
+   *  data has been collected at the topic level (pre-Phase-3). */
+  attemptCount: number;
+  /** Approximate per-question correctness rate, 0–100. We don't have
+   *  per-question scores in student_progress (only per-topic), so this
+   *  is computed by attributing the topic's average mcq_score uniformly
+   *  to every question in the topic. Acceptable approximation for the
+   *  trap detector — a topic where the average is 30% has a >70%-wrong
+   *  question somewhere. */
+  approxCorrectPct: number | null;
+  /** True when approxCorrectPct is below 30 AND the topic has been
+   *  attempted by at least 5 students. The 5-student floor stops a
+   *  single bad attempt from flagging the question. */
+  trap: boolean;
 }
 
 interface BloomDistribution {
@@ -118,11 +132,66 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     return Array.isArray(v) ? v[0] ?? null : v;
   }
 
+  // Per-topic MCQ aggregation for the trap detector. We pull every
+  // student_progress row that has an mcq_score on a topic in this
+  // course, then compute per-(module,topic) attempt count + average
+  // correctness pct. Per-question stats aren't stored — we attribute
+  // the topic average uniformly to every question. This is an
+  // approximation (a topic where one question is hard pulls the whole
+  // topic down) but good enough to flag the worst offenders.
+  const { data: progressRows } = await supabase
+    .from("student_progress")
+    .select("student_email, module_number, topic_id, mcq_score, mcq_total")
+    .not("mcq_score", "is", null)
+    .not("mcq_total", "is", null);
+
+  const topicStats = new Map<
+    string,
+    { attempts: Set<string>; correctSum: number; total: number }
+  >();
+  for (const r of (progressRows || []) as Array<{
+    student_email: string;
+    module_number: number;
+    topic_id: number;
+    mcq_score: number | null;
+    mcq_total: number | null;
+  }>) {
+    if (
+      r.mcq_score == null ||
+      r.mcq_total == null ||
+      r.mcq_total === 0
+    )
+      continue;
+    const key = `${r.module_number}:${r.topic_id}`;
+    let stat = topicStats.get(key);
+    if (!stat) {
+      stat = { attempts: new Set(), correctSum: 0, total: 0 };
+      topicStats.set(key, stat);
+    }
+    stat.attempts.add(r.student_email);
+    stat.correctSum += r.mcq_score / r.mcq_total;
+    stat.total += 1;
+  }
+
+  const TRAP_FLOOR_ATTEMPTS = 5;
+  const TRAP_PCT_THRESHOLD = 30; // <30% correct = >70% wrong = trap
+
   const questions: BankRow[] = ((data as unknown as Row[]) || [])
     .map((q) => {
       const topic = pickOne(q.topic);
       const mod = pickOne(topic?.module);
       if (!topic || !mod) return null;
+      const statKey = `${mod.number}:${topic.number}`;
+      const stat = topicStats.get(statKey);
+      const attemptCount = stat ? stat.attempts.size : 0;
+      const approxCorrectPct =
+        stat && stat.total > 0
+          ? Math.round((stat.correctSum / stat.total) * 100)
+          : null;
+      const trap =
+        attemptCount >= TRAP_FLOOR_ATTEMPTS &&
+        approxCorrectPct !== null &&
+        approxCorrectPct < TRAP_PCT_THRESHOLD;
       return {
         id: q.id,
         number: q.number,
@@ -136,6 +205,9 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
         moduleTitle: mod.title,
         topicNumber: topic.number,
         topicTitle: topic.title,
+        attemptCount,
+        approxCorrectPct,
+        trap,
       } satisfies BankRow;
     })
     .filter((q): q is BankRow => q !== null)
@@ -181,10 +253,13 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       byBloom: m.byBloom,
     }));
 
+  const trapCount = questions.filter((q) => q.trap).length;
+
   return Response.json({
     questions,
     bloomDistribution,
     moduleBreakdown,
     total: questions.length,
+    trapCount,
   });
 }

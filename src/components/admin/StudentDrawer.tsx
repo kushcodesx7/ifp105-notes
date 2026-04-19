@@ -46,6 +46,9 @@ export interface AdminStudent {
   avgMcq: number | null;
   bloomStats: Record<string, { correct: number; total: number }>;
   confidenceStats: { rated: number; confidentWrong: number; humbleRight: number };
+  /** Per-day completion counts, last 14 days (server-side), only days
+   *  with activity. Powers the sparkline timeline in this drawer. */
+  recentActivity?: { day: string; count: number }[];
   hidden?: boolean;
 }
 
@@ -780,6 +783,20 @@ function ProgressTab({ student }: { student: AdminStudent }) {
         </div>
       </div>
 
+      {/* 14-day activity timeline. Each cell = one day, height
+           proportional to completions. Blank cell = no activity that
+           day. Lets the teacher spot patterns at a glance: \"Maria
+           does 6 topics every Sunday night\" or \"Ali hasn't touched it
+           in a week\". */}
+      {student.recentActivity && student.recentActivity.length > 0 && (
+        <div className="pt-2">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-2">
+            Last 14 days
+          </div>
+          <ActivitySparkline activity={student.recentActivity} />
+        </div>
+      )}
+
       <div className="space-y-2 pt-2">
         {student.moduleStats.map((m) => (
           <div key={m.moduleNumber}>
@@ -1101,4 +1118,54 @@ function fmtDate(iso: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+// 14-day completion sparkline. Renders one cell per day in the
+// window, with cell height = clamp(count, 0..max) and color intensity
+// = same. Blank cells (no activity) get a low-opacity placeholder so
+// the rhythm is still visible.
+function ActivitySparkline({
+  activity,
+}: {
+  activity: { day: string; count: number }[];
+}) {
+  // Build a 14-day strip ending today, fill from the activity map.
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const map = new Map(activity.map((a) => [a.day, a.count] as const));
+  const days: { day: string; count: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86_400_000);
+    const key = d.toISOString().slice(0, 10);
+    days.push({ day: key, count: map.get(key) || 0 });
+  }
+  const max = Math.max(1, ...days.map((d) => d.count));
+
+  return (
+    <div className="flex items-end gap-1 h-12">
+      {days.map((d) => {
+        const heightPct = d.count > 0 ? Math.max(15, (d.count / max) * 100) : 6;
+        const isToday = d.day === days[days.length - 1].day;
+        return (
+          <div
+            key={d.day}
+            className="flex-1 rounded-sm transition-colors"
+            style={{
+              height: `${heightPct}%`,
+              minHeight: 4,
+              background:
+                d.count > 0
+                  ? "linear-gradient(180deg, #818CF8, #6366F1)"
+                  : "rgba(255,255,255,0.04)",
+              border: isToday
+                ? "1px solid rgba(99,102,241,0.5)"
+                : "none",
+            }}
+            title={`${d.day} — ${d.count} topic${d.count === 1 ? "" : "s"}`}
+            aria-label={`${d.day}: ${d.count} topics completed`}
+          />
+        );
+      })}
+    </div>
+  );
 }

@@ -166,6 +166,27 @@ export async function GET(req: NextRequest) {
     const completedCount = topicRows.filter((t) => t.completed).length;
     const completionPct = Math.round((completedCount / TOTAL_TOPICS) * 100);
 
+    // Per-day completion counts for the last 14 days. Powers the
+    // mini sparkline in StudentDrawer — lets the teacher spot
+    // bursts ("they did 8 topics yesterday") vs. steady work.
+    // Days with zero completions are omitted; the client renders
+    // them as gaps in the chart.
+    const FOURTEEN_DAYS_MS = 14 * 86_400_000;
+    const cutoff = now - FOURTEEN_DAYS_MS;
+    const dayCounts: Record<string, number> = {};
+    for (const t of topicRows) {
+      if (!t.completed || !t.updated_at) continue;
+      const ts = new Date(t.updated_at).getTime();
+      if (ts < cutoff) continue;
+      // Bucket by YYYY-MM-DD so the client can render a 14-day strip
+      // without timezone surprises.
+      const day = new Date(ts).toISOString().slice(0, 10);
+      dayCounts[day] = (dayCounts[day] || 0) + 1;
+    }
+    const recentActivity = Object.entries(dayCounts)
+      .map(([day, count]) => ({ day, count }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
     // Overall MCQ avg
     const mcqRows = topicRows.filter(
       (t) => t.mcq_score !== null && t.mcq_total !== null && t.mcq_total > 0
@@ -235,6 +256,7 @@ export async function GET(req: NextRequest) {
       avgMcq,
       bloomStats: bloomAgg,
       confidenceStats: confAgg,
+      recentActivity,
       hidden: isHiddenSection(s.section),
     };
   });
