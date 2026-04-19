@@ -110,17 +110,37 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  // Convert to array and compute summary stats
+  // Perf (Apr 2026): single-pass aggregation per student. Was doing 6
+  // array scans (1 for completedCount + 5 per-module filters + 1 for
+  // mcqEntries). Now one pass populates all counters. See the matching
+  // optimisation in /api/admin/people/route.ts for the full rationale.
   const students = Object.values(studentMap).map((s) => {
     const topicEntries = Object.values(s.topics);
-    const completedCount = topicEntries.filter((t) => t.completed).length;
 
-    // Per-module stats
+    let completedCount = 0;
+    let mcqPctSum = 0;
+    let mcqCount = 0;
+    const modDone: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+    for (const t of topicEntries) {
+      if (t.completed) {
+        completedCount += 1;
+        if (t.moduleNumber in modDone) modDone[t.moduleNumber] += 1;
+      }
+      if (
+        t.mcqScore !== null &&
+        t.mcqTotal !== null &&
+        (t.mcqTotal || 0) > 0
+      ) {
+        mcqPctSum += (t.mcqScore / t.mcqTotal) * 100;
+        mcqCount += 1;
+      }
+    }
+
     const moduleStats: Record<number, { done: number; total: number; pct: number }> = {};
     for (const moduleNum of [1, 2, 3, 4, 5]) {
-      const moduleTopics = topicEntries.filter((t) => t.moduleNumber === moduleNum);
-      const done = moduleTopics.filter((t) => t.completed).length;
       const total = MODULE_TOTALS[moduleNum];
+      const done = modDone[moduleNum];
       moduleStats[moduleNum] = {
         done,
         total,
@@ -128,16 +148,7 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    const mcqEntries = topicEntries.filter(
-      (t) => t.mcqScore !== null && t.mcqTotal !== null
-    );
-    const avgMcqScore =
-      mcqEntries.length > 0
-        ? mcqEntries.reduce(
-            (sum, t) => sum + (t.mcqScore! / t.mcqTotal!) * 100,
-            0
-          ) / mcqEntries.length
-        : null;
+    const avgMcqScore = mcqCount > 0 ? mcqPctSum / mcqCount : null;
 
     return {
       name: s.name,
