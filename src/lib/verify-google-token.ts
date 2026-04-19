@@ -1,11 +1,17 @@
 import { OAuth2Client } from "google-auth-library";
+import { verifyPasswordSession } from "@/lib/password-session";
 
-// Verifies a Google ID token (JWT) against our configured client ID.
-// Returns the verified email if valid, null if not.
+// Verifies a Google ID token (JWT) against our configured client ID,
+// OR a password-session JWT issued by /api/auth/login-password. Both
+// paths land here and resolve to the same VerifiedUser shape so every
+// downstream auth gate (`requireAuth`, `requireSelf`, `requireAdmin`)
+// works identically regardless of which login the student used.
 //
 // How the frontend sends this: the Google Sign-In button gives us a
 // `credential` (ID token JWT) in handleGoogleSuccess. We stash it in
 // auth context as `idToken` and include it as `x-id-token` on writes.
+// Password-session tokens use the same header — the client doesn't
+// need to know which kind it has.
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
@@ -31,39 +37,67 @@ export async function verifyGoogleIdToken(
   idToken: string | null | undefined
 ): Promise<VerifiedUser | null> {
   if (!idToken || typeof idToken !== "string") return null;
-  if (!CLIENT_ID) {
-    // No client ID configured → can't verify → fail closed
-    console.error("[auth] NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set");
-    return null;
-  }
-  try {
-    const ticket = await getClient().verifyIdToken({
-      idToken,
-      audience: CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email || !payload.sub) return null;
-    // Belt-and-braces: google-auth-library verifies the JWKS signature
-    // but doesn't explicitly enforce the issuer claim. Pin it to avoid
-    // accepting any other identity provider that happened to sign a
-    // JWT with a matching audience.
-    if (
-      payload.iss !== "https://accounts.google.com" &&
-      payload.iss !== "accounts.google.com"
-    ) {
-      return null;
+
+  // Two verifier paths, tried in order. Both produce the same
+  // VerifiedUser shape so the rest of the codebase doesn't care which
+  // one matched.
+  //
+  // 1. Google ID token (the historical path — every Google sign-in)
+  // 2. Password-session JWT (issued by /api/auth/login-password for
+  //    students who set up a quick-login password)
+  //
+  // Order matters for performance: Google's JWKS verify involves an
+  // outbound HTTP call (cached internally by google-auth-library) so
+  // it's slightly more expensive than the local HMAC check. But the
+  // overwhelming majority of tokens in flight are Google's, so trying
+  // it first avoids a wasted password-session check on every request.
+
+  if (CLIENT_ID) {
+    try {
+      const ticket = await getClient().verifyIdToken({
+        idToken,
+        audience: CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (payload && payload.email && payload.sub) {
+        // Belt-and-braces: google-auth-library verifies the JWKS signature
+        // but doesn't explicitly enforce the issuer claim. Pin it to avoid
+        // accepting any other identity provider that happened to sign a
+        // JWT with a matching audience.
+        if (
+          (payload.iss === "https://accounts.google.com" ||
+            payload.iss === "accounts.google.com") &&
+          payload.email_verified !== false
+        ) {
+          return {
+            email: payload.email.toLowerCase(),
+            name: payload.name,
+            picture: payload.picture,
+            sub: payload.sub,
+          };
+        }
+      }
+    } catch {
+      // Not a valid Google token — fall through to the password
+      // session path below. The fall-through is the whole point of
+      // having two verifiers.
     }
-    // Require the email to be verified by Google (not just claimed).
-    if (payload.email_verified === false) return null;
-    return {
-      email: payload.email.toLowerCase(),
-      name: payload.name,
-      picture: payload.picture,
-      sub: payload.sub,
-    };
-  } catch {
-    return null;
+  } else {
+    console.error("[auth] NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set");
   }
+
+  // Password-session fallback. Pure-local HMAC check — no network.
+  const pwd = await verifyPasswordSession(idToken);
+  if (pwd && pwd.email) {
+    return {
+      email: pwd.email.toLowerCase(),
+      name: pwd.name,
+      picture: pwd.picture,
+      sub: pwd.sub,
+    };
+  }
+
+  return null;
 }
 
 /**

@@ -56,8 +56,17 @@ function readProgressMap(): Record<number, { done: number; total: number; pct: n
 }
 
 export default function Navbar({ showBack = false, title, moduleNumber }: NavbarProps) {
-  const { user, isLoggedIn, login, logout, setIdToken, getIdToken } = useAuth();
+  const { user, isLoggedIn, login, logout, setIdToken, getIdToken, loginWithPassword } = useAuth();
   const [showSignIn, setShowSignIn] = useState(false);
+  // Sign-in modal has two paths: Google OAuth (default) and the lab-
+  // friendly enrollment+password quick-login. `signInMode` flips between
+  // them. Defaulting to Google preserves the existing one-click flow
+  // for everyone except students who explicitly opted into a password.
+  const [signInMode, setSignInMode] = useState<"google" | "password">("google");
+  const [pwEnrollment, setPwEnrollment] = useState("");
+  const [pwPassword, setPwPassword] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwLoading, setPwLoading] = useState(false);
   const [showModules, setShowModules] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
   // Per-module progress for the dropdown. Refreshed when the dropdown
@@ -171,6 +180,27 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
       photo: payload.picture,
     });
     setShowSignIn(false);
+  }
+
+  // Quick-login submit. Calls the auth-context method which talks to
+  // /api/auth/login-password and persists the returned session JWT to
+  // localStorage so reload keeps the user signed in.
+  async function handlePasswordSubmit() {
+    if (!pwEnrollment.trim() || !pwPassword) {
+      setPwError("Enter your enrollment number and password.");
+      return;
+    }
+    setPwError(null);
+    setPwLoading(true);
+    const res = await loginWithPassword(pwEnrollment.trim(), pwPassword);
+    setPwLoading(false);
+    if (res.ok) {
+      setPwEnrollment("");
+      setPwPassword("");
+      setShowSignIn(false);
+    } else {
+      setPwError(res.error);
+    }
   }
 
   // NOTE: we tried useGoogleOneTapLogin + auto_select to silently refresh
@@ -442,26 +472,105 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
               </svg>
             </button>
 
-            <div className="text-center mb-6">
+            <div className="text-center mb-5">
               <div className="text-3xl mb-3" aria-hidden="true">🚀</div>
               <h2 id="signin-modal-title" className="text-lg font-bold text-white mb-1.5">Sign In</h2>
               <p className="text-sm text-zinc-400">Save your progress across all devices</p>
             </div>
 
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => {}}
-                theme="filled_black"
-                size="large"
-                shape="pill"
-                text="signin_with"
-              />
-            </div>
-
-            <p className="text-[11px] text-zinc-600 text-center mt-4">
-              One click. No forms. Your progress syncs everywhere.
-            </p>
+            {signInMode === "google" ? (
+              <>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {}}
+                    theme="filled_black"
+                    size="large"
+                    shape="pill"
+                    text="signin_with"
+                  />
+                </div>
+                <p className="text-[11px] text-zinc-600 text-center mt-4">
+                  One click. No forms. Your progress syncs everywhere.
+                </p>
+                <div className="mt-5 pt-4 border-t border-white/[0.06] text-center">
+                  <button
+                    onClick={() => {
+                      setPwError(null);
+                      setSignInMode("password");
+                    }}
+                    className="text-[12px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    🔐 Use enrollment + password instead
+                  </button>
+                  <p className="text-[10px] text-zinc-600 mt-1.5">
+                    Faster on lab computers — set up in your profile after first sign-in.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handlePasswordSubmit();
+                }}
+                className="space-y-3"
+              >
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    Enrollment number
+                  </label>
+                  <input
+                    type="text"
+                    value={pwEnrollment}
+                    onChange={(e) => setPwEnrollment(e.target.value)}
+                    placeholder="e.g. 24-IFS-001"
+                    autoComplete="username"
+                    autoFocus
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={pwPassword}
+                    onChange={(e) => setPwPassword(e.target.value)}
+                    placeholder="Your quick-login password"
+                    autoComplete="current-password"
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                  />
+                </div>
+                {pwError && (
+                  <p className="text-[12px] text-red-400">{pwError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={pwLoading}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 transition-opacity"
+                >
+                  {pwLoading ? "Signing in…" : "Sign in"}
+                </button>
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPwError(null);
+                      setSignInMode("google");
+                    }}
+                    className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    ← Use Google sign-in instead
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-600 text-center pt-1">
+                  Don&apos;t have a password yet? Sign in with Google once,
+                  then go to your profile to set one up.
+                </p>
+              </form>
+            )}
           </motion.div>
         </motion.div>
       )}

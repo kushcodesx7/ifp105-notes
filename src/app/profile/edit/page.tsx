@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import QuickLoginPasswordCard from "@/components/QuickLoginPasswordCard";
 import { useAuth } from "@/lib/auth-context";
 import { decodeJwt } from "@/lib/jwt";
 import { GoogleLogin } from "@react-oauth/google";
@@ -423,6 +424,12 @@ export default function EditProfilePage() {
             <Field label="Telegram (optional)" value={profile.telegramUrl} onChange={v => updateField("telegramUrl", v)} placeholder="https://t.me/yourname" />
             <Field label="Portfolio (optional)" value={profile.portfolioUrl} onChange={v => updateField("portfolioUrl", v)} placeholder="https://yourwebsite.com" />
           </div>
+
+          {/* Quick-login password setup. Lives above the Save button so
+              students see it after filling in their links — at the
+              \"now what?\" moment when they're most likely to engage with
+              optional features. Self-contained: own auth, own toast. */}
+          <QuickLoginPasswordCard onToast={showToast} />
 
           {/* Save */}
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
