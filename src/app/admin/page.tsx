@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
 import ActiveNowWidget from "@/components/admin/ActiveNowWidget";
 import { useAdminFetch } from "@/lib/useAdminFetch";
-import { useAuth } from "@/lib/auth-context";
-import { isAdminEmail } from "@/lib/admins";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -86,111 +84,16 @@ function sectionShort(name: string): string {
 // ─── Page ───────────────────────────────────────────────────────────
 
 export default function AdminHomePage() {
-  const { user, isLoggedIn, getIdToken } = useAuth();
-  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
-  const idToken = isAdmin ? getIdToken() : null;
+  // Google-only auth gate. Password path removed — see adminWrite.
+  const { idToken, ready } = useAdminAuth();
 
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPassword(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin && idToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthenticated(true);
-    }
-  }, [isAdmin, idToken]);
-
-  const credential = idToken ? { idToken } : password;
   const { data, error: fetchError, isLoading: fetchLoading } =
-    useAdminFetch<SummaryResponse>("/api/admin/summary", credential, {
-      enabled: authenticated,
+    useAdminFetch<SummaryResponse>("/api/admin/summary", { idToken }, {
+      enabled: ready,
       refreshInterval: 30_000,
     });
 
-  useEffect(() => {
-    if (
-      fetchError &&
-      "status" in fetchError &&
-      (fetchError as { status?: number }).status === 401
-    ) {
-      if (!isAdmin) {
-        sessionStorage.removeItem("admin_pw");
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setAuthenticated(false);
-      }
-    }
-  }, [fetchError, isAdmin]);
-
-  async function login() {
-    setAuthError("");
-    setLoading(true);
-    const res = await fetch("/api/admin/summary", {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
-    }
-    setLoading(false);
-  }
-
-  // ─── Password gate for non-admin users ─────────────────────────
-  if (!authenticated) {
-    return (
-      <main className="min-h-screen">
-        <Navbar title="Admin" />
-        <div className="min-h-screen flex items-center justify-center px-6">
-          <div
-            className="w-full max-w-sm rounded-2xl p-6"
-            style={{
-              background: "linear-gradient(135deg, #0F0F1A, #0A0A12)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <div className="text-3xl mb-3">🛡️</div>
-            <h1 className="text-xl font-bold mb-1">Admin access</h1>
-            <p className="text-sm text-zinc-500 mb-5">
-              Sign in with an admin Google account, or enter the admin
-              password below.
-            </p>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") login();
-              }}
-              placeholder="Admin password"
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 mb-3"
-            />
-            {authError && (
-              <p className="text-[12px] text-red-400 mb-3">{authError}</p>
-            )}
-            <button
-              onClick={login}
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50"
-            >
-              {loading ? "Checking…" : "Continue"}
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  if (!ready) return <AdminAuthGate />;
 
   // ─── Main page ─────────────────────────────────────────────────
   return (
@@ -233,7 +136,7 @@ export default function AdminHomePage() {
              real "who's in the app right now" view, not just
              "active this week". Useful during class to spot which
              students started the assignment. */}
-        <ActiveNowWidget idToken={idToken} password={password} />
+        <ActiveNowWidget idToken={idToken} />
 
         {/* ─── KPI row ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">

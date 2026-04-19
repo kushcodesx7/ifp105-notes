@@ -96,9 +96,11 @@ export async function logAdminAction(input: LogAdminActionInput): Promise<void> 
 }
 
 /**
- * Extracts the best actor identifier from the auth outcome.
- * - If Google ID token: the verified admin's email.
- * - If legacy password (no token): a stable "password-admin" label.
+ * Extracts the best actor identifier from the auth outcome. Every
+ * admin request now comes through a Google ID token, so `email` is
+ * always present on success. The legacy `viaPassword` path returned a
+ * "password-admin" label; it's kept here as a defensive fallback but
+ * is never actually hit.
  */
 export function actorFromAuth(info: {
   email?: string | null;

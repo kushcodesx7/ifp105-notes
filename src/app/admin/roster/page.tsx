@@ -3,13 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import CreateBatchWizard from "@/components/admin/CreateBatchWizard";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
-import { useAuth } from "@/lib/auth-context";
-import { isAdminEmail } from "@/lib/admins";
 import { compareSections } from "@/lib/sections";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -42,69 +41,18 @@ interface RosterResponse {
 // ─── Page ───────────────────────────────────────────────────────
 
 export default function RosterPage() {
-  const { user, isLoggedIn, getIdToken } = useAuth();
-  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
-  const idToken = isAdmin ? getIdToken() : null;
+  // Shared Google-only auth gate (password path removed).
+  const { idToken, ready } = useAdminAuth();
   const { toast } = useToast();
 
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPassword(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin && idToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthenticated(true);
-    }
-  }, [isAdmin, idToken]);
-
-  const credential = idToken ? { idToken } : password;
-  const { data, error: fetchError, isLoading, mutate } =
-    useAdminFetch<RosterResponse>("/api/batches/admin", credential, {
-      enabled: authenticated,
+  const { data, isLoading, mutate } =
+    useAdminFetch<RosterResponse>("/api/batches/admin", { idToken }, {
+      enabled: ready,
       refreshInterval: 60_000,
     });
 
-  useEffect(() => {
-    if (
-      fetchError &&
-      "status" in fetchError &&
-      (fetchError as { status?: number }).status === 401
-    ) {
-      if (!isAdmin) {
-        sessionStorage.removeItem("admin_pw");
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setAuthenticated(false);
-      }
-    }
-  }, [fetchError, isAdmin]);
-
-  async function login() {
-    setAuthError("");
-    setAuthLoading(true);
-    const res = await fetch("/api/batches/admin", {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
-    }
-    setAuthLoading(false);
-  }
-
-  const batches = data?.batches ?? [];
+  // Memoize so useEffect/useMemo below get a stable reference when data is unchanged.
+  const batches = useMemo(() => data?.batches ?? [], [data]);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
@@ -123,11 +71,7 @@ export default function RosterPage() {
 
   function authHeaders(): Record<string, string> {
     const h: Record<string, string> = { "Content-Type": "application/json" };
-    if (idToken && isAdmin) h["x-id-token"] = idToken;
-    else {
-      const pw = sessionStorage.getItem("admin_pw");
-      if (pw) h["x-admin-password"] = pw;
-    }
+    if (idToken) h["x-id-token"] = idToken;
     return h;
   }
 
@@ -143,43 +87,7 @@ export default function RosterPage() {
   }
 
   // ─── Auth gate ──────────────────────────────────────────────
-  if (!authenticated) {
-    return (
-      <main className="min-h-screen">
-        <Navbar title="Admin" />
-        <div className="min-h-screen flex items-center justify-center px-6">
-          <div
-            className="w-full max-w-sm rounded-2xl p-6"
-            style={{
-              background: "linear-gradient(135deg, #0F0F1A, #0A0A12)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <div className="text-3xl mb-3">🛡️</div>
-            <h1 className="text-xl font-bold mb-1">Admin access</h1>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") login();
-              }}
-              placeholder="Admin password"
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 mb-3 mt-4"
-            />
-            {authError && <p className="text-[12px] text-red-400 mb-3">{authError}</p>}
-            <button
-              onClick={login}
-              disabled={authLoading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50"
-            >
-              {authLoading ? "Checking…" : "Continue"}
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  if (!ready) return <AdminAuthGate />;
 
   return (
     <main className="min-h-screen">

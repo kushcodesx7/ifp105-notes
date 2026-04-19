@@ -1,93 +1,93 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
+import { decodeJwt } from "@/lib/jwt";
 
 // Shared admin-page auth gate.
 //
 // Every /admin/* page used to inline the same ~50 lines of auth state
 // (password prompt + session-storage persistence + Google-token check
-// + a login screen). The Phase 4 editor adds four more pages that all
-// need the same gate, so we hoist it here.
+// + a login screen). Phase 4 hoisted that into this hook + component.
 //
 // Usage:
 //   const { idToken, password, ready } = useAdminAuth();
 //   if (!ready) return <AdminAuthGate />;
 //   // …render the page once authenticated
 //
-// The hook + component are kept in one file so the render-during-login
-// path stays co-located with the state that powers it.
+// The legacy shared-password path was removed (see PR description).
+// Google sign-in is the only way in. The hook still returns a
+// `password: ""` field for back-compat with the ~10 admin pages that
+// destructure it — they pass it to adminWrite which now ignores it.
 
 export function useAdminAuth() {
   const { user, isLoggedIn, getIdToken } = useAuth();
   const isAdmin = isLoggedIn && isAdminEmail(user?.email);
   const idToken = isAdmin ? getIdToken() : null;
 
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const saved =
-      typeof window !== "undefined" ? sessionStorage.getItem("admin_pw") : null;
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPassword(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin && idToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthenticated(true);
-    }
-  }, [isAdmin, idToken]);
-
   return {
     idToken,
-    password,
-    setPassword,
-    ready: authenticated,
-    setAuthenticated,
+    // Legacy fields kept so existing call sites compile unchanged.
+    // Both are now no-ops; admin auth is Google-only.
+    password: "",
+    setPassword: (_pw: string) => {
+      void _pw;
+    },
+    ready: !!(isAdmin && idToken),
+    setAuthenticated: (_v: boolean) => {
+      void _v;
+    },
   };
 }
 
 interface GateProps {
-  password: string;
-  setPassword: (pw: string) => void;
-  setAuthenticated: (v: boolean) => void;
+  // Kept for back-compat with the ~10 call sites that pass them.
+  // Both are ignored now — the gate only cares about Google sign-in.
+  password?: string;
+  setPassword?: (pw: string) => void;
+  setAuthenticated?: (v: boolean) => void;
   /**
-   * URL to ping with the password to validate it. Any endpoint that
-   * requires admin auth works — pick one cheap & page-relevant for
-   * nicer 401-in-console attribution.
+   * Probe URL was used to validate the password against an admin
+   * endpoint. Now ignored — Google ID token verification happens at
+   * every API call, no probe needed.
    */
   probeUrl?: string;
 }
 
-export default function AdminAuthGate({
-  password,
-  setPassword,
-  setAuthenticated,
-  probeUrl = "/api/admin/audit?limit=1",
-}: GateProps) {
+export default function AdminAuthGate(_props: GateProps) {
+  void _props; // back-compat shim; no longer used
+  const { user, login, setIdToken } = useAuth();
   const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
 
-  async function login() {
-    setAuthError("");
-    setAuthLoading(true);
-    const res = await fetch(probeUrl, {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
+  // Google sign-in handler — same shape as the one in Navbar but
+  // self-contained because the auth gate may render before the
+  // Navbar exists in the tree (some admin layouts skip Navbar).
+  function handleGoogleSuccess(response: { credential?: string }) {
+    if (!response.credential) {
+      setAuthError("Sign-in returned no token. Try again.");
+      return;
     }
-    setAuthLoading(false);
+    const payload = decodeJwt(response.credential);
+    if (!payload?.email) {
+      setAuthError("Sign-in returned no email. Try again.");
+      return;
+    }
+    if (!isAdminEmail(payload.email)) {
+      setAuthError(
+        `${payload.email} isn't on the admin list. Sign in with the admin account.`
+      );
+      return;
+    }
+    setIdToken(response.credential);
+    login({
+      ...(user || {}),
+      name: payload.name || payload.email,
+      email: payload.email,
+      photo: payload.picture,
+    });
   }
 
   return (
@@ -95,34 +95,41 @@ export default function AdminAuthGate({
       <Navbar title="Admin" />
       <div className="min-h-screen flex items-center justify-center px-6">
         <div
-          className="w-full max-w-sm rounded-2xl p-6"
+          className="w-full max-w-sm rounded-2xl p-6 text-center"
           style={{
             background: "linear-gradient(135deg, #0F0F1A, #0A0A12)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          <div className="text-3xl mb-3">🛡️</div>
+          <div className="text-3xl mb-3" aria-hidden="true">
+            🛡️
+          </div>
           <h1 className="text-xl font-bold mb-1">Admin access</h1>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") login();
-            }}
-            placeholder="Admin password"
-            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 mb-3 mt-4"
-          />
+          <p className="text-[12px] text-zinc-500 mb-5 leading-relaxed">
+            Sign in with the Google account on the admin list.
+          </p>
+
+          <div className="flex justify-center mb-3">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() =>
+                setAuthError("Google sign-in failed. Try once more.")
+              }
+              theme="filled_black"
+              size="large"
+              shape="pill"
+              text="signin_with"
+            />
+          </div>
+
           {authError && (
-            <p className="text-[12px] text-red-400 mb-3">{authError}</p>
+            <p className="text-[12px] text-red-400 mt-2">{authError}</p>
           )}
-          <button
-            onClick={login}
-            disabled={authLoading}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50"
-          >
-            {authLoading ? "Checking…" : "Continue"}
-          </button>
+
+          <p className="text-[10px] text-zinc-600 mt-5 leading-relaxed">
+            The shared-password admin login was removed. Every admin
+            action is now attributed to a real email in the audit log.
+          </p>
         </div>
       </div>
     </main>
@@ -130,18 +137,20 @@ export default function AdminAuthGate({
 }
 
 /**
- * Helper for writing JSON to admin endpoints with the right header.
- * Returns the parsed JSON (or throws with a useful message on error).
+ * Helper for writing JSON to admin endpoints. Google ID token only —
+ * the password header is no longer accepted server-side. Kept the
+ * `credential.password` field in the type signature so call sites
+ * don't all need updating; it's just ignored.
  */
 export async function adminWrite<T = unknown>(
   url: string,
   method: "POST" | "PATCH" | "DELETE",
-  credential: { idToken: string | null; password: string },
+  credential: { idToken: string | null; password?: string },
   body?: unknown
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (credential.idToken) headers["x-id-token"] = credential.idToken;
-  else if (credential.password) headers["x-admin-password"] = credential.password;
+  // password field intentionally ignored — see comment above.
 
   const res = await fetch(url, {
     method,

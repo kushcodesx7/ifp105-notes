@@ -47,14 +47,12 @@ const POLL_INTERVAL_MS = 20_000;
 
 interface Props {
   idToken: string | null;
-  password: string;
 }
 
-export default function ActiveNowWidget({ idToken, password }: Props) {
-  const credential = idToken ? { idToken } : password;
+export default function ActiveNowWidget({ idToken }: Props) {
   const { data, isLoading, mutate } = useAdminFetch<Response>(
     "/api/admin/active-now?windowMin=10",
-    credential
+    { idToken }
   );
 
   // Heartbeat that keeps the relative-time labels fresh between polls.

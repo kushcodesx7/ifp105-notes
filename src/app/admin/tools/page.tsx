@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
+import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
-import { useAuth } from "@/lib/auth-context";
-import { isAdminEmail } from "@/lib/admins";
 import type { AdminActionKind } from "@/lib/admin-audit";
 
 // Phase 3 — real Tools page.
@@ -38,85 +37,10 @@ interface AuditResponse {
 // ─── Page ─────────────────────────────────────────────────────
 
 export default function ToolsPage() {
-  const { user, isLoggedIn, getIdToken } = useAuth();
-  const isAdmin = isLoggedIn && isAdminEmail(user?.email);
-  const idToken = isAdmin ? getIdToken() : null;
-
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("admin_pw");
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPassword(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin && idToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthenticated(true);
-    }
-  }, [isAdmin, idToken]);
-
-  async function login() {
-    setAuthError("");
-    setAuthLoading(true);
-    const res = await fetch("/api/admin/audit?limit=1", {
-      headers: { "x-admin-password": password },
-    });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_pw", password);
-    } else {
-      setAuthError("Wrong password.");
-    }
-    setAuthLoading(false);
-  }
-
-  if (!authenticated) {
-    return (
-      <main className="min-h-screen">
-        <Navbar title="Admin" />
-        <div className="min-h-screen flex items-center justify-center px-6">
-          <div
-            className="w-full max-w-sm rounded-2xl p-6"
-            style={{
-              background: "linear-gradient(135deg, #0F0F1A, #0A0A12)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <div className="text-3xl mb-3">🛡️</div>
-            <h1 className="text-xl font-bold mb-1">Admin access</h1>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") login();
-              }}
-              placeholder="Admin password"
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 mb-3 mt-4"
-            />
-            {authError && (
-              <p className="text-[12px] text-red-400 mb-3">{authError}</p>
-            )}
-            <button
-              onClick={login}
-              disabled={authLoading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50"
-            >
-              {authLoading ? "Checking…" : "Continue"}
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  // Switched to the shared AdminAuthGate when the password path was
+  // removed. The gate now ONLY accepts Google sign-in for admins.
+  const { idToken, ready } = useAdminAuth();
+  if (!ready) return <AdminAuthGate />;
 
   return (
     <main className="min-h-screen">
@@ -171,13 +95,10 @@ export default function ToolsPage() {
         </Link>
 
         {/* Migration: TS flashcards → DB. One-shot, idempotent. */}
-        <MigrateTsFlashcardsCard idToken={idToken} password={password} />
+        <MigrateTsFlashcardsCard idToken={idToken} />
 
         {/* Audit log — ready */}
-        <AuditLogCard
-          idToken={idToken}
-          password={password}
-        />
+        <AuditLogCard idToken={idToken} />
 
         {/* Stubbed cards for future work */}
         <div className="mt-6 grid md:grid-cols-2 gap-3">
@@ -258,10 +179,8 @@ const ACTION_FILTER_OPTIONS: { value: string; label: string }[] = [
 
 function AuditLogCard({
   idToken,
-  password,
 }: {
   idToken: string | null;
-  password: string;
 }) {
   const [actorFilter, setActorFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
@@ -278,10 +197,9 @@ function AuditLogCard({
     return sp.toString();
   }, [actorFilter, actionFilter, subjectFilter]);
 
-  const credential = idToken ? { idToken } : password;
   const { data, error, isLoading, mutate } = useAdminFetch<AuditResponse>(
     `/api/admin/audit?${queryString}`,
-    credential,
+    { idToken },
     { refreshInterval: 30_000 }
   );
 
@@ -611,10 +529,8 @@ function StubCard({
 
 function MigrateTsFlashcardsCard({
   idToken,
-  password,
 }: {
   idToken: string | null;
-  password: string;
 }) {
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<{
@@ -634,7 +550,6 @@ function MigrateTsFlashcardsCard({
         "Content-Type": "application/json",
       };
       if (idToken) headers["x-id-token"] = idToken;
-      else if (password) headers["x-admin-password"] = password;
       const res = await fetch("/api/admin/migrate-ts-flashcards", {
         method: "POST",
         headers,

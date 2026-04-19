@@ -160,15 +160,19 @@ export async function requireAuth(
 }
 
 /**
- * Admin auth — accepts EITHER:
- *  - a valid Google ID token whose email is in the admin allowlist
- *  - the legacy admin password header (x-admin-password)
+ * Admin auth — Google ID token only. The legacy shared-password
+ * header (x-admin-password / ADMIN_PASSWORD env) was removed because:
+ *   - Anyone who learned the password became admin forever
+ *   - Audit log couldn't attribute actions to a real email
+ *     (everything showed up as "password-admin")
+ *   - Google sign-in already provides the same access with a real
+ *     identity per admin
  *
- * On success returns the admin identity so endpoints can log actions
- * with attribution. When auth came via password we report viaPassword=true
- * and email=null; audit code turns that into a "password-admin" label.
+ * Return shape keeps `email` + `viaPassword` for back-compat with
+ * callers that destructure them. `viaPassword` is now always false.
  *
- * The allowlist is imported lazily to avoid a circular dep with src/lib/admins.
+ * The allowlist is imported lazily to avoid a circular dep with
+ * src/lib/admins.
  */
 export async function requireAdmin(
   req: Request
@@ -176,7 +180,6 @@ export async function requireAdmin(
   | { ok: true; email: string | null; viaPassword: boolean }
   | { ok: false; response: Response }
 > {
-  // 1. Try Google ID token first
   const idToken = req.headers.get("x-id-token");
   if (idToken) {
     const verified = await verifyGoogleIdToken(idToken);
@@ -186,13 +189,6 @@ export async function requireAdmin(
         return { ok: true, email: verified.email, viaPassword: false };
       }
     }
-  }
-
-  // 2. Fall back to the shared admin password (legacy)
-  const pw = req.headers.get("x-admin-password");
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (adminPassword && pw === adminPassword) {
-    return { ok: true, email: null, viaPassword: true };
   }
 
   return {
