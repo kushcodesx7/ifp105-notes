@@ -4,6 +4,7 @@ import { DM_Serif_Display } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import AdminBarMount from "@/components/admin/AdminBarMount";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getCurrentCourse } from "@/lib/course-registry";
 import "./globals.css";
 
@@ -90,6 +91,13 @@ export default function RootLayout({
               AuthProvider since it reads the signed-in user. */}
           <AdminBarMount />
           {children}
+          {/* Vercel Speed Insights — sends anonymous Core Web Vitals
+              (LCP / CLS / INP / TTFB) from real student devices to
+              the Vercel dashboard at /speed-insights. ~3KB chunk,
+              one beacon per pageview, no PII. Lets us see actual
+              perf in Tashkent's network conditions vs. synthetic
+              Lighthouse scores. */}
+          <SpeedInsights />
         </AuthProvider>
       </body>
     </html>
