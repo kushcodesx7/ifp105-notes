@@ -156,6 +156,18 @@ export default function SharedQuestionEditor({
           className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
           placeholder="Question text…"
         />
+        {/* Top-right delete icon — same action as the Delete button at
+             the bottom of the card, but always visible without scrolling
+             past the option list. Bottom button stays for the "I just
+             finished editing, now delete" flow. */}
+        <button
+          onClick={() => setConfirmOpen(true)}
+          title="Delete this question"
+          aria-label={`Delete question ${q.number}`}
+          className="shrink-0 w-7 h-7 rounded-md text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center mt-1"
+        >
+          🗑️
+        </button>
       </div>
 
       <div className="space-y-1.5 mb-2 pl-7">

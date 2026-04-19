@@ -115,6 +115,14 @@ export default function ModulePage({
   const [done, setDone] = useState<Set<number>>(new Set());
   const [isCheatSheet, setIsCheatSheet] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
+  // True when the user object exists in localStorage (so isLoggedIn=true)
+  // but the in-memory ID token is null — happens on every page reload
+  // since tokens aren't persisted. Without surfacing this state, any
+  // saveToSupabase silently bails, the local progress bar fills, and
+  // the admin /people view shows "0 / Never" for the student. Surfacing
+  // it via a sticky banner + forcing the LoginPrompt on action recovers
+  // the silent-fail.
+  const [needsReauth, setNeedsReauth] = useState(false);
   // "normal" = standard per-topic burst, "module" = bigger celebration
   // when the last topic is marked done. Stored alongside the trigger
   // so the Confetti component can pick the right particle count +
@@ -304,6 +312,33 @@ export default function ModulePage({
     };
   }, [isLoggedIn, user, moduleNumber, getIdToken]);
 
+  // Session ping + token presence check. Runs on mount and whenever the
+  // logged-in state changes. Two jobs:
+  //   1. If we have a fresh token, ping /api/session/ping so admin sees
+  //      the student is active even before they complete any topic.
+  //   2. If user object exists but token is null (page reload / token
+  //      expiry), set the needsReauth banner so the student knows their
+  //      next "Mark as done" won't actually save.
+  useEffect(() => {
+    if (!isLoggedIn || !user) {
+      setNeedsReauth(false);
+      return;
+    }
+    const token = getIdToken();
+    if (!token) {
+      setNeedsReauth(true);
+      return;
+    }
+    setNeedsReauth(false);
+    // Fire-and-forget; ping failure isn't user-visible.
+    fetch("/api/session/ping", {
+      method: "POST",
+      headers: { "x-id-token": token },
+      // Skip caches — the whole point is recording fresh activity.
+      cache: "no-store",
+    }).catch(() => {});
+  }, [isLoggedIn, user, getIdToken]);
+
   // Reading progress bar — rAF-throttled so setState fires at most once per frame
   useEffect(() => {
     let rafId = 0;
@@ -357,10 +392,16 @@ export default function ModulePage({
   }) {
     if (!isLoggedIn || !user) return;
     const token = getIdToken();
-    // No token this session → they're on a restored-from-localStorage session
-    // without a fresh sign-in. Skip the remote save; local state still tracks
-    // their progress. Next sign-in will sync.
-    if (!token) return;
+    // No token this session → user object was restored from localStorage
+    // but the in-memory token is gone (tokens are never persisted). Flip
+    // the banner state so the student sees a "your progress isn't saving"
+    // toast + a re-sign-in prompt. Local state still tracks their work
+    // so they don't lose anything once they re-auth.
+    if (!token) {
+      setNeedsReauth(true);
+      setShowLoginPrompt(true);
+      return;
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     fetch("/api/progress", {
@@ -487,6 +528,41 @@ export default function ModulePage({
           boxShadow: `0 0 8px ${accentFrom}60`,
         }}
       />
+
+      {/* Re-auth banner — surfaces the "user-restored-from-localStorage
+           but token is gone" state that otherwise silently swallows
+           every Mark-as-done into local-only state. Without this, the
+           student sees their topic count fill but admin sees Never +
+           0/N because nothing reaches the DB. */}
+      {needsReauth && (
+        <div
+          className="sticky z-40 px-4 py-2.5 text-center text-[12px] font-semibold flex items-center justify-center gap-3"
+          style={{
+            top: "3.5rem",
+            background: "linear-gradient(135deg, rgba(249,115,22,0.18), rgba(245,158,11,0.18))",
+            borderBottom: "1px solid rgba(249,115,22,0.3)",
+            color: "#FCD34D",
+            backdropFilter: "blur(12px)",
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <span aria-hidden="true">⚠️</span>
+          <span>
+            Your sign-in expired — your progress isn&apos;t syncing.
+          </span>
+          <button
+            onClick={() => setShowLoginPrompt(true)}
+            className="text-[11px] font-bold px-3 py-1 rounded-full text-white"
+            style={{
+              background: "linear-gradient(135deg, #F59E0B, #D97706)",
+              boxShadow: "0 2px 8px rgba(245,158,11,0.3)",
+            }}
+          >
+            Sign in again
+          </button>
+        </div>
+      )}
 
       {/* Hero */}
       <section className="relative pt-14 overflow-hidden" style={{ background: '#08080F' }}>
