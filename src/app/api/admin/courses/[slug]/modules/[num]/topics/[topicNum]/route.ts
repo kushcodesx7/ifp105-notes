@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { cleanupTopicImages } from "@/lib/storage-cleanup";
+import { sanitizeContentBlocks } from "@/lib/sanitize-html";
 
 // /api/admin/courses/[slug]/modules/[num]/topics/[topicNum]
 //   GET    — topic detail (includes content_json for Phase 5 block editor)
@@ -183,8 +184,16 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   if (typeof body.number === "number" && Number.isInteger(body.number) && body.number > 0)
     patch.number = body.number;
   // content_json is the Phase 5 content-block array. We accept any JSON
-  // array here; the block editor will validate structure client-side.
-  if (Array.isArray(body.contentJson)) patch.content_json = body.contentJson;
+  // array here; the block editor validates structure client-side.
+  //
+  // Every `html` field in the tree is run through the allowlist
+  // sanitizer server-side so a compromised admin account can't store
+  // `<img src=x onerror=…>` or similar. The student renderer still
+  // uses dangerouslySetInnerHTML for performance; this is the only
+  // line of defense.
+  if (Array.isArray(body.contentJson)) {
+    patch.content_json = sanitizeContentBlocks(body.contentJson);
+  }
   // flashcards_json — array of { front, back, deletedAt? }. The optional
   // deletedAt field (ISO string) marks the card as in-trash (layer 2).
   // Validate the inner shape so malformed payloads can't reach the DB
