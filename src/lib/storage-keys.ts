@@ -57,6 +57,17 @@ export function quizStateKey(
   return `${LEGACY_PREFIX}_m${moduleNumber}_quiz_t${topicId}`;
 }
 
+/** Per-topic flashcard session state — which card the student is on
+ *  and which cards they've marked "known". Persisted so a refresh
+ *  doesn't restart the deck from card 1. */
+export function flashcardStateKey(
+  _courseSlug: string,
+  moduleNumber: number,
+  topicId: number
+): string {
+  return `${LEGACY_PREFIX}_m${moduleNumber}_flash_t${topicId}`;
+}
+
 /** Bookmarks — array of (module, topic) pairs the student starred. */
 export function bookmarksKey(_courseSlug: string): string {
   return `${LEGACY_PREFIX}_bookmarks`;
