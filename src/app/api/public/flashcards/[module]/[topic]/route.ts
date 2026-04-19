@@ -1,0 +1,95 @@
+import { NextRequest } from "next/server";
+import { supabase } from "@/lib/supabase";
+import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+
+// GET /api/public/flashcards/:module/:topic?course=ict
+//
+// Public endpoint the student Flashcards component hits before falling
+// back to the bundled TS flashcards. Returns:
+//   { cards: [{front, back}] }  when the DB row has non-empty cards
+//   { cards: null }             when DB has nothing (→ TS fallback wins)
+//
+// Public (no auth) — flashcards are already public content rendered
+// into every student's browser. Cached so a popular topic doesn't
+// hammer the DB on Monday mornings.
+
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ module: string; topic: string }> }
+) {
+  const { module, topic } = await ctx.params;
+  const moduleNumber = parseInt(module, 10);
+  const topicNumber = parseInt(topic, 10);
+  if (Number.isNaN(moduleNumber) || Number.isNaN(topicNumber)) {
+    return Response.json(
+      { error: "Invalid module or topic number" },
+      { status: 400 }
+    );
+  }
+
+  // 180/min/IP — a student flipping between 10 topics on a module page
+  // fires exactly 10 requests; 180 is well above any realistic human
+  // pace and still bounded enough to trip obvious abuse.
+  const rl = await rateLimit({
+    bucket: "public:flashcards",
+    id: ipFromRequest(req),
+    limit: 180,
+    windowSec: 60,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 180);
+
+  const url = new URL(req.url);
+  const slug = (url.searchParams.get("course") || "ict").trim();
+
+  // Resolve course → module → topic via two cheap lookups. We don't
+  // need a join here because the caller knows (slug, moduleNumber,
+  // topicNumber) and each lookup hits a UNIQUE constraint.
+  const { data: course } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  const courseId = (course as { id: string } | null)?.id;
+  if (!courseId) return Response.json({ cards: null }, cacheHeaders());
+
+  const { data: mod } = await supabase
+    .from("modules")
+    .select("id")
+    .eq("course_id", courseId)
+    .eq("number", moduleNumber)
+    .maybeSingle();
+  const moduleId = (mod as { id: string } | null)?.id;
+  if (!moduleId) return Response.json({ cards: null }, cacheHeaders());
+
+  const { data: topicRow, error } = await supabase
+    .from("topics")
+    .select("flashcards_json")
+    .eq("module_id", moduleId)
+    .eq("number", topicNumber)
+    .maybeSingle();
+
+  // flashcards_json column doesn't exist yet (pre-migration) — swallow
+  // the error so the student page keeps working via the TS fallback.
+  if (error) {
+    return Response.json({ cards: null }, cacheHeaders());
+  }
+
+  const raw = (topicRow as { flashcards_json: unknown } | null)?.flashcards_json;
+  const cards =
+    Array.isArray(raw) && raw.length > 0
+      ? (raw as Array<{ front: string; back: string }>)
+      : null;
+
+  return Response.json({ cards }, cacheHeaders());
+}
+
+function cacheHeaders() {
+  return {
+    headers: {
+      // 5 min fresh + 30 min SWR. Flashcards change infrequently;
+      // students rarely need sub-5-minute freshness. Same cadence as
+      // the MCQ endpoint for consistency.
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
+    },
+  };
+}

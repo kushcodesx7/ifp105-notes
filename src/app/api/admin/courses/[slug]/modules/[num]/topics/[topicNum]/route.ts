@@ -79,6 +79,12 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   const res = await resolveTopicId(slug, num, topicNum);
   if (!res.ok) return res.response;
 
+  // Two-step fetch so the core topic load survives even if the
+  // flashcards migration hasn't been run yet. First SELECT pulls
+  // everything we know has existed for months; second optional SELECT
+  // attempts flashcards_json and swallows the "column does not exist"
+  // error, returning [] instead. After the migration runs this just
+  // becomes one extra cheap row read.
   const { data, error } = await supabase
     .from("topics")
     .select(
@@ -89,6 +95,17 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
+  let flashcardsJson: Array<{ front: string; back: string }> = [];
+  const { data: fcData, error: fcError } = await supabase
+    .from("topics")
+    .select("flashcards_json")
+    .eq("id", res.topicId)
+    .maybeSingle();
+  if (!fcError && fcData) {
+    const raw = (fcData as { flashcards_json: unknown }).flashcards_json;
+    if (Array.isArray(raw)) flashcardsJson = raw as typeof flashcardsJson;
+  }
+
   return Response.json({
     topic: {
       id: data.id,
@@ -97,6 +114,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       timeMin: data.time_min,
       hook: data.hook,
       contentJson: data.content_json,
+      flashcardsJson,
       orderIndex: data.order_index,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
@@ -131,6 +149,23 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // content_json is the Phase 5 content-block array. We accept any JSON
   // array here; the block editor will validate structure client-side.
   if (Array.isArray(body.contentJson)) patch.content_json = body.contentJson;
+  // flashcards_json — array of { front, back } strings. Validate the
+  // inner shape here so malformed payloads from a bad editor state can't
+  // ever reach the DB and break the student render. Drop anything that
+  // isn't a trimmed non-empty front+back pair.
+  if (Array.isArray(body.flashcardsJson)) {
+    const cleaned = body.flashcardsJson
+      .map((c: unknown) => {
+        if (!c || typeof c !== "object") return null;
+        const obj = c as Record<string, unknown>;
+        const front = typeof obj.front === "string" ? obj.front.trim() : "";
+        const back = typeof obj.back === "string" ? obj.back.trim() : "";
+        if (!front || !back) return null;
+        return { front, back };
+      })
+      .filter(Boolean);
+    patch.flashcards_json = cleaned;
+  }
 
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: "No editable fields in body" }, { status: 400 });
@@ -156,16 +191,17 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
   if (!data) return Response.json({ error: "Topic not found" }, { status: 404 });
 
-  // Audit log — but skip content-json-only patches to avoid flooding
-  // the log with every 2-second auto-save the inline editor fires
-  // while the admin is typing. Meta changes (title / hook / timeMin /
-  // order / number) still get logged so we can reconstruct structural
-  // edits. Rule: if the ONLY key in `patch` is `content_json`, skip.
+  // Audit log — skip auto-save-only patches (content_json OR
+  // flashcards_json) to avoid flooding the log with every 2-second
+  // save the inline editor fires while the admin is typing. Meta
+  // changes (title / hook / timeMin / order / number) still get
+  // logged so we can reconstruct structural edits.
   const patchKeys = Object.keys(patch);
-  const contentOnly =
-    patchKeys.length === 1 && patchKeys[0] === "content_json";
+  const autosaveOnly =
+    patchKeys.length > 0 &&
+    patchKeys.every((k) => k === "content_json" || k === "flashcards_json");
 
-  if (!contentOnly) {
+  if (!autosaveOnly) {
     await logAdminAction({
       actorEmail: actorFromAuth(admin),
       action: "update_topic",
@@ -179,6 +215,19 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     });
   }
 
+  // Optional follow-up read for flashcards_json so pre-migration DBs
+  // still return a successful PATCH instead of a 500 on the select.
+  let flashcardsJson: Array<{ front: string; back: string }> = [];
+  const { data: fcData, error: fcError } = await supabase
+    .from("topics")
+    .select("flashcards_json")
+    .eq("id", res.topicId)
+    .maybeSingle();
+  if (!fcError && fcData) {
+    const raw = (fcData as { flashcards_json: unknown }).flashcards_json;
+    if (Array.isArray(raw)) flashcardsJson = raw as typeof flashcardsJson;
+  }
+
   return Response.json({
     topic: {
       id: data.id,
@@ -187,6 +236,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       timeMin: data.time_min,
       hook: data.hook,
       contentJson: data.content_json,
+      flashcardsJson,
       orderIndex: data.order_index,
       createdAt: data.created_at,
       updatedAt: data.updated_at,

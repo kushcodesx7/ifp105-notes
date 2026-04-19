@@ -121,6 +121,82 @@ interface SavedQuizState {
   score: number;
   shuffleSeed: number;
   completed: boolean;
+  // Stable fingerprint per question (hash of q.q text). Present on states
+  // saved by this app version and later; absent on older states. When
+  // present, we use these to re-align answers across question edits: if
+  // an admin deletes Q6, we still keep the student's answers for Q1-Q5
+  // instead of wiping the whole quiz. See rehydrateByFingerprint().
+  questionFingerprints?: string[];
+}
+
+// Fingerprint a question by hashing its prompt text. Good enough for our
+// needs: a teacher editing the wording is effectively a new question and
+// SHOULD invalidate the old answer; add/delete/reorder all keep existing
+// questions' fingerprints unchanged.
+function questionFingerprint(q: Question): string {
+  return String(hashString(q.q));
+}
+
+// Given the saved state + the current question list, produce aligned
+// answers/confidences arrays of length `currentQs.length`. Answers for
+// surviving questions (same fingerprint) are preserved at the slot of
+// their NEW index; deleted questions' answers are dropped; new questions
+// get null. If the saved state has no fingerprints (older versions),
+// falls back to length-match semantics (keep if lengths match, else
+// fresh arrays) — same behaviour as before this patch.
+function rehydrateByFingerprint(
+  saved: SavedQuizState,
+  currentQs: Question[]
+): {
+  answers: (number | null)[];
+  confidences: (ConfidenceLevel | null)[];
+  score: number;
+  completed: boolean;
+} {
+  const total = currentQs.length;
+  if (saved.questionFingerprints && saved.questionFingerprints.length === saved.answers.length) {
+    const lookup = new Map<string, { answer: number | null; confidence: ConfidenceLevel | null }>();
+    saved.questionFingerprints.forEach((fp, i) => {
+      lookup.set(fp, {
+        answer: saved.answers[i] ?? null,
+        confidence: saved.confidences?.[i] ?? null,
+      });
+    });
+    const answers: (number | null)[] = new Array(total).fill(null);
+    const confidences: (ConfidenceLevel | null)[] = new Array(total).fill(null);
+    currentQs.forEach((q, i) => {
+      const hit = lookup.get(questionFingerprint(q));
+      if (hit) {
+        answers[i] = hit.answer;
+        confidences[i] = hit.confidence;
+      }
+    });
+    // Score is the count of correct answers among the surviving
+    // questions — recomputed here so a "score = 5" from a 6-question
+    // quiz doesn't pollute a now-5-question quiz after Q6 removal.
+    let score = 0;
+    currentQs.forEach((q, i) => {
+      if (answers[i] != null && answers[i] === q.ans) score++;
+    });
+    // `completed` only holds if every surviving slot has an answer.
+    const completed = saved.completed && answers.every((a) => a !== null);
+    return { answers, confidences, score, completed };
+  }
+  // Legacy state (no fingerprints) — length-match or fresh.
+  if (saved.answers.length === total) {
+    return {
+      answers: saved.answers,
+      confidences: saved.confidences?.length === total ? saved.confidences : new Array(total).fill(null),
+      score: saved.score,
+      completed: saved.completed,
+    };
+  }
+  return {
+    answers: new Array(total).fill(null),
+    confidences: new Array(total).fill(null),
+    score: 0,
+    completed: false,
+  };
 }
 
 export default function McqQuiz({
@@ -154,89 +230,54 @@ export default function McqQuiz({
     }
   }, [user?.email]);
 
-  // Load saved state or create fresh
-  const [shuffleSeed, setShuffleSeed] = useState(() => {
-    if (typeof window === "undefined") return Date.now();
+  // Compute the initial state ONCE from localStorage so all 6 useState
+  // initializers below share the same fingerprint-aligned answer/score
+  // view. Without this, they'd each parse the blob and apply slightly
+  // different fallback rules, and length-mismatched blobs would wipe
+  // some fields but not others. This also keeps the new fingerprint-
+  // based rehydration in a single code path.
+  const initialState = useState(() => {
+    const defaults = {
+      shuffleSeed: (topicId * 1000 + moduleNumber) ^ userSalt,
+      answers: new Array(total).fill(null) as (number | null)[],
+      confidences: new Array(total).fill(null) as (ConfidenceLevel | null)[],
+      score: 0,
+      completed: false,
+      currentQ: 0,
+    };
+    if (typeof window === "undefined") return defaults;
     try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        return parsed.shuffleSeed;
-      }
-    } catch {}
-    // Deterministic seed per (topic, module, student). The user salt
-    // breaks the authored "correct is always index 1" pattern across
-    // students — so one student's leaked mapping doesn't work for
-    // anyone else.
-    return (topicId * 1000 + moduleNumber) ^ userSalt;
-  });
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return defaults;
+      const saved: SavedQuizState = JSON.parse(raw);
+      const rehydrated = rehydrateByFingerprint(saved, questions);
+      const firstUnanswered = rehydrated.answers.findIndex((a) => a === null);
+      return {
+        shuffleSeed: saved.shuffleSeed,
+        answers: rehydrated.answers,
+        confidences: rehydrated.confidences,
+        score: rehydrated.score,
+        completed: rehydrated.completed,
+        currentQ: firstUnanswered >= 0 ? firstUnanswered : 0,
+      };
+    } catch {
+      return defaults;
+    }
+  })[0];
 
-  const [answered, setAnswered] = useState<(number | null)[]>(() => {
-    if (typeof window === "undefined") return new Array(total).fill(null);
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        if (parsed.answers.length === total) return parsed.answers;
-      }
-    } catch {}
-    return new Array(total).fill(null);
-  });
+  // Load saved state or create fresh
+  const [shuffleSeed, setShuffleSeed] = useState(initialState.shuffleSeed);
+  const [answered, setAnswered] = useState<(number | null)[]>(initialState.answers);
 
   // Per-question confidence (null until the student rates themselves).
   // Stored alongside answers so calibration stats can be computed at the end.
-  const [confidences, setConfidences] = useState<(ConfidenceLevel | null)[]>(() => {
-    if (typeof window === "undefined") return new Array(total).fill(null);
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        if (parsed.confidences && parsed.confidences.length === total)
-          return parsed.confidences;
-      }
-    } catch {}
-    return new Array(total).fill(null);
-  });
+  const [confidences, setConfidences] = useState<(ConfidenceLevel | null)[]>(
+    initialState.confidences
+  );
 
-  const [score, setScore] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        return parsed.score;
-      }
-    } catch {}
-    return 0;
-  });
-
-  const [completed, setCompleted] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        return parsed.completed;
-      }
-    } catch {}
-    return false;
-  });
-
-  const [currentQ, setCurrentQ] = useState(() => {
-    // Start at the first unanswered question, or 0 if all answered
-    if (typeof window === "undefined") return 0;
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        if (parsed.answers.length === total) {
-          const firstUnanswered = parsed.answers.findIndex((a) => a === null);
-          return firstUnanswered >= 0 ? firstUnanswered : 0;
-        }
-      }
-    } catch {}
-    return 0;
-  });
+  const [score, setScore] = useState(initialState.score);
+  const [completed, setCompleted] = useState(initialState.completed);
+  const [currentQ, setCurrentQ] = useState(initialState.currentQ);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [viewMode, setViewMode] = useState<"quiz" | "review">("quiz");
 
@@ -255,18 +296,13 @@ export default function McqQuiz({
   const showFeedback = answered[currentQ] !== null && confidenceRated;
   const awaitingConfidence = answered[currentQ] !== null && !confidenceRated;
 
-  // If returning to a completed quiz, show review mode
-  const [showResult, setShowResult] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed: SavedQuizState = JSON.parse(saved);
-        if (parsed.completed && parsed.answers.every((a) => a !== null)) return true;
-      }
-    } catch {}
-    return false;
-  });
+  // If returning to a completed quiz, show review mode. Uses the
+  // fingerprint-rehydrated `initialState` rather than re-parsing the
+  // blob so a "5-question quiz completed, teacher added a 6th" case
+  // correctly leaves review mode OFF until the new Q6 is answered.
+  const [showResult, setShowResult] = useState(
+    initialState.completed && initialState.answers.every((a) => a !== null)
+  );
 
   // Mount-only restore of review mode. We deliberately run this once:
   // `completed`/`allAnswered` are derived from lazy-init state reading
@@ -291,6 +327,12 @@ export default function McqQuiz({
     onAnswerCountChangeRef.current?.(answeredCount, total);
   }, [answeredCount, total]);
 
+  // Per-question fingerprints — recomputed from current questions on
+  // every save so edits propagate immediately. The ref keeps the save
+  // callback stable (deps only on LS_KEY + shuffleSeed).
+  const fingerprintsRef = useRef<string[]>([]);
+  fingerprintsRef.current = questions.map(questionFingerprint);
+
   // Save state to localStorage whenever answers or confidences change
   const saveState = useCallback(
     (
@@ -306,6 +348,9 @@ export default function McqQuiz({
           score: newScore,
           shuffleSeed,
           completed: isCompleted,
+          // Store the current question set's fingerprints so a future
+          // rehydrate can re-align across add/delete/reorder.
+          questionFingerprints: fingerprintsRef.current,
         };
         localStorage.setItem(LS_KEY, JSON.stringify(state));
       } catch {}

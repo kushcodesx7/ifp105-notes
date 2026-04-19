@@ -11,6 +11,7 @@ import AdminAuthGate, {
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import BlockEditor from "@/components/admin/BlockEditor";
+import FlashcardsEditor, { type Flashcard } from "@/components/admin/FlashcardsEditor";
 import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import LabelledInput from "@/components/admin/shared/LabelledInput";
 import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
@@ -413,6 +414,7 @@ interface TopicDetail {
   timeMin: number | null;
   hook: string | null;
   contentJson: ContentBlock[];
+  flashcardsJson: Flashcard[];
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
@@ -463,6 +465,13 @@ function TopicEditorPanel({
   const [showPreview, setShowPreview] = useState(false);
   const [savingBody, setSavingBody] = useState(false);
 
+  // Flashcards — same dirty-tracking dance as content blocks. Separate
+  // save button / PATCH so one typo in a card doesn't block the body
+  // from saving (and vice versa).
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [flashcardsDirty, setFlashcardsDirty] = useState(false);
+  const [savingFlashcards, setSavingFlashcards] = useState(false);
+
   const serverBlocks = detailData?.topic.contentJson;
   useEffect(() => {
     if (!serverBlocks) return;
@@ -472,6 +481,14 @@ function TopicEditorPanel({
     // identity via stringify). Prevents overwriting in-flight edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(serverBlocks)]);
+
+  const serverFlashcards = detailData?.topic.flashcardsJson;
+  useEffect(() => {
+    if (!serverFlashcards) return;
+    setFlashcards(serverFlashcards);
+    setFlashcardsDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(serverFlashcards)]);
 
   function handleBlocksChange(next: ContentBlock[]) {
     setBlocks(next);
@@ -493,6 +510,24 @@ function TopicEditorPanel({
       alert((e as Error).message);
     } finally {
       setSavingBody(false);
+    }
+  }
+
+  async function saveFlashcards() {
+    setSavingFlashcards(true);
+    try {
+      await adminWrite(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${num}/topics/${topic.number}`,
+        "PATCH",
+        { idToken, password },
+        { flashcardsJson: flashcards }
+      );
+      setFlashcardsDirty(false);
+      mutateDetail();
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setSavingFlashcards(false);
     }
   }
 
@@ -642,6 +677,26 @@ function TopicEditorPanel({
             password={password}
           />
         )}
+      </div>
+
+      {/* ── Flashcards ─────────────────────────────────────────
+           Separate from body content because these render in a
+           different student surface (the Quick-Review deck below
+           the topic), have a different authoring cadence (~5-8
+           cards vs. full body of mixed blocks), and should save
+           independently so a half-edited card can't block body
+           saves. */}
+      <div className="mt-5 border-t border-white/[0.05] pt-4">
+        <FlashcardsEditor
+          value={flashcards}
+          onChange={(next) => {
+            setFlashcards(next);
+            setFlashcardsDirty(true);
+          }}
+          onSave={saveFlashcards}
+          saving={savingFlashcards}
+          dirty={flashcardsDirty}
+        />
       </div>
 
       <div className="mt-5 border-t border-white/[0.05] pt-4">
