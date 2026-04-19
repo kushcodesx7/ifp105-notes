@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
+import ActiveNowWidget from "@/components/admin/ActiveNowWidget";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
@@ -225,6 +226,14 @@ export default function AdminHomePage() {
              click. "All quiet today" shows when nothing warrants
              attention — a daily "you're good" reassurance. */}
         <AlertsRow data={data} loading={fetchLoading} />
+
+        {/* ─── Live Now widget ─────────────────────────────────────
+             Polls /api/admin/active-now every 20s. Shows students
+             whose session was pinged within the last 10 min — a
+             real "who's in the app right now" view, not just
+             "active this week". Useful during class to spot which
+             students started the assignment. */}
+        <ActiveNowWidget idToken={idToken} password={password} />
 
         {/* ─── KPI row ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
