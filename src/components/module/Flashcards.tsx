@@ -87,14 +87,28 @@ export default function Flashcards({
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<number>>(new Set());
 
-  // Reset review state when the underlying deck changes (topic switch
-  // or admin-edit override lands). Prevents a known-index from pointing
-  // at a deleted card after an edit.
+  // Topic switched → full reset. This is the only case where we wipe
+  // session progress; card-count changes within the same topic (DB
+  // override arriving, admin adding/removing a card) just clamp.
   useEffect(() => {
     setCurrent(0);
     setFlipped(false);
     setKnown(new Set());
-  }, [moduleNumber, topicId, resolved?.length]);
+  }, [moduleNumber, topicId]);
+
+  // Card count changed (DB override landed, or admin edited cards)
+  // but the topic is the same — keep the student's progress and just
+  // clamp indices into the new range. Known cards that were deleted
+  // silently fall off; survivors keep their "known" flag.
+  const resolvedLen = resolved?.length ?? 0;
+  useEffect(() => {
+    if (resolvedLen === 0) return;
+    setKnown((prev) => new Set([...prev].filter((i) => i < resolvedLen)));
+    setCurrent((c) => Math.min(c, resolvedLen - 1));
+    // Flipped state is meaningless if the underlying card changed —
+    // safest to unflip.
+    setFlipped(false);
+  }, [resolvedLen]);
 
   // While the DB fetch is in flight AND we have no TS fallback to show
   // meanwhile, render nothing (avoids a flash of the TS deck that then
