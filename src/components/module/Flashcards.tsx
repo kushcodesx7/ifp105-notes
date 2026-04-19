@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // data only loads when a student actually scrolls into a topic.
 import { flashcardData } from "@/data/flashcards";
 import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
+import { flashcardStateKey } from "@/lib/storage-keys";
 
 interface FlashcardData {
   front: string;
@@ -83,18 +84,76 @@ export default function Flashcards({
   //   - if caller passed `cards` directly, those always win
   const resolved = cardsProp ?? (dbCards && dbCards.length > 0 ? dbCards : tsFallback);
 
-  const [current, setCurrent] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [known, setKnown] = useState<Set<number>>(new Set());
+  // Persist the per-topic deck session so a refresh keeps the student
+  // on the card they were on with their "known" set intact. Key is
+  // (course, module, topic). State is read once at mount via the lazy
+  // useState initializer; subsequent saves happen in the effect below.
+  const lsKey =
+    moduleNumber != null && topicId != null
+      ? flashcardStateKey(courseSlug ?? CURRENT_COURSE_SLUG, moduleNumber, topicId)
+      : null;
 
-  // Topic switched → full reset. This is the only case where we wipe
-  // session progress; card-count changes within the same topic (DB
-  // override arriving, admin adding/removing a card) just clamp.
+  function loadInitial(): { current: number; known: number[] } {
+    if (typeof window === "undefined" || !lsKey) {
+      return { current: 0, known: [] };
+    }
+    try {
+      const raw = localStorage.getItem(lsKey);
+      if (!raw) return { current: 0, known: [] };
+      const parsed = JSON.parse(raw) as {
+        current?: number;
+        known?: number[];
+      };
+      return {
+        current: typeof parsed.current === "number" ? parsed.current : 0,
+        known: Array.isArray(parsed.known) ? parsed.known : [],
+      };
+    } catch {
+      return { current: 0, known: [] };
+    }
+  }
+
+  const initial = useState(loadInitial)[0];
+  const [current, setCurrent] = useState(initial.current);
+  const [flipped, setFlipped] = useState(false);
+  const [known, setKnown] = useState<Set<number>>(new Set(initial.known));
+
+  // Topic switched → reload the saved state for the new (module, topic)
+  // pair. We don't wipe — a student returning to a topic they reviewed
+  // last week should still see their "known" marks. The clamp effect
+  // below handles the case where the deck changed since last visit.
   useEffect(() => {
-    setCurrent(0);
-    setFlipped(false);
-    setKnown(new Set());
+    if (!lsKey || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(lsKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { current?: number; known?: number[] };
+        setCurrent(typeof parsed.current === "number" ? parsed.current : 0);
+        setKnown(new Set(Array.isArray(parsed.known) ? parsed.known : []));
+      } else {
+        setCurrent(0);
+        setKnown(new Set());
+      }
+      setFlipped(false);
+    } catch {
+      setCurrent(0);
+      setKnown(new Set());
+      setFlipped(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleNumber, topicId]);
+
+  // Save on every state change. Debounce isn't needed — the UI fires
+  // at most one update per click, and localStorage writes are cheap.
+  useEffect(() => {
+    if (!lsKey || typeof window === "undefined") return;
+    try {
+      localStorage.setItem(
+        lsKey,
+        JSON.stringify({ current, known: [...known] })
+      );
+    } catch {}
+  }, [lsKey, current, known]);
 
   // Card count changed (DB override landed, or admin edited cards)
   // but the topic is the same — keep the student's progress and just

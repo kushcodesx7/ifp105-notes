@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { CANONICAL_SECTIONS, compareSections } from "@/lib/sections";
+import { isHiddenSection } from "@/lib/hidden-sections";
 import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/batches/sections?batchId=2025-2026
@@ -49,18 +50,25 @@ export async function GET(req: NextRequest) {
     countMap[sec] = (countMap[sec] || 0) + 1;
   }
 
-  // Start with the canonical list so every section is always offered
-  const seen = new Set<string>(CANONICAL_SECTIONS);
-  const sections = CANONICAL_SECTIONS.map((name) => ({
+  // Start with the canonical list so every section is always offered.
+  // Filter out hidden (test) sections — students must NEVER see "Test
+  // Section" in the registration dropdown. Admin-only views surface
+  // it via /api/admin/people with a HIDDEN badge instead.
+  const liveCanonical = CANONICAL_SECTIONS.filter((s) => !isHiddenSection(s));
+  const seen = new Set<string>(liveCanonical);
+  const sections = liveCanonical.map((name) => ({
     name,
     studentCount: countMap[name] || 0,
     pending: !countMap[name], // true when roll list hasn't been imported
   }));
 
   // Append any non-canonical sections that exist in the DB (custom sections
-  // a teacher added), so we don't hide real data.
+  // a teacher added). Hidden ones are dropped here too so a teacher can't
+  // accidentally make a "Test 2" section show up to students just by
+  // adding a hidden-section roll.
   for (const [name, count] of Object.entries(countMap)) {
     if (seen.has(name)) continue;
+    if (isHiddenSection(name)) continue;
     sections.push({ name, studentCount: count, pending: false });
     seen.add(name);
   }
