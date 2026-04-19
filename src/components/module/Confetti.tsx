@@ -74,7 +74,7 @@ export default function Confetti({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setParticles(generateParticles(count));
     if (variant === "module") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setShowBanner(true);
       const bannerTimer = setTimeout(() => setShowBanner(false), 2200);
       const particleTimer = setTimeout(() => setParticles([]), 3000);

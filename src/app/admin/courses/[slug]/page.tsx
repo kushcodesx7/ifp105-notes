@@ -223,6 +223,8 @@ export default function CourseEditPage({
                   key={m.id}
                   slug={slug}
                   module={m}
+                  idToken={idToken}
+                  password={password}
                   onChange={() => mutate()}
                 />
               ))}
@@ -354,28 +356,29 @@ function CourseMetaEditor({
 function ModuleRowCard({
   slug,
   module: m,
+  idToken,
+  password,
   onChange,
 }: {
   slug: string;
   module: ModuleRow;
-  // idToken/password intentionally not threaded here — the DELETE flow
-  // routes through DangerDeleteDialog which collects a fresh password
-  // from the admin and sends it as `x-admin-password`. See runDelete.
+  idToken: string | null;
+  password: string;
   onChange: () => void;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // Two-step delete: opens the DangerDeleteDialog which collects the
-  // admin password, then fires the DELETE with `x-admin-password`
-  // (NOT the OAuth session token — we want a fresh password check
-  // even if the admin is signed in via Google, so a misclick on a
-  // logged-in tab can't nuke a module). Throwing from onConfirm
+  // Two-step delete: DangerDeleteDialog makes the admin retype the
+  // module label ("Module N") before Confirm enables — cognitive
+  // friction against misclicks. Auth is the admin's Google ID token;
+  // the dialog no longer doubles as a password prompt since the
+  // shared-password admin path was removed. Throwing from onConfirm
   // surfaces the error inline in the dialog.
-  async function runDelete(enteredPassword: string) {
+  async function runDelete() {
     await adminWrite(
       `/api/admin/courses/${encodeURIComponent(slug)}/modules/${m.number}`,
       "DELETE",
-      { idToken: null, password: enteredPassword }
+      { idToken, password }
     );
     setDeleteOpen(false);
     onChange();
@@ -432,6 +435,7 @@ function ModuleRowCard({
           `${m.questionCount} question${m.questionCount === 1 ? "" : "s"}`,
           `Any uploaded images for topics in this module`,
         ]}
+        confirmPhrase={`Module ${m.number}`}
         confirmLabel="Delete module"
         onCancel={() => setDeleteOpen(false)}
         onConfirm={runDelete}

@@ -81,8 +81,8 @@ export default function CoursesPage() {
   // Soft delete = "Hide" — reversible, low-blast-radius. Keeps the
   // cheap confirm() path. Hard delete = cascades across modules,
   // topics, questions, and orphans course_id references in
-  // student_progress — routed through DangerDeleteDialog with
-  // password re-auth.
+  // student_progress — routed through DangerDeleteDialog which makes
+  // the admin retype the course slug before Confirm enables.
   async function handleSoftDelete(slug: string) {
     if (
       !confirm(
@@ -103,13 +103,14 @@ export default function CoursesPage() {
     }
   }
 
-  // Hard delete runs ONLY through the DangerDeleteDialog. The dialog
-  // collects a fresh admin password and calls this function with it.
-  async function runHardDelete(slug: string, enteredPassword: string) {
+  // Hard delete runs ONLY through the DangerDeleteDialog. Auth is the
+  // current admin's Google ID token; the dialog enforces a retype of
+  // the course slug before enabling Confirm (anti-misclick friction).
+  async function runHardDelete(slug: string) {
     await adminWrite(
       `/api/admin/courses/${encodeURIComponent(slug)}?hard=true`,
       "DELETE",
-      { idToken: null, password: enteredPassword }
+      { idToken, password }
     );
     setHardDeleteTarget(null);
     toast({ kind: "success", message: "Course permanently deleted." });
@@ -213,9 +214,10 @@ export default function CoursesPage() {
           `Uploaded images for this course (in Supabase Storage)`,
           `Any existing student_progress rows that reference this course will be orphaned`,
         ]}
+        confirmPhrase={hardDeleteTarget?.slug ?? ""}
         confirmLabel="Delete course permanently"
         onCancel={() => setHardDeleteTarget(null)}
-        onConfirm={(pw) => runHardDelete(hardDeleteTarget!.slug, pw)}
+        onConfirm={() => runHardDelete(hardDeleteTarget!.slug)}
       />
     </main>
   );

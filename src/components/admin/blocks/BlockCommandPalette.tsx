@@ -28,7 +28,7 @@ export function BlockCommandPalette({
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setActiveIndex(0);
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
