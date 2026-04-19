@@ -292,51 +292,31 @@ export default function Home() {
         </div>
         <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
 
-        {/* Hero stagger — each child reveals ~120ms after the previous
-            using framer-motion's variants. Creates a cinematic, TV-ad
-            style intro instead of the whole block fading in as one. The
-            parent container is the variant root; every direct child that
-            declares `variants={heroItem}` inherits the stagger cadence. */}
-        <motion.div
-          variants={{
-            hidden: {},
-            visible: {
-              transition: {
-                staggerChildren: 0.12,
-                delayChildren: 0.1,
-              },
-            },
-          }}
-          initial="hidden"
-          animate="visible"
-          className="relative z-10 text-center px-6 max-w-3xl mx-auto"
-        >
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
-            }}
+        {/* Hero stagger — uses the SSR-safe CSS utilities (.animate-fade-up
+            + .delay-N) from globals.css instead of framer-motion variants.
+            Variants here caused a hydration mismatch because framer sets the
+            `hidden` style on the client before hydrate, and the server
+            output has no inline style. The CSS approach renders identically
+            on both sides and still cascades ~120ms per element. */}
+        <div className="relative z-10 text-center px-6 max-w-3xl mx-auto">
+          <div
             data-tour="badge"
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm mb-6"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] backdrop-blur-sm mb-6 animate-fade-up delay-1"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-xs font-medium text-zinc-400 tracking-wide">
               IFP105 &middot; Information &amp; Communication Technology
             </span>
-          </motion.div>
+          </div>
 
-          <motion.h1
-            variants={{
-              hidden: { opacity: 0, y: 24 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
-            }}
+          <h1
             data-tour="hero"
-            className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4 animate-fade-up delay-2"
           >
             Your Complete
             <br />
             <span className="gradient-text-animated">ICT Study Notes</span>
-          </motion.h1>
+          </h1>
 
           {/* Personalized subtitle */}
           <AnimatePresence mode="wait">
@@ -359,13 +339,7 @@ export default function Home() {
             </motion.p>
           </AnimatePresence>
 
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 16 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-            }}
-            className="text-sm text-zinc-500 mb-8"
-          >
+          <div className="text-sm text-zinc-500 mb-8 animate-fade-up delay-3">
             by{" "}
             <span className="text-zinc-300 font-medium">Kushagra Tripathi</span>
             {" \u00B7 "}
@@ -377,19 +351,13 @@ export default function Home() {
             >
               LinkedIn &rarr;
             </a>
-          </motion.div>
+          </div>
 
           {/* Two-CTA split: primary "Try a Sample Question" drops first-time
                visitors into the Quick Challenge so they can feel the value
                before signing up. "Browse Modules" is the secondary path
                for returners who already know what they want. */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 16 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-            }}
-            className="flex items-center justify-center gap-3 flex-wrap"
-          >
+          <div className="flex items-center justify-center gap-3 flex-wrap animate-fade-up delay-4">
             <a
               href="#quick-challenge"
               data-tour="cta"
@@ -409,8 +377,8 @@ export default function Home() {
             >
               Browse modules
             </a>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </section>
 
       {/* ─── CONTINUE LEARNING ─── */}
