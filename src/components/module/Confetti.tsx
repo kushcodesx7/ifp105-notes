@@ -62,12 +62,19 @@ export default function Confetti({
   // entirely. Completion UX still works; only the confetti is gone.
   const reduceMotion = useReducedMotion();
 
+  // Effect fires on each `trigger` bump (the parent increments it
+  // when a topic is marked done). This is the canonical "do something
+  // visible when a counter changes" pattern — celebration animations
+  // can't be derived in render because they have to start fresh each
+  // time. Whitelisted.
   useEffect(() => {
     if (trigger === 0) return;
     if (reduceMotion) return;
     const count = variant === "module" ? 80 : 40;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setParticles(generateParticles(count));
     if (variant === "module") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowBanner(true);
       const bannerTimer = setTimeout(() => setShowBanner(false), 2200);
       const particleTimer = setTimeout(() => setParticles([]), 3000);

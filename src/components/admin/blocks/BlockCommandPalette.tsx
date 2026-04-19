@@ -22,10 +22,13 @@ export function BlockCommandPalette({
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset on open, focus the input.
+  // Reset on open, focus the input. Whitelisted — canonical "sync to
+  // controlled-open prop" pattern.
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIndex(0);
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
@@ -39,9 +42,11 @@ export function BlockCommandPalette({
     });
   }, [query]);
 
-  // Keep the active index in bounds as the list filters.
+  // Keep the active index in bounds as the list filters. Whitelisted —
+  // clamp pattern, see AdminCommandPalette for the same comment.
   useEffect(() => {
     if (activeIndex >= filtered.length)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveIndex(Math.max(0, filtered.length - 1));
   }, [filtered.length, activeIndex]);
 

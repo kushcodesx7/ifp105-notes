@@ -99,10 +99,13 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
     const curr = realActiveCount;
     // Only fire when crossing UPWARD past a threshold. Thresholds are
     // 5, 10, 20 — picked to match meaningful classroom moments
-    // (small group, full session, packed lab).
+    // (small group, full session, packed lab). Whitelisted — this is
+    // exactly the "compare current value to previous (ref-tracked) and
+    // act on the diff" pattern that needs an effect.
     const thresholds = [5, 10, 20];
     for (const t of thresholds) {
       if (prev < t && curr >= t) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setClassAlert({ threshold: t, seenAt: Date.now() });
         break; // one alert per render even if we crossed multiple
       }

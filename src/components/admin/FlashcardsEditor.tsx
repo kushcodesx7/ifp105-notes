@@ -87,6 +87,11 @@ export default function FlashcardsEditor({
     if (justAddedIdx == null) return;
     const el = frontRefs.current[justAddedIdx];
     if (el) el.focus();
+    // Reset the trigger so the next add re-fires the effect.
+    // Whitelisted — using state as a "do this once" trigger is the
+    // canonical workaround for "I need to focus an element AFTER the
+    // ref is attached to a freshly-rendered DOM node".
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setJustAddedIdx(null);
   }, [justAddedIdx]);
 
