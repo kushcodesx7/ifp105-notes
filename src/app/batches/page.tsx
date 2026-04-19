@@ -23,6 +23,9 @@ export default function BatchesPage() {
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    // Whitelisted: re-running the effect on retry must reset the
+    // visible loading/error states. Sync setState here is deliberate.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError("");
     let alive = true;
