@@ -24,9 +24,34 @@ const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse
 });
 const HomeCompareWithClass = dynamic(() => import("@/components/HomeCompareWithClass"), {
   ssr: false,
+  // Placeholder sized to approximate final height so the hero + module
+  // grid don't jump when this widget hydrates. Without this, the layout
+  // below shifts ~140px after the SWR response lands.
+  loading: () => (
+    <section className="px-6 mb-10">
+      <div
+        className="max-w-5xl mx-auto rounded-2xl p-5 h-[160px] animate-pulse"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.04)",
+        }}
+      />
+    </section>
+  ),
 });
 const HomeBloomsProfile = dynamic(() => import("@/components/HomeBloomsProfile"), {
   ssr: false,
+  loading: () => (
+    <section className="px-6 mb-10">
+      <div
+        className="max-w-5xl mx-auto rounded-2xl p-5 h-[220px] animate-pulse"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.04)",
+        }}
+      />
+    </section>
+  ),
 });
 import { useAuth } from "@/lib/auth-context";
 import { getBookmarks, removeBookmark, type Bookmark } from "@/lib/bookmarks";
