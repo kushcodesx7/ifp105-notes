@@ -75,6 +75,7 @@ interface TopicDetail {
   hook: string | null;
   contentJson: ContentBlock[];
   flashcardsJson?: Flashcard[];
+  flashcardsSource?: "db" | "ts" | "empty";
 }
 
 interface TopicDetailResponse {
@@ -579,6 +580,18 @@ function TopicEditor({
           border: "1px solid rgba(255,255,255,0.06)",
         }}
       >
+        {detailData?.topic.flashcardsSource === "ts" && (
+          <div
+            className="mb-3 rounded-lg px-3 py-2.5 text-[11px] leading-relaxed"
+            style={{
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid rgba(245,158,11,0.25)",
+              color: "#FCD34D",
+            }}
+          >
+            <strong>📦 Loaded from bundled file</strong> — these {flashcards.length} card{flashcards.length === 1 ? "" : "s"} live in <code className="px-1 py-0.5 rounded bg-black/30">src/data/flashcards.ts</code>. Click <strong>Save cards</strong> to migrate them to the database, then you can edit / delete / reorder.
+          </div>
+        )}
         <FlashcardsEditor
           value={flashcards}
           onChange={(next) => {
@@ -587,7 +600,7 @@ function TopicEditor({
           }}
           onSave={saveFlashcards}
           saving={savingFlashcards}
-          dirty={flashcardsDirty}
+          dirty={flashcardsDirty || detailData?.topic.flashcardsSource === "ts"}
         />
       </div>
 

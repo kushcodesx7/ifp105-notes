@@ -101,6 +101,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   let flashcardsJson: Array<{ front: string; back: string }> = [];
+  let flashcardsSource: "db" | "ts" | "empty" = "empty";
   const { data: fcData, error: fcError } = await supabase
     .from("topics")
     .select("flashcards_json")
@@ -108,7 +109,28 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     .maybeSingle();
   if (!fcError && fcData) {
     const raw = (fcData as { flashcards_json: unknown }).flashcards_json;
-    if (Array.isArray(raw)) flashcardsJson = raw as typeof flashcardsJson;
+    if (Array.isArray(raw) && raw.length > 0) {
+      flashcardsJson = raw as typeof flashcardsJson;
+      flashcardsSource = "db";
+    }
+  }
+
+  // TS fallback — if DB has nothing for this topic, look up the
+  // bundled hard-coded deck in src/data/flashcards.ts. Lets the admin
+  // SEE what students currently see (the TS deck) and migrate it to
+  // DB by hitting Save. Only runs for ICT today; future courses
+  // author straight into DB so won't have a TS file to fall back to.
+  if (flashcardsSource === "empty" && slug === "ict") {
+    try {
+      const { flashcardData } = await import("@/data/flashcards");
+      const tsCards = flashcardData[res.moduleNumber]?.[res.topicNumber];
+      if (tsCards && tsCards.length > 0) {
+        flashcardsJson = tsCards.map((c) => ({ front: c.front, back: c.back }));
+        flashcardsSource = "ts";
+      }
+    } catch {
+      // Bundled file missing — leave empty.
+    }
   }
 
   return Response.json({
@@ -120,6 +142,10 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       hook: data.hook,
       contentJson: data.content_json,
       flashcardsJson,
+      // "db" → editable normally
+      // "ts" → bundled in source; first Save migrates to DB
+      // "empty" → no cards anywhere
+      flashcardsSource,
       orderIndex: data.order_index,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
