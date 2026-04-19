@@ -57,9 +57,14 @@ export default function Flashcards({
     if (moduleNumber == null || topicId == null) return;
     let alive = true;
     const slug = courseSlug ?? CURRENT_COURSE_SLUG;
+    // Server sets `public, s-maxage=300, stale-while-revalidate=1800`
+    // — use the browser HTTP cache so flipping back to a topic
+    // inside the SWR window is instant (no network). Safe: flashcards
+    // aren't user-specific; admin edits invalidate via a different
+    // code path on save.
     fetch(
       `/api/public/flashcards/${moduleNumber}/${topicId}?course=${encodeURIComponent(slug)}`,
-      { cache: "no-store" }
+      { cache: "default" }
     )
       .then((r) => (r.ok ? r.json() : { cards: null }))
       .then((json: { cards: FlashcardData[] | null }) => {
