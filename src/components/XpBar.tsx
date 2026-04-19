@@ -12,19 +12,28 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateStreak } from "@/lib/gamification";
 
-export default function XpBar() {
-  const [streakCount, setStreakCount] = useState(0);
-  const [streakToast, setStreakToast] = useState<string | null>(null);
+// Mount-time work — bump the streak counter and capture both
+// the new count + whether to show the celebratory toast. Done up
+// here (lazy useState) instead of inside an effect so the React
+// Compiler doesn't flag a setState-in-effect that's actually fine
+// (this fires exactly once per mount and the only "external system"
+// is localStorage, which lazy useState reads natively).
+function readMountState(): { count: number; isNew: boolean } {
+  if (typeof window === "undefined") return { count: 0, isNew: false };
+  return updateStreak();
+}
 
+export default function XpBar() {
+  const [{ count: streakCount, isNew: streakIsNew }] = useState(readMountState);
+  const [streakToast, setStreakToast] = useState<string | null>(streakIsNew && streakCount > 1 ? `🔥 ${streakCount}-day streak!` : null);
+
+  // Auto-dismiss the celebratory toast after 3s. Effect now has zero
+  // setState in its body — only schedules + cleans up a timer.
   useEffect(() => {
-    const streak = updateStreak();
-    setStreakCount(streak.count);
-    if (streak.isNew && streak.count > 1) {
-      setStreakToast(`🔥 ${streak.count}-day streak!`);
-      const t = setTimeout(() => setStreakToast(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, []);
+    if (!streakToast) return;
+    const t = setTimeout(() => setStreakToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [streakToast]);
 
   // Hide entirely until we know we have a streak to show
   if (streakCount <= 0) return null;
