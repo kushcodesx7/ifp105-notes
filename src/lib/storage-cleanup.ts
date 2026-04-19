@@ -16,6 +16,20 @@ import type { ContentBlock } from "@/types/content";
 
 const BUCKET = "course-content";
 
+// Resolve the configured Supabase project's hostname. Used to scope the
+// cleanup helper so we only ever try to delete URLs that point at our
+// own bucket — never accidentally a third-party or sister-project URL.
+// Returns null only on truly malformed env config; calling code falls
+// through to a host-suffix check (".supabase.co") in that case.
+function configuredSupabaseHost(): string | null {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  try {
+    return new URL(raw).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
 // Parse a Supabase public URL back into the storage key.
 //
 // Example:
@@ -28,7 +42,14 @@ const BUCKET = "course-content";
 function urlToStoragePath(url: string): string | null {
   try {
     const u = new URL(url);
-    if (!u.hostname.endsWith(".supabase.co")) return null;
+    // Prefer exact match against the configured project; fall back to
+    // suffix match so this still works in pre-env / test contexts.
+    const expectedHost = configuredSupabaseHost();
+    if (expectedHost) {
+      if (u.hostname !== expectedHost) return null;
+    } else if (!u.hostname.endsWith(".supabase.co")) {
+      return null;
+    }
     const marker = `/storage/v1/object/public/${BUCKET}/`;
     const idx = u.pathname.indexOf(marker);
     if (idx < 0) return null;

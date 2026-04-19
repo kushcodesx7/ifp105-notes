@@ -126,7 +126,7 @@ export default function EditProfilePage() {
         setProfile(prev => ({ ...prev, name: user.name }));
       }
     } catch {}
-  }, [user]);
+  }, [user, getIdToken]);
 
   // Load the saved profile when the user becomes available. Intentionally
   // allowed setState-in-effect: loadProfile() reaches out to the /api/profiles
