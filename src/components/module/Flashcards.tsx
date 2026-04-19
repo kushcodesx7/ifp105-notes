@@ -93,23 +93,61 @@ export default function Flashcards({
       ? flashcardStateKey(courseSlug ?? CURRENT_COURSE_SLUG, moduleNumber, topicId)
       : null;
 
-  function loadInitial(): { current: number; known: number[] } {
+  // Spaced-repetition window — cards marked "known" more than this many
+  // days ago resurface as a refresher. Per cognitive-load research, 3 days
+  // is a sweet spot for low-effort retention review (Ebbinghaus +
+  // SuperMemo's first interval). Tunable; longer = more retention but more
+  // forgetting between exposures.
+  const REFRESHER_AFTER_DAYS = 3;
+
+  function loadInitial(): {
+    current: number;
+    known: number[];
+    knownAt: Record<number, number>;
+    refreshedCount: number;
+  } {
     if (typeof window === "undefined" || !lsKey) {
-      return { current: 0, known: [] };
+      return { current: 0, known: [], knownAt: {}, refreshedCount: 0 };
     }
     try {
       const raw = localStorage.getItem(lsKey);
-      if (!raw) return { current: 0, known: [] };
+      if (!raw) return { current: 0, known: [], knownAt: {}, refreshedCount: 0 };
       const parsed = JSON.parse(raw) as {
         current?: number;
         known?: number[];
+        knownAt?: Record<number, number>;
       };
+      const allKnown = Array.isArray(parsed.known) ? parsed.known : [];
+      const knownAt: Record<number, number> =
+        parsed.knownAt && typeof parsed.knownAt === "object"
+          ? parsed.knownAt
+          : {};
+      // Spaced-repetition: any card marked >REFRESHER_AFTER_DAYS ago
+      // gets popped back out of the known set so it shows up again
+      // for review. Carries its old timestamp away too — next time
+      // it's marked known, that's a fresh interval.
+      const cutoff = Date.now() - REFRESHER_AFTER_DAYS * 86_400_000;
+      const survivors: number[] = [];
+      const refreshedKnownAt: Record<number, number> = {};
+      let refreshedCount = 0;
+      for (const idx of allKnown) {
+        const ts = knownAt[idx];
+        if (ts && ts >= cutoff) {
+          survivors.push(idx);
+          refreshedKnownAt[idx] = ts;
+        } else {
+          // Fell out of the spaced-repetition window — surface again.
+          refreshedCount += 1;
+        }
+      }
       return {
         current: typeof parsed.current === "number" ? parsed.current : 0,
-        known: Array.isArray(parsed.known) ? parsed.known : [],
+        known: survivors,
+        knownAt: refreshedKnownAt,
+        refreshedCount,
       };
     } catch {
-      return { current: 0, known: [] };
+      return { current: 0, known: [], knownAt: {}, refreshedCount: 0 };
     }
   }
 
@@ -117,27 +155,65 @@ export default function Flashcards({
   const [current, setCurrent] = useState(initial.current);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<number>>(new Set(initial.known));
+  // Per-card knownAt timestamp (epoch ms). Driven by markKnown();
+  // persisted alongside the known set so spaced-repetition survives
+  // tab close.
+  const [knownAt, setKnownAt] = useState<Record<number, number>>(
+    initial.knownAt
+  );
+  // Banner state — non-zero when cards just resurfaced from the
+  // spaced-repetition cutoff. Cleared after the student dismisses.
+  const [refresherCount, setRefresherCount] = useState<number>(
+    initial.refreshedCount
+  );
 
   // Topic switched → reload the saved state for the new (module, topic)
-  // pair. We don't wipe — a student returning to a topic they reviewed
-  // last week should still see their "known" marks. The clamp effect
-  // below handles the case where the deck changed since last visit.
+  // pair. Re-runs the same spaced-repetition cutoff logic as the
+  // initial loader so a student returning across days picks up
+  // refresher cards consistently.
   useEffect(() => {
     if (!lsKey || typeof window === "undefined") return;
     try {
       const raw = localStorage.getItem(lsKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { current?: number; known?: number[] };
+        const parsed = JSON.parse(raw) as {
+          current?: number;
+          known?: number[];
+          knownAt?: Record<number, number>;
+        };
+        const allKnown = Array.isArray(parsed.known) ? parsed.known : [];
+        const ka: Record<number, number> =
+          parsed.knownAt && typeof parsed.knownAt === "object"
+            ? parsed.knownAt
+            : {};
+        const cutoff = Date.now() - REFRESHER_AFTER_DAYS * 86_400_000;
+        const survivors: number[] = [];
+        const survivorAt: Record<number, number> = {};
+        let resurfaced = 0;
+        for (const idx of allKnown) {
+          if (ka[idx] && ka[idx] >= cutoff) {
+            survivors.push(idx);
+            survivorAt[idx] = ka[idx];
+          } else {
+            resurfaced += 1;
+          }
+        }
         setCurrent(typeof parsed.current === "number" ? parsed.current : 0);
-        setKnown(new Set(Array.isArray(parsed.known) ? parsed.known : []));
+        setKnown(new Set(survivors));
+        setKnownAt(survivorAt);
+        setRefresherCount(resurfaced);
       } else {
         setCurrent(0);
         setKnown(new Set());
+        setKnownAt({});
+        setRefresherCount(0);
       }
       setFlipped(false);
     } catch {
       setCurrent(0);
       setKnown(new Set());
+      setKnownAt({});
+      setRefresherCount(0);
       setFlipped(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,10 +226,10 @@ export default function Flashcards({
     try {
       localStorage.setItem(
         lsKey,
-        JSON.stringify({ current, known: [...known] })
+        JSON.stringify({ current, known: [...known], knownAt })
       );
     } catch {}
-  }, [lsKey, current, known]);
+  }, [lsKey, current, known, knownAt]);
 
   // Card count changed (DB override landed, or admin edited cards)
   // but the topic is the same — keep the student's progress and just
@@ -183,7 +259,13 @@ export default function Flashcards({
 
   function next(didKnow: boolean) {
     const newKnown = didKnow ? new Set([...known, current]) : known;
-    if (didKnow) setKnown(newKnown);
+    if (didKnow) {
+      setKnown(newKnown);
+      // Stamp the timestamp so the spaced-repetition cutoff knows
+      // when to resurface this card. "Still learning" doesn't get a
+      // timestamp — it stays in the active rotation until known.
+      setKnownAt((prev) => ({ ...prev, [current]: Date.now() }));
+    }
     setFlipped(false);
 
     // If all cards known, show completion
@@ -205,6 +287,7 @@ export default function Flashcards({
 
   function reset() {
     setKnown(new Set());
+    setKnownAt({});
     setCurrent(0);
     setFlipped(false);
   }
@@ -221,6 +304,37 @@ export default function Flashcards({
           {known.size}/{cards.length} known
         </span>
       </div>
+
+      {/* Spaced-repetition refresher banner — surfaces when one or
+          more "known" cards aged past REFRESHER_AFTER_DAYS and were
+          popped back into the active rotation. The student sees this
+          on first interaction with the deck per session, then it
+          dismisses on click. Pure client-side; no DB needed. */}
+      {refresherCount > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-3 rounded-xl px-3 py-2 flex items-center gap-2 text-[12px]"
+          style={{
+            background: "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(249,115,22,0.06))",
+            border: "1px solid rgba(245,158,11,0.25)",
+          }}
+        >
+          <span aria-hidden="true">🔄</span>
+          <span className="text-amber-200 font-medium flex-1">
+            <strong className="text-amber-100">{refresherCount}</strong>{" "}
+            card{refresherCount === 1 ? "" : "s"} back for refresher (last
+            seen 3+ days ago)
+          </span>
+          <button
+            onClick={() => setRefresherCount(0)}
+            className="text-[10px] font-medium text-amber-300/70 hover:text-amber-200 px-1.5 py-0.5 rounded hover:bg-amber-500/10 transition-colors"
+            aria-label="Dismiss refresher notice"
+          >
+            ✕
+          </button>
+        </motion.div>
+      )}
 
       {allDone ? (
         <motion.div
