@@ -48,12 +48,18 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
     credential
   );
 
-  // Tick state — drives the relative-time labels so they age in real
-  // time between polls. Without this, "2m ago" stays "2m ago" until
-  // the next fetch even after the actual time has passed.
-  const [, setTick] = useState(0);
+  // Heartbeat that keeps the relative-time labels fresh between polls.
+  // Updates every 10s — fast enough that "just now" graduates to "10s
+  // ago" promptly, slow enough that we're not re-rendering 20 cards
+  // every second. Previously this was a 1s tick that fired re-renders
+  // but never actually updated the displayed labels (those were
+  // computed from the server-snapshotted ageSec, not the live clock).
+  const [nowMs, setNowMs] = useState<number>(() =>
+    typeof window === "undefined" ? 0 : Date.now()
+  );
   useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    if (typeof window === "undefined") return;
+    const t = setInterval(() => setNowMs(Date.now()), 10_000);
     return () => clearInterval(t);
   }, []);
 
@@ -123,7 +129,7 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
                 <Avatar
                   name={s.name}
                   photoUrl={s.photoUrl}
-                  ageSec={s.ageSec}
+                  ageSec={liveAgeSec(s.lastActiveAt, nowMs)}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-semibold text-zinc-200 truncate flex items-center gap-1.5">
@@ -137,7 +143,7 @@ export default function ActiveNowWidget({ idToken, password }: Props) {
                   <div className="text-[10px] text-zinc-500 truncate">
                     {s.section || "no section"} ·{" "}
                     <span className="text-emerald-400 font-medium">
-                      {formatAge(s.ageSec)}
+                      {formatAge(liveAgeSec(s.lastActiveAt, nowMs))}
                     </span>
                   </div>
                 </div>
@@ -208,4 +214,11 @@ function formatAge(sec: number): string {
   const min = Math.floor(sec / 60);
   if (min === 1) return "1m ago";
   return `${min}m ago`;
+}
+
+// Compute age against the React-state-tracked `nowMs` so the displayed
+// label updates every 10s (the heartbeat above) instead of being frozen
+// to whatever the server snapshotted at fetch time.
+function liveAgeSec(lastActiveAt: string, nowMs: number): number {
+  return Math.max(0, Math.floor((nowMs - new Date(lastActiveAt).getTime()) / 1000));
 }

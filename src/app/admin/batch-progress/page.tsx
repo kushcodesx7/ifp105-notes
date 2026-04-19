@@ -453,6 +453,13 @@ export default function BatchProgressListPage() {
                   Message these students to finish registration
                 </div>
                 {orphanList.map((s) => {
+                  // Coarse "X days ago" display — recomputed per render is
+                  // fine because the value only flips at midnight UTC and
+                  // this list typically has < 10 entries. The compiler
+                  // flags Date.now() here; whitelisted because the cost
+                  // of rerender churn is negligible vs. introducing a
+                  // tick-state for one cosmetic label.
+                  // eslint-disable-next-line react-hooks/purity
                   const daysAgo = s.lastActive
                     ? Math.floor(
                         (Date.now() - new Date(s.lastActive).getTime()) /

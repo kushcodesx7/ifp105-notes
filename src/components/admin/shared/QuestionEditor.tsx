@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { useToast } from "@/components/admin/Toast";
 
 // Shared MCQ question editor. Was duplicated as `QuestionEditor` in the
 // admin module detail page and `InlineQuestionEditor` in the inline
@@ -54,6 +55,11 @@ export default function SharedQuestionEditor({
   onChange,
   variant = "default",
 }: Props) {
+  // useToast falls back to a no-op when no provider is in scope (the
+  // default context value), so it's safe to call from any caller —
+  // the inline editor wraps itself in ToastProvider; the admin pages
+  // get it from /admin/layout.tsx.
+  const { toast } = useToast();
   const [text, setText] = useState(q.question);
   const [options, setOptions] = useState<string[]>(q.options);
   const [correctIndex, setCorrectIndex] = useState(q.correctIndex);
@@ -129,7 +135,7 @@ export default function SharedQuestionEditor({
       setConfirmOpen(false);
       onChange();
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setDeleting(false);
     }

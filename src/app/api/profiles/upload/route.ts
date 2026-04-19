@@ -51,7 +51,20 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  const publicUrl = `https://ujsjbpjoaqjdlqkmnear.supabase.co/storage/v1/object/public/profile-photos/${filename}`;
+  // Build the public URL from the env-configured Supabase project so
+  // the route still works if we ever rotate the project. Previously
+  // the project subdomain was hard-coded, which would silently break
+  // every uploaded avatar URL after a project move.
+  const supabaseBase = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  const publicUrl = supabaseBase
+    ? `${supabaseBase}/storage/v1/object/public/profile-photos/${filename}`
+    : null;
+  if (!publicUrl) {
+    return Response.json(
+      { error: "NEXT_PUBLIC_SUPABASE_URL is not configured" },
+      { status: 500 }
+    );
+  }
 
   return Response.json({ url: publicUrl });
 }

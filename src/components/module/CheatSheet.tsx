@@ -63,9 +63,11 @@ export default function CheatSheet({
           className="rounded-2xl overflow-hidden"
           style={{ background: '#0D0D1F', border: '1px solid rgba(255,255,255,0.06)' }}
         >
-          {/* Section header */}
+          {/* Section header — uses both accent stops so the gradient
+              sweep matches the module's hero (was using accentFrom only,
+              leaving the second prop dead). */}
           <div className="px-5 py-3 relative overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(ellipse at 80% 50%, ${accentFrom}30, transparent 60%)` }} />
+            <div className="absolute inset-0 opacity-20" style={{ background: `linear-gradient(135deg, ${accentFrom}30, ${accentTo}1a 60%, transparent)` }} />
             <h3 className="text-sm font-bold text-white relative">{section.title}</h3>
           </div>
 

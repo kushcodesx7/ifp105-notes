@@ -9,6 +9,7 @@ import BlockEditor from "@/components/admin/BlockEditor";
 import FlashcardsEditor, { type Flashcard } from "@/components/admin/FlashcardsEditor";
 import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
 import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
+import { ToastProvider, useToast } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth-context";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { setEditSaveStatus, markSaved } from "@/lib/edit-save-status";
@@ -100,7 +101,23 @@ interface QuestionsResponse {
 
 // ─── Top-level shell ──────────────────────────────────────
 
-export default function InlineModuleEditor({
+// Wrapped in ToastProvider so save errors surface as toast
+// notifications instead of native alert() dialogs (which block the
+// main thread and can't be styled). The provider lives here rather
+// than in the parent /module/N layout because that layout is shared
+// with the student view, which doesn't need toast plumbing.
+export default function InlineModuleEditor(props: {
+  slug: string;
+  moduleNumber: number;
+}) {
+  return (
+    <ToastProvider>
+      <InlineModuleEditorInner {...props} />
+    </ToastProvider>
+  );
+}
+
+function InlineModuleEditorInner({
   slug,
   moduleNumber,
 }: {
@@ -302,6 +319,7 @@ function TopicEditor({
   idToken: string;
 }) {
   const credential = useMemo(() => ({ idToken }), [idToken]);
+  const { toast } = useToast();
 
   // Full detail fetch — need content_json which isn't on the list response.
   const { data: detailData, mutate: mutateDetail } =
@@ -357,7 +375,7 @@ function TopicEditor({
         throw new Error(j.error || `Save failed (${res.status})`);
       }
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setSavingMeta(false);
     }
@@ -417,7 +435,7 @@ function TopicEditor({
       setFlashcardsDirty(false);
       mutateDetail();
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setSavingFlashcards(false);
     }

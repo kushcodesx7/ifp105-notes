@@ -444,6 +444,11 @@ function TopicEditorPanel({
   password: string;
   onChange: () => void;
 }) {
+  // useToast lives in context — safe to call from any sub-component.
+  // Replaces the four `alert()` calls below; alert blocks the main
+  // thread and can't be styled, while toasts queue and animate.
+  const { toast } = useToast();
+
   const [title, setTitle] = useState(topic.title);
   const [hook, setHook] = useState(topic.hook || "");
   const [timeMin, setTimeMin] = useState(
@@ -516,7 +521,7 @@ function TopicEditorPanel({
       setBodyDirty(false);
       mutateDetail();
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setSavingBody(false);
     }
@@ -534,7 +539,7 @@ function TopicEditorPanel({
       setFlashcardsDirty(false);
       mutateDetail();
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setSavingFlashcards(false);
     }
@@ -561,7 +566,7 @@ function TopicEditorPanel({
       );
       onChange();
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setSaving(false);
     }
@@ -585,7 +590,7 @@ function TopicEditorPanel({
       setDeleteOpen(false);
       onChange();
     } catch (e) {
-      alert((e as Error).message);
+      toast({ kind: "error", message: (e as Error).message });
     } finally {
       setDeleting(false);
     }

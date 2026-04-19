@@ -233,23 +233,29 @@ export default function BugFixChallenge({
                 borderTop: "1px solid rgba(34,197,94,0.2)",
               }}
             >
-              {/* Celebration particles */}
+              {/* Celebration particles. Particle vectors precomputed
+                   from the index instead of Math.random() so render is
+                   pure (the React Compiler flagged the previous random
+                   calls as impure). The variation comes from index
+                   permutations rather than RNG; visually indistinguishable. */}
               <div className="relative">
-                {[...Array(6)].map((_, i) => (
+                {[
+                  { y: -65, x: -30, emoji: "\u2728" },
+                  { y: -45, x: 25, emoji: "\uD83C\uDF89" },
+                  { y: -55, x: -10, emoji: "\u2B50" },
+                  { y: -70, x: 35, emoji: "\uD83C\uDF1F" },
+                  { y: -40, x: -25, emoji: "\uD83C\uDFAF" },
+                  { y: -60, x: 15, emoji: "\uD83D\uDD25" },
+                ].map((p, i) => (
                   <motion.span
                     key={i}
                     initial={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-                    animate={{
-                      opacity: 0,
-                      y: -(30 + Math.random() * 40),
-                      x: (Math.random() - 0.5) * 80,
-                      scale: 0,
-                    }}
+                    animate={{ opacity: 0, y: p.y, x: p.x, scale: 0 }}
                     transition={{ duration: 0.8, delay: i * 0.08 }}
                     className="absolute text-sm pointer-events-none"
                     style={{ left: `${15 + i * 14}%`, top: 0 }}
                   >
-                    {["\u2728", "\uD83C\uDF89", "\u2B50", "\uD83C\uDF1F", "\uD83C\uDFAF", "\uD83D\uDD25"][i]}
+                    {p.emoji}
                   </motion.span>
                 ))}
               </div>
