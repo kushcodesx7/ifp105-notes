@@ -36,11 +36,16 @@ export type { BloomLevel };
 // by snapping straight to the final value.
 function CountUp({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
+  // Tween the display number from 0 → value whenever value changes.
+  // Whitelisted — fmAnimate is an external animation engine driving
+  // setState via onUpdate; this is exactly what the rule's "external
+  // system" exception is for.
   useEffect(() => {
     const reduce =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplay(value);
       return;
     }

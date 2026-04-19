@@ -74,8 +74,13 @@ export default function StudentDrawer({
 }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
 
-  // Reset to overview when a new student opens
+  // Reset to overview when a new student opens. Whitelisted — using
+  // an effect to sync local tab state to the controlled `student.email`
+  // prop is the canonical pattern. The alternative (key={student?.email}
+  // on the drawer) would replay the slide-in animation every time the
+  // teacher clicks a different student.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (student) setTab("overview");
   }, [student?.email]);
 

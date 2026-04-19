@@ -75,6 +75,13 @@ export default function RegistrationModal({
   // because the old empty-roster response was still in her HTTP cache.
   useEffect(() => {
     if (!open) return;
+    // Whitelisted set-state-in-effect cluster — this is data fetching
+    // tied to a controlled-open prop. Each setState is the standard
+    // "loading state + result" pattern that data libraries (SWR, react-
+    // query) hide for you. We do it by hand here because the modal
+    // needs cache: "no-store" to dodge a stale-roster bug a student
+    // reported, and it'd be overkill to wire SWR for one fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBatchesLoading(true);
     fetch("/api/batches", { cache: "no-store" })
       .then((r) => r.json())
@@ -92,14 +99,19 @@ export default function RegistrationModal({
       });
   }, [open]);
 
-  // Load sections when batch is selected
+  // Load sections when batch is selected. Whitelisted — same data-
+  // fetch-with-loading-state pattern as the batches effect above.
   useEffect(() => {
     if (!selectedBatchId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSections([]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedSection("");
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSectionsLoading(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError("");
     fetch(
       `/api/batches/sections?batchId=${encodeURIComponent(selectedBatchId)}`,
@@ -238,9 +250,14 @@ export default function RegistrationModal({
   // only hit this check at submit time, which meant she'd type her
   // batch/section/roll/LinkedIn only to be told "please sign in again"
   // — that's exactly the UX bug a student reported on Apr 18.
+  // Whitelisted — checks an external state (the auth context's token
+  // ref) when the modal opens. The alternative (deriving in render)
+  // would call getIdToken() on every render of every modal close.
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!getIdToken()) setNeedsReauth(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     else setNeedsReauth(false);
   }, [open, getIdToken]);
 

@@ -144,6 +144,11 @@ function InlineModuleEditorInner({
   useEffect(() => {
     if (!moduleData) return;
     const first = moduleData.topics[0]?.number ?? null;
+    // Whitelisted — sets `activeTopicNumber` to the first topic ONLY
+    // if it hasn't been set yet. The functional update preserves any
+    // user choice across data refetches. Pure derivation in render
+    // wouldn't work because we want the user's selection to persist.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveTopicNumber((prev) => prev ?? first);
   }, [moduleData]);
 

@@ -156,12 +156,16 @@ export default function AdminBar() {
   const editMode = searchParams?.get("edit") === "1";
 
   // Show "Best on desktop" toast once when an admin opens edit mode
-  // on a narrow screen. Gently nudges without blocking.
+  // on a narrow screen. Gently nudges without blocking. Whitelisted —
+  // using state as a "show this banner for 6s when X happens" trigger
+  // is the right shape for an effect; the alternative is plumbing a
+  // toast through context.
   const [mobileHint, setMobileHint] = useState(false);
   useEffect(() => {
     if (!editMode || !isAdmin) return;
     if (typeof window === "undefined") return;
     if (window.innerWidth < 768) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMobileHint(true);
       const t = setTimeout(() => setMobileHint(false), 6000);
       return () => clearTimeout(t);

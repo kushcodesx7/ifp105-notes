@@ -48,7 +48,6 @@ export default function BatchProgressListPage() {
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
     if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPassword(saved);
       setAuthenticated(true);
     }
@@ -57,7 +56,6 @@ export default function BatchProgressListPage() {
   // Signed-in admin → auto-authenticate
   useEffect(() => {
     if (isAdmin && idToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthenticated(true);
     }
   }, [isAdmin, idToken]);
@@ -84,8 +82,7 @@ export default function BatchProgressListPage() {
     if (fetchError && "status" in fetchError && (fetchError as { status?: number }).status === 401) {
       if (!isAdmin) {
         sessionStorage.removeItem("admin_pw");
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setAuthenticated(false);
+          setAuthenticated(false);
       }
     }
   }, [fetchError, isAdmin]);
@@ -453,15 +450,15 @@ export default function BatchProgressListPage() {
                   Message these students to finish registration
                 </div>
                 {orphanList.map((s) => {
-                  // Coarse "X days ago" display — recomputed per render is
-                  // fine because the value only flips at midnight UTC and
-                  // this list typically has < 10 entries. The compiler
-                  // flags Date.now() here; whitelisted because the cost
-                  // of rerender churn is negligible vs. introducing a
-                  // tick-state for one cosmetic label.
-                  // eslint-disable-next-line react-hooks/purity
+                  // Coarse "X days ago" display — recomputed per render
+                  // is fine because the value only flips at midnight UTC
+                  // and this list typically has < 10 entries. Compiler
+                  // purity rule flags Date.now() inline; suppressed
+                  // because the cosmetic label isn't worth introducing
+                  // tick state for a list this small.
                   const daysAgo = s.lastActive
                     ? Math.floor(
+                        // eslint-disable-next-line react-hooks/purity
                         (Date.now() - new Date(s.lastActive).getTime()) /
                           86400000
                       )

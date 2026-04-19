@@ -52,11 +52,17 @@ export default function DangerDeleteDialog({
   const [err, setErr] = useState<string | null>(null);
 
   // Reset state whenever the dialog opens so a previous failed attempt
-  // doesn't leak into the next invocation.
+  // doesn't leak into the next invocation. Whitelisted: this is the
+  // canonical "sync state to a controlled-open prop" pattern. The
+  // alternative (force remount via `key={open}`) would also tear down
+  // the focus trap and trigger the open animation twice.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPassword("");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErr(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
     }
   }, [open]);

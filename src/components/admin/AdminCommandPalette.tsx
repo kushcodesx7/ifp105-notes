@@ -120,10 +120,16 @@ export default function AdminCommandPalette({
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset state when the palette opens, focus the input.
+  // Reset state when the palette opens, focus the input. Whitelisted —
+  // canonical "sync state to controlled-open prop" pattern. The
+  // alternative (key={open} on the parent) would re-mount the
+  // motion.dialog and replay the open animation in reverse, which
+  // looks wrong.
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIndex(0);
     const t = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(t);
@@ -213,9 +219,13 @@ export default function AdminCommandPalette({
     return scored.slice(0, 40);
   }, [query, allResults]);
 
-  // Keep the active index in bounds as the list changes.
+  // Keep the active index in bounds as the list changes. Whitelisted —
+  // this is a "clamp local state to a derived value" pattern. The
+  // alternative (deriving in render) would let activeIndex go OOB on
+  // arrow-key handling.
   useEffect(() => {
     if (activeIndex >= filtered.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveIndex(Math.max(0, filtered.length - 1));
     }
   }, [filtered.length, activeIndex]);
