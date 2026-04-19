@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import BlockEditor from "@/components/admin/BlockEditor";
+import FlashcardsEditor, { type Flashcard } from "@/components/admin/FlashcardsEditor";
 import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
 import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
 import { useAuth } from "@/lib/auth-context";
@@ -73,6 +74,7 @@ interface TopicDetail {
   timeMin: number | null;
   hook: string | null;
   contentJson: ContentBlock[];
+  flashcardsJson?: Flashcard[];
 }
 
 interface TopicDetailResponse {
@@ -378,6 +380,48 @@ function TopicEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(serverBlocks)]);
 
+  // Flashcards — same auto-save pattern as blocks but with its own
+  // state + save function so a half-typed card can't block body
+  // saves and vice versa.
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [flashcardsDirty, setFlashcardsDirty] = useState(false);
+  const [savingFlashcards, setSavingFlashcards] = useState(false);
+
+  const serverFlashcards = detailData?.topic.flashcardsJson;
+  useEffect(() => {
+    if (!serverFlashcards) return;
+    setFlashcards(serverFlashcards);
+    setFlashcardsDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(serverFlashcards)]);
+
+  async function saveFlashcards() {
+    setSavingFlashcards(true);
+    try {
+      const res = await fetch(
+        `/api/admin/courses/${encodeURIComponent(slug)}/modules/${moduleNumber}/topics/${topicMeta.number}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-id-token": idToken,
+          },
+          body: JSON.stringify({ flashcardsJson: flashcards }),
+        }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || `Save failed (${res.status})`);
+      }
+      setFlashcardsDirty(false);
+      mutateDetail();
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setSavingFlashcards(false);
+    }
+  }
+
   function handleBlocksChange(next: ContentBlock[]) {
     setBlocks(next);
     setBlocksDirty(true);
@@ -522,6 +566,28 @@ function TopicEditor({
           topicNumber={topicMeta.number}
           idToken={idToken}
           password=""
+        />
+      </div>
+
+      {/* Flashcards — same per-topic deck the /admin/courses page edits.
+           Wired here so admins editing inline (the /module/N route) can
+           also add/edit/delete cards without bouncing to /admin/courses. */}
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <FlashcardsEditor
+          value={flashcards}
+          onChange={(next) => {
+            setFlashcards(next);
+            setFlashcardsDirty(true);
+          }}
+          onSave={saveFlashcards}
+          saving={savingFlashcards}
+          dirty={flashcardsDirty}
         />
       </div>
 
