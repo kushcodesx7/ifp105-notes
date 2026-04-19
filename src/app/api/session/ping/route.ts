@@ -26,6 +26,20 @@ export async function POST(req: NextRequest) {
   const email = auth.user.email;
   const name = auth.user.name || "Student";
 
+  // Optional `currentPath` in body — feeds the live class digest on
+  // /admin so the teacher can see WHERE everyone is, not just THAT
+  // they're active. Whitelist to in-app paths so we never store
+  // arbitrary user input from a third-party referrer.
+  const body = (await req.json().catch(() => ({}))) as {
+    currentPath?: unknown;
+  };
+  let currentPath: string | null = null;
+  if (typeof body.currentPath === "string") {
+    const p = body.currentPath.trim();
+    // Only accept relative app paths starting with /, max 200 chars.
+    if (p.startsWith("/") && p.length <= 200) currentPath = p;
+  }
+
   // Read the existing session row (if any) so we don't accidentally
   // overwrite enrollment_no / course_id with placeholders. Empty row
   // means it's the first interaction — fine to insert with N/A.
@@ -43,10 +57,27 @@ export async function POST(req: NextRequest) {
   };
   const existingCourseId = (existing as { course_id?: string } | null)?.course_id;
   if (existingCourseId) payload.course_id = existingCourseId;
+  if (currentPath) payload.current_path = currentPath;
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from("student_sessions")
     .upsert(payload, { onConflict: "student_email" });
+
+  // Graceful degradation: if the current_path column doesn't exist
+  // yet (pre-migration), retry without it. The session ping is
+  // best-effort; the admin live-now widget falls back to the
+  // count-only view until the SQL migration runs.
+  if (
+    error &&
+    /column.*current_path.*does not exist|PGRST204|PGRST102/i.test(
+      error.message
+    )
+  ) {
+    delete payload.current_path;
+    ({ error } = await supabase
+      .from("student_sessions")
+      .upsert(payload, { onConflict: "student_email" }));
+  }
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
