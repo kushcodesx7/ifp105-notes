@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 // Flashcards data (~42KB) lands in this lazy chunk, not in the main
 // module bundle. ModulePage wraps this component in next/dynamic so the
@@ -12,6 +12,24 @@ import { flashcardStateKey } from "@/lib/storage-keys";
 interface FlashcardData {
   front: string;
   back: string;
+  /** Stable fingerprint (hash of front). Present on DB-sourced cards
+   *  from /api/public/flashcards; absent on TS-fallback decks. When
+   *  present, the client keys "known" state by fingerprint so admin
+   *  deletes/reorders don't silently transfer flags to wrong cards. */
+  fp?: string;
+}
+
+// Client-side FNV-1a fingerprint — identical formula to the server
+// (and McqQuiz). Lets the client generate fingerprints for TS-fallback
+// decks so the fingerprint-based known-flag path works uniformly even
+// before a topic has been migrated to the DB.
+function fpFrontClient(front: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < front.length; i++) {
+    h ^= front.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return String(h >>> 0);
 }
 
 interface FlashcardsProps {
@@ -272,19 +290,78 @@ export default function Flashcards({
     } catch {}
   }, [lsKey, current, known, knownAt]);
 
-  // Card count changed (DB override landed, or admin edited cards)
-  // but the topic is the same — keep the student's progress and just
-  // clamp indices into the new range. Known cards that were deleted
-  // silently fall off; survivors keep their "known" flag.
-  const resolvedLen = resolved?.length ?? 0;
+  // Fingerprint-based realignment when the deck changes.
+  //
+  // Previous version clamped known-by-INDEX to the new length. That
+  // silently transferred the "I know this" flag to whichever card
+  // sat at that index in the new deck — so if admin deleted card 3
+  // of 8, the flag the student set for OLD card 4 (which was at
+  // index 3 after deletion) jumped to OLD card 5 (now at index 3).
+  // Classic content-vs-position drift bug.
+  //
+  // New version: use each card's fingerprint (hash of front text)
+  // as the key. When the deck changes, look up each OLD known
+  // index → fingerprint, then find that fingerprint's new position
+  // in the current deck. Deleted cards' flags silently drop
+  // (no fingerprint match). Surviving cards keep their flag at
+  // the RIGHT slot, not just a same-numbered slot. Matches how
+  // McqQuiz realigns answers.
+  const fpList = useMemo(
+    () =>
+      (resolved ?? []).map((c) => {
+        // Prefer the server-emitted fingerprint; fall back to a
+        // client hash so TS-fallback decks (no DB override yet)
+        // also get realignment. Cast is safe — runtime check
+        // handles the "no fp field at all" case.
+        const fp = (c as { fp?: string }).fp;
+        return fp ?? fpFrontClient(c.front);
+      }),
+    [resolved]
+  );
+  const prevFpListRef = useRef<string[]>(fpList);
   useEffect(() => {
-    if (resolvedLen === 0) return;
-    setKnown((prev) => new Set([...prev].filter((i) => i < resolvedLen)));
-    setCurrent((c) => Math.min(c, resolvedLen - 1));
-    // Flipped state is meaningless if the underlying card changed —
-    // safest to unflip.
+    const prev = prevFpListRef.current;
+    if (prev.length === fpList.length) {
+      let same = true;
+      for (let i = 0; i < prev.length; i++) {
+        if (prev[i] !== fpList[i]) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return;
+    }
+    // Build "known flag keyed by fingerprint" from current state.
+    const knownByFp = new Map<string, number>();
+    for (const idx of known) {
+      const fp = prev[idx];
+      if (fp) knownByFp.set(fp, knownAt[idx] ?? Date.now());
+    }
+    // Project onto the new deck.
+    const nextKnown = new Set<number>();
+    const nextKnownAt: Record<number, number> = {};
+    fpList.forEach((fp, i) => {
+      const t = knownByFp.get(fp);
+      if (t != null) {
+        nextKnown.add(i);
+        nextKnownAt[i] = t;
+      }
+    });
+    // Follow the student's current card if it survived; else clamp.
+    setCurrent((c) => {
+      const prevFp = prev[c];
+      if (prevFp) {
+        const idxInNew = fpList.indexOf(prevFp);
+        if (idxInNew >= 0) return idxInNew;
+      }
+      return Math.max(0, Math.min(c, fpList.length - 1));
+    });
+    setKnown(nextKnown);
+    setKnownAt(nextKnownAt);
     setFlipped(false);
-  }, [resolvedLen]);
+    prevFpListRef.current = fpList;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fpList]);
 
   // While the DB fetch is in flight AND we have no TS fallback to show
   // meanwhile, render nothing (avoids a flash of the TS deck that then

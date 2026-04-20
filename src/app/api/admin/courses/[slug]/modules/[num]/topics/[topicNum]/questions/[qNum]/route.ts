@@ -286,6 +286,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     },
   });
 
+  // Cache-bust the MCQ public endpoint so student tabs pick up
+  // the edit within the next poll window instead of waiting for
+  // the 30s CDN TTL.
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath(`/api/public/mcq/${res.moduleNumber}`);
+  } catch {}
+
   return Response.json({ question: rowToQuestion(data) });
 }
 
@@ -330,6 +338,14 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
         questionNumber: res.questionNumber,
       },
     });
+
+    // Cache-bust so the delete lands on students within ~15 s
+    // (next poll tick) instead of waiting for the 30s CDN TTL.
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath(`/api/public/mcq/${res.moduleNumber}`);
+    } catch {}
+
     return Response.json({ ok: true, softDeleted: true });
   }
 

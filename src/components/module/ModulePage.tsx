@@ -151,9 +151,17 @@ export default function ModulePage({
       setMcqAnswerCounts({});
     },
     onAuthRequired: () => {
-      // Token missing on a save attempt — surface the LoginPrompt so
-      // the student can re-authenticate immediately.
-      setShowLoginPrompt(true);
+      // Token missing on a save attempt. Previously popped the
+      // LoginPrompt immediately — but saveToSupabase ALSO flips
+      // `needsReauth` which renders a big sticky banner at the top
+      // of the page. Having both fire at once stacked a modal on
+      // top of a banner — confusing UX. Now the banner is the
+      // single primary surface; students tap its "Sign in again"
+      // button to open the modal on demand. If the banner is for
+      // some reason hidden (rare — requires `isLoggedIn && user`
+      // but no token), we still fall through to the modal so the
+      // student has a path forward.
+      if (!isLoggedIn || !user) setShowLoginPrompt(true);
     },
   });
 

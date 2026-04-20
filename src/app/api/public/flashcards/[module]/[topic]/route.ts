@@ -80,11 +80,29 @@ export async function GET(
   // the same JSONB column so they can be restored — but students must
   // never see them.
   type CardRow = { front: string; back: string; deletedAt?: string | null };
+  // Fingerprint per card — stable hash of the front text. Used by
+  // the client to key "I know this" state by content rather than
+  // array position, so admin deletes / reorders don't silently
+  // transfer the flag to the wrong card. Matches questionFingerprint
+  // in McqQuiz. FNV-1a for speed; collisions are benign (worst case
+  // two cards share a known-flag, which is visually recoverable).
+  function fpFront(front: string): string {
+    let h = 2166136261;
+    for (let i = 0; i < front.length; i++) {
+      h ^= front.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return String(h >>> 0);
+  }
   const liveCards =
     Array.isArray(raw) && raw.length > 0
       ? (raw as CardRow[])
           .filter((c) => !c.deletedAt)
-          .map(({ front, back }) => ({ front, back }))
+          .map(({ front, back }) => ({
+            front,
+            back,
+            fp: fpFront(front),
+          }))
       : null;
   const cards = liveCards && liveCards.length > 0 ? liveCards : null;
 

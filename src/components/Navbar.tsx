@@ -87,10 +87,17 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   const signInDialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(signInDialogRef, showSignIn);
 
-  // After login, check if user needs to register (skip for admins)
+  // After login, refresh user data from the DB. Previously gated on
+  // `!isRegistered` so it only fired for first-time students — but
+  // that left a registered student's locally-cached `section` /
+  // `batchId` stale if an admin reassigned them. Now runs on every
+  // mount for every logged-in non-admin, so the auth context
+  // self-heals within one page load of any admin section change.
+  // (~200 students × a handful of page loads = tiny load; endpoint
+  // is already auth'd + fast.)
   useEffect(() => {
     if (isAdmin) return;
-    if (isLoggedIn && user && !isRegistered) {
+    if (isLoggedIn && user) {
       // Check DB to see if they're actually registered (maybe auth context is stale).
       // Endpoint is auth'd — send the caller's Google ID token.
       const token = getIdToken();

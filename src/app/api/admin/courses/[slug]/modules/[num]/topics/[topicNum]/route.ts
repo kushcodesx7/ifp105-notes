@@ -282,6 +282,23 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (Array.isArray(raw)) flashcardsJson = raw as typeof flashcardsJson;
   }
 
+  // Cache-bust the public endpoints this edit touches so the CDN
+  // serves fresh data on the very next student request. Without
+  // this, up to 30 seconds of stale data could be served from the
+  // edge after a teacher hits Save. Safe to call even for content-
+  // only edits — the flashcard endpoint caches separately per
+  // topic, so revalidating it costs nothing when flashcards
+  // weren't touched.
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath(`/api/public/mcq/${res.moduleNumber}`);
+    revalidatePath(
+      `/api/public/flashcards/${res.moduleNumber}/${res.topicNumber}`
+    );
+  } catch {
+    /* revalidatePath missing in unusual runtimes — TTL fallback OK */
+  }
+
   return Response.json({
     topic: {
       id: data.id,
@@ -350,6 +367,16 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
         topicNumber: res.topicNumber,
       },
     });
+
+    // Cache-bust public endpoints so students see the disappearance
+    // on the next load instead of waiting for the 30s CDN TTL.
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath(`/api/public/mcq/${res.moduleNumber}`);
+      revalidatePath(
+        `/api/public/flashcards/${res.moduleNumber}/${res.topicNumber}`
+      );
+    } catch {}
 
     return Response.json({ ok: true, softDeleted: true });
   }
