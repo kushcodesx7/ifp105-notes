@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { useAuth } from "@/lib/auth-context";
 import BloomsRadar from "@/components/BloomsRadar";
 import { BLOOM_META, type BloomLevel } from "@/lib/blooms";
+import { prettyName } from "@/lib/names";
 
 interface BloomsResponse {
   levels: {
@@ -205,14 +206,20 @@ function ShareProfileButton({
   strongest: { level: BloomLevel; correct: number; total: number; pct: number };
   weakest: { level: BloomLevel; correct: number; total: number; pct: number } | null;
 }) {
+  const { user, isLoggedIn } = useAuth();
   if (strongest.total === 0) return null;
 
   const strongMeta = BLOOM_META[strongest.level];
   const weakMeta = weakest ? BLOOM_META[weakest.level] : null;
 
+  // Friendly name only — prettyName strips the "453_" roll prefix so
+  // the shared post reads as "— Kush" rather than "— 453_kush".
+  const studentName = isLoggedIn && user ? prettyName(user.name) : "";
+  const signoff = studentName ? `\n\n— ${studentName}` : "";
+
   const text = weakMeta
-    ? `Just discovered my thinking profile on IFP105! Strongest at ${strongMeta.label} (${strongest.pct}%), weakest at ${weakMeta.label} (${weakest!.pct}%). Bloom's Taxonomy-based learning is changing how I study.`
-    : `Just discovered my thinking profile on IFP105! Strongest at ${strongMeta.label} (${strongest.pct}%). Bloom's Taxonomy-based learning is changing how I study.`;
+    ? `Just discovered my thinking profile on IFP105! Strongest at ${strongMeta.label} (${strongest.pct}%), weakest at ${weakMeta.label} (${weakest!.pct}%). Bloom's Taxonomy-based learning is changing how I study.${signoff}`
+    : `Just discovered my thinking profile on IFP105! Strongest at ${strongMeta.label} (${strongest.pct}%). Bloom's Taxonomy-based learning is changing how I study.${signoff}`;
 
   const url =
     typeof window !== "undefined"

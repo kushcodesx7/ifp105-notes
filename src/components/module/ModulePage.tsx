@@ -15,6 +15,7 @@ import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { CURRENT_COURSE_SLUG, getCurrentCourse } from "@/lib/course-registry";
+import { prettyName } from "@/lib/names";
 import { activeTabKey } from "@/lib/storage-keys";
 import { useStudentProgress } from "@/lib/use-student-progress";
 import type { ContentBlock, Question as CanonicalQuestion } from "@/types/content";
@@ -825,7 +826,13 @@ export default function ModulePage({
                     Module {moduleNumber}: {moduleTitle}
                   </div>
                   <div className="text-sm text-zinc-300 mb-3">
-                    Awarded to <span className="font-semibold text-white">{isLoggedIn && user ? user.name : "Student"}</span>
+                    {/* prettyName strips the "453_" roll-prefix that
+                        registration bakes into user.name so the
+                        certificate shows "Kush" not "453_kush". */}
+                    Awarded to{" "}
+                    <span className="font-semibold text-white">
+                      {isLoggedIn && user ? prettyName(user.name) : "Student"}
+                    </span>
                   </div>
                   <div className="text-[11px] text-zinc-500 mb-1">
                     {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
@@ -856,10 +863,24 @@ export default function ModulePage({
                     // @-mentions don't auto-link on LinkedIn, only
                     // hashtags do; no site URL — the notes aren't a
                     // public resource we want indexed by strangers.
+                    // Prefer the student's clean display name
+                    // ("Kush") over the registration handle
+                    // ("453_kush"). Users explicitly asked for this —
+                    // their LinkedIn network sees "Kush has completed
+                    // Module 1" not a raw roll-prefixed token.
+                    // Falls back to an empty string if no user is
+                    // logged in; the caption then reads naturally
+                    // without a dangling "— —" line.
+                    const studentName =
+                      isLoggedIn && user ? prettyName(user.name) : "";
+                    const signoff = studentName
+                      ? `— ${studentName}`
+                      : "";
                     const caption = [
                       `I just completed Module ${moduleNumber} in ICT Fundamentals at Amity University Tashkent! 🎓`,
                       "",
                       `Huge thanks to our professor Kushagra Tripathi for the interactive study notes — quizzes, flashcards, Bloom's Taxonomy tracking, and a learning flow that actually sticks.`,
+                      ...(signoff ? ["", signoff] : []),
                       "",
                       `#KushagraTripathi #AmityTashkent #ICTFundamentals #LearningInPublic`,
                     ].join("\n");
