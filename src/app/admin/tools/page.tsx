@@ -94,8 +94,14 @@ export default function ToolsPage() {
           </div>
         </Link>
 
-        {/* Migration: TS flashcards → DB. One-shot, idempotent. */}
-        <MigrateTsFlashcardsCard idToken={idToken} />
+        {/* The "Migrate TS flashcards → DB" card used to live here as
+             a one-shot migration. Removed Apr 20 once the teacher
+             confirmed every topic had been ported. The
+             MigrateTsFlashcardsCard component + its /api/admin/
+             migrate-ts-flashcards endpoint are still in the codebase
+             (idempotent, safe) in case a fresh deployment needs to
+             run it once — re-add <MigrateTsFlashcardsCard idToken=
+             {idToken} /> here if that ever happens. */}
 
         {/* Nuclear: wipe every student's progress in one action. */}
         <ResetAllProgressCard idToken={idToken} />
@@ -531,7 +537,12 @@ function StubCard({
 //
 // After this runs, every ICT topic is DB-backed for flashcards →
 // admin can edit / delete / restore / reorder freely.
-
+//
+// Unused after Apr 20 — kept in-file (rather than deleted) so
+// re-enabling it for a fresh deployment is a one-line change above.
+// The server-side /api/admin/migrate-ts-flashcards endpoint remains
+// idempotent and safe to call.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MigrateTsFlashcardsCard({
   idToken,
 }: {

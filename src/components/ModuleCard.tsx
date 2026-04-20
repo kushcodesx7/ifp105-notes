@@ -48,6 +48,13 @@ export default function ModuleCard({
       if (!saved) return;
       const completed = new Set(JSON.parse(saved));
       if (completed.size === 0) return;
+      // Whitelisted: this is the classic "hydrate from localStorage
+      // after mount" pattern. Doing it in a lazy useState initializer
+      // causes an SSR hydration mismatch (server sees null, client
+      // sees the blob). Effects are the correct fix — the cascading-
+      // render is one extra paint, which is acceptable for a
+      // cosmetic progress bar.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProgress({ done: completed.size, total: totalTopics });
     } catch {
       /* ignore — no progress shown */
