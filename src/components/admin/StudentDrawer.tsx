@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admins";
 import { compareSections } from "@/lib/sections";
 import { useFocusTrap } from "@/lib/use-focus-trap";
+import { TOTAL_TOPICS } from "@/lib/course-registry";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -502,7 +503,11 @@ function OverviewTab({
       <Field label="Roll number" value={student.enrollmentNo} />
       <Field
         label="Quiz topics completed"
-        value={`${student.completedCount} / 48`}
+        // TOTAL_TOPICS lives in @/lib/modules (re-exported via
+        // course-registry) so this survives module topic-count
+        // changes. Was hardcoded "/ 48" — drifted the moment
+        // any module gained/lost a topic.
+        value={`${student.completedCount} / ${TOTAL_TOPICS}`}
       />
 
       {/* ── Section change ──────────────────────────────────────── */}

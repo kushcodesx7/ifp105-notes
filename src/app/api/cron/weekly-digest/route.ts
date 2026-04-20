@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 
 // GET /api/cron/weekly-digest
 // Generates a weekly teacher digest. Protected by a shared secret — only
@@ -34,9 +35,12 @@ export async function GET(req: NextRequest) {
   const [studentsRes, allProgressRes, weeklyProgressRes, sessionsRes] =
     await Promise.all([
       supabase.from("students").select("email, name, section, added_at"),
+      // Include module_number so we can aggregate per-module and
+      // apply the module-weighted completion percentage (1 module
+      // done = 20%) — matches every other endpoint.
       supabase
         .from("student_progress")
-        .select("student_email, completed"),
+        .select("student_email, module_number, completed"),
       supabase
         .from("student_progress")
         .select("student_email, completed")
@@ -52,12 +56,22 @@ export async function GET(req: NextRequest) {
   );
   const validEmails = new Set(students.map((s) => s.email));
 
-  // Per-email completion counts
+  // Per-email completion counts — both a flat total (used for "is
+  // this student not started?" gating) and a per-module breakdown
+  // (fed into moduleWeightedPct for display percentages).
   const allDone: Record<string, number> = {};
+  const doneByModule: Record<string, Record<number, number>> = {};
   for (const row of allProgressRes.data || []) {
     if (!row.student_email || !validEmails.has(row.student_email)) continue;
     if (!row.completed) continue;
     allDone[row.student_email] = (allDone[row.student_email] || 0) + 1;
+    const mn = Number(row.module_number);
+    if (Number.isFinite(mn)) {
+      const byMod =
+        doneByModule[row.student_email] ??
+        (doneByModule[row.student_email] = {});
+      byMod[mn] = (byMod[mn] || 0) + 1;
+    }
   }
 
   const weeklyDone: Record<string, number> = {};
@@ -91,7 +105,14 @@ export async function GET(req: NextRequest) {
     const stats = bySection[sec];
     stats.registered += 1;
     const done = allDone[s.email!] || 0;
-    stats.avgCompletion += done;
+    // Accumulate module-weighted pct per student; divide by
+    // registered below to get the section average. Previously the
+    // sum was "completed topics" which the divide then mis-scaled
+    // against a flat TOTAL_TOPICS — giving 23% for a one-module
+    // student when the rest of the app said 20%.
+    stats.avgCompletion += moduleWeightedPct(
+      doneByModule[s.email!] || {}
+    );
     if (done === 0) stats.notStarted += 1;
     const active = lastActive[s.email!];
     if (active && active >= weekAgoIso) stats.activeThisWeek += 1;
@@ -99,9 +120,9 @@ export async function GET(req: NextRequest) {
 
   const sections = Object.values(bySection).map((s) => ({
     ...s,
-    avgCompletion: s.registered
-      ? Math.round((s.avgCompletion / s.registered / TOTAL_TOPICS) * 100)
-      : 0,
+    // avgCompletion is already a sum of pct values (see above), so
+    // we just divide by the section size to get the mean.
+    avgCompletion: s.registered ? Math.round(s.avgCompletion / s.registered) : 0,
   }));
   sections.sort((a, b) => b.avgCompletion - a.avgCompletion);
 

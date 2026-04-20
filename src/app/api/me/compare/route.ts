@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAuth } from "@/lib/verify-google-token";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 
 // GET /api/me/compare
 // Returns the caller's per-module completion counts + the section median
@@ -109,11 +110,18 @@ export async function GET(req: NextRequest) {
       };
     });
 
-  // Overall
+  // Overall — module-weighted pct so "Compare with class" matches
+  // the /connect + home glimpse cards the same student sees next to
+  // it on their home page. Previously used flat, leading to 20%
+  // vs 23% for the same student in the same viewport.
+  const sectionOverallPcts = sectionEmails.map((e) =>
+    moduleWeightedPct(sectionByEmail[e] || {})
+  );
   const sectionTotals = sectionEmails.map((e) =>
     Object.values(sectionByEmail[e] || {}).reduce((a, b) => a + b, 0)
   );
   const medianOverall = median(sectionTotals);
+  const medianPctOverall = median(sectionOverallPcts);
 
   return Response.json(
     {
@@ -122,11 +130,11 @@ export async function GET(req: NextRequest) {
       you: {
         totalDone: ownTotalDone,
         totalTopics: TOTAL_TOPICS,
-        pct: Math.round((ownTotalDone / TOTAL_TOPICS) * 100),
+        pct: moduleWeightedPct(ownDoneByModule),
       },
       sectionMedian: {
         done: medianOverall,
-        pct: Math.round((medianOverall / TOTAL_TOPICS) * 100),
+        pct: medianPctOverall,
       },
       modules,
     },

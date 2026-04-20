@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { TOTAL_TOPICS, MODULES } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { compareSections } from "@/lib/sections";
@@ -92,8 +93,13 @@ export async function GET(req: NextRequest) {
   const activeThisWeek = activeSet.size;
 
   // ─── Progress aggregation per registered student ────────────────
+  // `modDone` tracks completed topics per module (1..5) so we can
+  // compute the module-weighted pct instead of the old flat
+  // `completed / TOTAL_TOPICS` — matches every other completion
+  // surface in the app.
   type Agg = {
     completed: number;
+    modDone: Record<number, number>;
     mcqSum: number;
     mcqCount: number;
   };
@@ -105,10 +111,16 @@ export async function GET(req: NextRequest) {
     if (!row.student_email || !registeredEmails.has(row.student_email)) continue;
     let agg = byStudent.get(row.student_email);
     if (!agg) {
-      agg = { completed: 0, mcqSum: 0, mcqCount: 0 };
+      agg = { completed: 0, modDone: {}, mcqSum: 0, mcqCount: 0 };
       byStudent.set(row.student_email, agg);
     }
-    if (row.completed) agg.completed += 1;
+    if (row.completed) {
+      agg.completed += 1;
+      const mn = Number(row.module_number);
+      if (Number.isFinite(mn)) {
+        agg.modDone[mn] = (agg.modDone[mn] || 0) + 1;
+      }
+    }
     if (
       row.mcq_score !== null &&
       row.mcq_total !== null &&
@@ -136,7 +148,7 @@ export async function GET(req: NextRequest) {
   let mcqSumAll = 0;
   let mcqStudentCount = 0;
   for (const agg of byStudent.values()) {
-    completionSum += (agg.completed / TOTAL_TOPICS) * 100;
+    completionSum += moduleWeightedPct(agg.modDone);
     if (agg.mcqCount > 0) {
       mcqSumAll += agg.mcqSum / agg.mcqCount;
       mcqStudentCount += 1;
@@ -161,9 +173,7 @@ export async function GET(req: NextRequest) {
   const studentScores: StudentScore[] = registeredStudents.map((s) => {
     const email = s.email!;
     const agg = byStudent.get(email);
-    const completionPct = agg
-      ? Math.round((agg.completed / TOTAL_TOPICS) * 100)
-      : 0;
+    const completionPct = agg ? moduleWeightedPct(agg.modDone) : 0;
     const avg =
       agg && agg.mcqCount > 0 ? Math.round(agg.mcqSum / agg.mcqCount) : null;
     const lastActive = lastActiveMap[email] || null;

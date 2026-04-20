@@ -576,7 +576,7 @@ export default function RegistrationModal({
                 disabled={loading || needsReauth || !selectedBatchId || !selectedSection || !enrollmentNo.trim()}
                 className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
               >
-                {loading ? "Registering..." : "Register — Lock in my details →"}
+                {loading ? "Registering..." : "Finish registration →"}
               </button>
 
               {closable && (

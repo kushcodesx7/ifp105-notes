@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
 
 // GET — Return all student progress grouped by student.
@@ -158,7 +159,10 @@ export async function GET(req: NextRequest) {
       section: s.section,
       completedCount,
       totalTopics: TOTAL_TOPICS,
-      completionPct: Math.round((completedCount / TOTAL_TOPICS) * 100),
+      // Module-weighted pct — aligns with /api/connect + glimpse +
+       // /api/admin/people so the same student shows the same % on
+       // every surface. `modDone` is already tracked above.
+      completionPct: moduleWeightedPct(modDone),
       moduleStats,
       avgMcqScore: avgMcqScore !== null ? Math.round(avgMcqScore) : null,
       lastActive: s.lastActive,

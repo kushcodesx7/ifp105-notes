@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { TOTAL_TOPICS } from "@/lib/course-registry";
 
 interface ModuleStats {
   done: number;
@@ -235,7 +236,7 @@ export default function BatchProgressDetailPage() {
       s.moduleStats[4]?.pct ?? 0,
       s.moduleStats[5]?.pct ?? 0,
       s.completionPct,
-      `${s.completedCount}/48`,
+      `${s.completedCount}/${TOTAL_TOPICS}`,
       s.avgMcqScore !== null ? s.avgMcqScore : "-",
       s.lastActive ? new Date(s.lastActive).toISOString() : "Never",
     ]);

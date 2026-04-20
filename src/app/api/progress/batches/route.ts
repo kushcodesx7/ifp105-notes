@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { compareSections } from "@/lib/sections";
@@ -187,10 +188,14 @@ export async function GET(req: NextRequest) {
             0
           ) / mcqEntries.length
         : null;
+    // Module-weighted pct — same formula as every other endpoint so
+    // the batch-progress page matches what students see on /connect.
+    const modDoneMap: Record<number, number> = {};
+    for (const mn of [1, 2, 3, 4, 5]) modDoneMap[mn] = moduleStats[mn].done;
     return {
       completedCount,
       totalTopics: TOTAL_TOPICS,
-      completionPct: Math.round((completedCount / TOTAL_TOPICS) * 100),
+      completionPct: moduleWeightedPct(modDoneMap),
       moduleStats,
       avgMcqScore: avgMcqScore !== null ? Math.round(avgMcqScore) : null,
     };

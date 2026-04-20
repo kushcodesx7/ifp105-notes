@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import type { BloomLevel } from "@/lib/blooms";
@@ -228,7 +229,10 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const completionPct = Math.round((completedCount / TOTAL_TOPICS) * 100);
+    // Module-weighted pct (each module = 20% of overall) — matches
+    // /api/connect and /api/connect/glimpse so a student's % is the
+    // same on every surface the teacher looks at.
+    const completionPct = moduleWeightedPct(modDone);
     const avgMcq =
       mcqCountAll > 0 ? Math.round(mcqPctSumAll / mcqCountAll) : null;
 
