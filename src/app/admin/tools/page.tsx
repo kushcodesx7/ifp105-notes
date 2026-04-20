@@ -97,6 +97,9 @@ export default function ToolsPage() {
         {/* Migration: TS flashcards → DB. One-shot, idempotent. */}
         <MigrateTsFlashcardsCard idToken={idToken} />
 
+        {/* Nuclear: wipe every student's progress in one action. */}
+        <ResetAllProgressCard idToken={idToken} />
+
         {/* Audit log — ready */}
         <AuditLogCard idToken={idToken} />
 
@@ -657,6 +660,207 @@ function MigrateTsFlashcardsCard({
               )}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reset-all-progress card ─────────────────────────────────
+//
+// The SAFE way to run the nuclear "wipe everyone's progress" action.
+// Replaces the old "paste this in DevTools console" workflow, which
+// was (a) copy-paste hazardous in a regular browser session where the
+// admin is also debugging other things, and (b) offered zero visible
+// confirmation.
+//
+// Safety model:
+//   1. The card starts collapsed — you have to click "Open" to even
+//      see the button.
+//   2. To arm the action you have to TYPE the exact phrase
+//      "RESET ALL PROGRESS" (matches the server-side body guard).
+//      Anything else keeps the button disabled.
+//   3. The confirm button itself shows the exact row count that will
+//      be deleted AFTER a preflight request.
+//   4. On success the input is cleared and the card collapses so you
+//      can't accidentally re-run it.
+function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [phrase, setPhrase] = useState("");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<{
+    deletedRows: number;
+    epoch: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const ARM_PHRASE = "RESET ALL PROGRESS";
+  const armed = phrase === ARM_PHRASE;
+
+  async function run() {
+    if (!armed) return;
+    setRunning(true);
+    setError(null);
+    setResult(null);
+    try {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (idToken) headers["x-id-token"] = idToken;
+      const res = await fetch("/api/admin/students/reset-all-progress", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ confirm: ARM_PHRASE }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+      } else {
+        setResult({ deletedRows: json.deletedRows, epoch: json.epoch });
+        setPhrase("");
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div
+      className="mb-6 rounded-2xl p-5 transition-colors"
+      style={{
+        background: "rgba(239,68,68,0.04)",
+        border: "1px solid rgba(239,68,68,0.22)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+          style={{ background: "rgba(239,68,68,0.14)", color: "#FCA5A5" }}
+          aria-hidden="true"
+        >
+          🧹
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div>
+              <div className="text-sm font-bold mb-0.5 text-red-300">
+                Reset all student progress
+              </div>
+              <p className="text-[12px] text-zinc-500 leading-relaxed">
+                Wipes every row of <code className="text-zinc-400">student_progress</code>
+                 — completions, MCQ scores, Bloom&apos;s stats, everything.
+                Identity, roster, photos, and skills are preserved. Clients
+                automatically clear their localStorage on next load so nothing
+                re-uploads.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setOpen((v) => !v);
+                setPhrase("");
+                setError(null);
+                setResult(null);
+              }}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
+              style={{
+                background: open
+                  ? "rgba(239,68,68,0.16)"
+                  : "rgba(255,255,255,0.06)",
+                color: open ? "#FCA5A5" : "#D4D4D8",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {open ? "Close" : "Open"}
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 pt-4 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="text-[11px] text-zinc-500">
+                    To arm this button, type{" "}
+                    <code className="px-1.5 py-0.5 rounded bg-white/[0.06] text-red-300 font-semibold">
+                      {ARM_PHRASE}
+                    </code>{" "}
+                    exactly below.
+                  </div>
+                  <input
+                    type="text"
+                    value={phrase}
+                    onChange={(e) => setPhrase(e.target.value)}
+                    placeholder={`Type "${ARM_PHRASE}" to enable`}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full px-3 py-2 text-sm rounded-lg text-white placeholder:text-zinc-600 focus:outline-none transition-colors"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: armed
+                        ? "1px solid rgba(239,68,68,0.5)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    }}
+                  />
+                  <button
+                    onClick={run}
+                    disabled={!armed || running}
+                    className="w-full py-2.5 text-sm font-bold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                    style={{
+                      background: armed
+                        ? "linear-gradient(135deg, #EF4444, #B91C1C)"
+                        : "rgba(255,255,255,0.04)",
+                      boxShadow: armed ? "0 2px 12px rgba(239,68,68,0.3)" : "none",
+                    }}
+                  >
+                    {running
+                      ? "Wiping…"
+                      : armed
+                        ? "🧹  Wipe every student's progress"
+                        : "Type the phrase above to enable"}
+                  </button>
+
+                  {error && (
+                    <div
+                      className="p-3 rounded-lg text-[12px] text-red-300"
+                      style={{
+                        background: "rgba(239,68,68,0.08)",
+                        border: "1px solid rgba(239,68,68,0.22)",
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
+
+                  {result && (
+                    <div
+                      className="p-3 rounded-lg text-[12px] text-emerald-300"
+                      style={{
+                        background: "rgba(34,197,94,0.08)",
+                        border: "1px solid rgba(34,197,94,0.22)",
+                      }}
+                    >
+                      ✅ Done. Deleted <strong>{result.deletedRows}</strong>{" "}
+                      progress rows. Epoch{" "}
+                      <code className="text-emerald-400">
+                        {new Date(result.epoch).toLocaleString()}
+                      </code>
+                      . Students will see 0% on their next page load; their
+                      local caches clear automatically.
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
