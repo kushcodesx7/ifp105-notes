@@ -154,6 +154,20 @@ export function useStudentProgress({
         }),
         signal: controller.signal,
       })
+        .then((res) => {
+          // `.catch` only fires on network errors — HTTP 401/500 resolve
+          // with res.ok = false. If we don't check res.ok, we silently
+          // lose the student's progress and they only notice on refresh
+          // (bug Apr 20). If the server rejected with 401 we flip the
+          // re-auth banner; the next refresh will retry the save via
+          // the loadProgress recovery branch.
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+              setNeedsReauth(true);
+              onAuthRequired?.();
+            }
+          }
+        })
         .catch(() => {})
         .finally(() => clearTimeout(timeout));
     },
@@ -194,10 +208,23 @@ export function useStudentProgress({
         }
 
         // ──── Silent-fail recovery ────
-        // First sync this session + empty server + localStorage has
-        // progress → almost certainly the saveToSupabase silent-fail
-        // bug (#118). Push local UP instead of wiping. Read from
-        // localStorage directly to dodge any state-timing surprise.
+        // First sync this session + localStorage has topics the server
+        // doesn't → the saveToSupabase silent-fail bug (#118) struck
+        // those topics. `.catch(() => {})` on the save fetch only swallows
+        // network errors, but HTTP 401/500 responses resolve with
+        // res.ok = false and we never check — so the client thinks
+        // "saved" when the server rejected.
+        //
+        // Previously the recovery only fired when the server had ZERO
+        // progress. That missed the common case: topics 2–3 fail to
+        // save, topic 4 saves — server has {4}, local has {2,3,4}, and
+        // the old logic would overwrite local with {4}, losing the
+        // student's previous completions (bug report Apr 20).
+        //
+        // New rule: on first load, UNION the two sets and push any
+        // local-only topics back up to the server. On subsequent loads
+        // the server is authoritative (so admin resets still work via
+        // the branch below).
         let localDoneFromLs = new Set<number>();
         try {
           const saved = localStorage.getItem(LS_KEY);
@@ -206,21 +233,28 @@ export function useStudentProgress({
             if (Array.isArray(parsed)) localDoneFromLs = new Set(parsed);
           }
         } catch {}
-        const isLikelySilentFailRecovery =
-          wasFirstLoad && remoteCount === 0 && localDoneFromLs.size > 0;
+        const localOnly = [...localDoneFromLs].filter(
+          (t) => !remoteDone.has(t)
+        );
+        const needsRecovery = wasFirstLoad && localOnly.length > 0;
 
-        if (isLikelySilentFailRecovery) {
-          for (const topicId of localDoneFromLs) {
+        if (needsRecovery) {
+          // Retry the failed saves. Fire-and-forget; if these fail
+          // silently again (persistent auth issue), the next refresh
+          // will retry — and setNeedsReauth in saveToSupabase will
+          // surface a banner if the token is missing.
+          for (const topicId of localOnly) {
             saveToSupabase({ topicId, completed: true });
           }
-          // Make sure React state reflects what's in localStorage.
-           
-          setDone(localDoneFromLs);
+          // UI shows both sets unioned so the student doesn't see
+          // their previously-completed topics vanish mid-session.
+          const merged = new Set<number>([...remoteDone, ...localDoneFromLs]);
+          setDone(merged);
           return;
         }
 
         // Normal path: server is the source of truth.
-         
+
         setDone(remoteDone);
 
         // Empty AFTER a previous successful sync → real admin reset.
