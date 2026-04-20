@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -31,22 +31,28 @@ export default function ModuleCard({
   lsKey,
   totalTopics,
 }: ModuleCardProps) {
-  // Read progress from localStorage in the lazy useState initializer
-  // instead of an effect. Localstorage is a synchronous external store
-  // and lazy initializers are React's blessed pattern for it — fixes
-  // the React Compiler's setState-in-effect flag.
-  const [progress] = useState<{ done: number; total: number } | null>(() => {
-    if (typeof window === "undefined" || !lsKey || !totalTopics) return null;
+  // Progress starts at null so the server-rendered HTML (no
+  // localStorage access on the server) matches the client's first
+  // paint. A useEffect then reads localStorage AFTER hydration and
+  // flips the state — avoiding the "server rendered HTML didn't
+  // match the client" hydration mismatch that used to fire from the
+  // lazy-init pattern here. Tradeoff: one extra render, but no
+  // hydration error and the progress bar animates in naturally.
+  const [progress, setProgress] = useState<
+    { done: number; total: number } | null
+  >(null);
+  useEffect(() => {
+    if (!lsKey || !totalTopics) return;
     try {
       const saved = localStorage.getItem(lsKey);
-      if (!saved) return null;
+      if (!saved) return;
       const completed = new Set(JSON.parse(saved));
-      if (completed.size === 0) return null;
-      return { done: completed.size, total: totalTopics };
+      if (completed.size === 0) return;
+      setProgress({ done: completed.size, total: totalTopics });
     } catch {
-      return null;
+      /* ignore — no progress shown */
     }
-  });
+  }, [lsKey, totalTopics]);
 
   const content = (
     <motion.div
