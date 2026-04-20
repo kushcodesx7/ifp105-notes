@@ -748,13 +748,52 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
               <div className="text-sm font-bold mb-0.5 text-red-300">
                 Reset all student progress
               </div>
-              <p className="text-[12px] text-zinc-500 leading-relaxed">
-                Wipes every row of <code className="text-zinc-400">student_progress</code>
-                 — completions, MCQ scores, Bloom&apos;s stats, everything.
-                Identity, roster, photos, and skills are preserved. Clients
-                automatically clear their localStorage on next load so nothing
-                re-uploads.
+              <p className="text-[12px] text-zinc-500 leading-relaxed mb-2">
+                Wipes every row of <code className="text-zinc-400">student_progress</code>{" "}
+                across every module. Clients clear their localStorage on
+                next load so nothing re-uploads.
               </p>
+              {/* Explicit what-is-wiped vs what-is-kept so the admin is
+                  never afraid of losing LinkedIn URLs, interest tags,
+                  profile photos, etc. This reset touches one table only. */}
+              <div className="grid sm:grid-cols-2 gap-2 mt-2 text-[11px]">
+                <div
+                  className="rounded-lg p-2.5"
+                  style={{
+                    background: "rgba(239,68,68,0.06)",
+                    border: "1px solid rgba(239,68,68,0.16)",
+                  }}
+                >
+                  <div className="font-bold text-red-300 mb-1">
+                    Wipes (module progress only)
+                  </div>
+                  <ul className="text-zinc-400 space-y-0.5 list-disc list-inside">
+                    <li>Topic completions</li>
+                    <li>MCQ scores</li>
+                    <li>Bloom&apos;s stats</li>
+                    <li>Confidence calibration</li>
+                    <li>Challenge attempts</li>
+                  </ul>
+                </div>
+                <div
+                  className="rounded-lg p-2.5"
+                  style={{
+                    background: "rgba(34,197,94,0.05)",
+                    border: "1px solid rgba(34,197,94,0.18)",
+                  }}
+                >
+                  <div className="font-bold text-emerald-300 mb-1">
+                    Keeps (everything else)
+                  </div>
+                  <ul className="text-zinc-400 space-y-0.5 list-disc list-inside">
+                    <li>Name, email, enrollment</li>
+                    <li>Photo, bio, LinkedIn</li>
+                    <li>Interest tags / skills</li>
+                    <li>Batch &amp; section</li>
+                    <li>Roll list &amp; sessions</li>
+                  </ul>
+                </div>
+              </div>
             </div>
             <button
               onClick={() => {
