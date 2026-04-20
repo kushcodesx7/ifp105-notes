@@ -57,31 +57,65 @@ export default function Flashcards({
     if (moduleNumber == null || topicId == null) return;
     let alive = true;
     const slug = courseSlug ?? CURRENT_COURSE_SLUG;
-    // `cache: "no-store"` bypasses the browser's HTTP cache so an admin
-    // editing a flashcard in the studio sees the change immediately on
-    // their next refresh. The server still sets a short CDN cache
-    // (s-maxage=30), which protects against Monday-morning traffic
-    // spikes without making admin edits invisible. Tried `cache:
-    // "default"` earlier — perf win was marginal vs the correctness
-    // problem of stale flashcards.
-    fetch(
-      `/api/public/flashcards/${moduleNumber}/${topicId}?course=${encodeURIComponent(slug)}`,
-      { cache: "no-store" }
-    )
-      .then((r) => (r.ok ? r.json() : { cards: null }))
-      .then((json: { cards: FlashcardData[] | null }) => {
+
+    // Fetch flashcards from the DB-override endpoint. Called on mount,
+    // every 15s thereafter, and on every tab/window focus — so an
+    // admin deleting a card in the studio propagates to every open
+    // student tab within at most 15s (or instantly on tab focus) WITHOUT
+    // the student needing to refresh. Cache is set to "no-store" so the
+    // browser + CDN can't serve a stale copy.
+    async function load() {
+      try {
+        const r = await fetch(
+          `/api/public/flashcards/${moduleNumber}/${topicId}?course=${encodeURIComponent(slug)}`,
+          { cache: "no-store" }
+        );
+        const json: { cards: FlashcardData[] | null } = r.ok
+          ? await r.json()
+          : { cards: null };
         if (!alive) return;
         setDbCards(json.cards);
         setDbFetched(true);
-      })
-      .catch(() => {
+      } catch {
         if (!alive) return;
-        // On network error, fall through silently to TS fallback.
-        setDbCards(null);
+        // Network failure → leave the last-known cards in place;
+        // next tick will retry. Don't wipe dbCards to null mid-session
+        // just because the server blipped.
         setDbFetched(true);
-      });
+      }
+    }
+
+    load();
+
+    // Poll every 15s. Short enough that a teacher deleting cards live
+    // in class sees students' decks converge fast; long enough that
+    // 200 tabs open on Monday morning don't hammer the endpoint
+    // (+ the 30s CDN cache absorbs most of it anyway).
+    const tick = setInterval(load, 15_000);
+
+    // Refetch the instant the student switches back to this tab —
+    // common pattern: teacher edits in one tab, flips to the student
+    // projector tab, and expects to see the change immediately.
+    const onFocus = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      load();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onFocus);
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onFocus);
+    }
+
     return () => {
       alive = false;
+      clearInterval(tick);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onFocus);
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onFocus);
+      }
     };
   }, [cardsProp, moduleNumber, topicId, courseSlug]);
 

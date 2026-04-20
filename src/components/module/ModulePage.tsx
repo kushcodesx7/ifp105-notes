@@ -168,14 +168,48 @@ export default function ModulePage({
   useEffect(() => {
     if (mcqDataProp) return; // eager path — nothing to fetch
     let alive = true;
-    import("@/data/load-mcq").then(async ({ loadMcqData }) => {
-      const data = await loadMcqData(moduleNumber);
-      if (!alive) return;
-      setMcqData(data);
-      setMcqReady(true);
-    });
+
+    async function load() {
+      try {
+        const { loadMcqData } = await import("@/data/load-mcq");
+        const data = await loadMcqData(moduleNumber);
+        if (!alive) return;
+        setMcqData(data);
+        setMcqReady(true);
+      } catch {
+        /* retry on the next tick */
+      }
+    }
+    load();
+
+    // Live-class admin deletes: re-pull MCQ data every 15s and on tab
+    // focus so a question the teacher removes propagates to student
+    // tabs without anyone refreshing. Matches the pattern added to
+    // Flashcards. McqQuiz's own fingerprint rehydration realigns
+    // saved answers when the question list changes — deleted Q5's
+    // answer silently drops, survivors keep theirs.
+    const tick = setInterval(load, 15_000);
+
+    const onFocus = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      load();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onFocus);
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onFocus);
+    }
+
     return () => {
       alive = false;
+      clearInterval(tick);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onFocus);
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onFocus);
+      }
     };
   }, [moduleNumber, mcqDataProp]);
 
