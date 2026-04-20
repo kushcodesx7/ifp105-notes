@@ -267,41 +267,53 @@ export default function ActiveNowWidget({ idToken }: Props) {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                className="flex items-center gap-3 p-2.5 rounded-xl"
-                style={{
-                  background: "rgba(16,185,129,0.04)",
-                  border: "1px solid rgba(16,185,129,0.12)",
-                }}
               >
-                <Avatar
-                  name={prettyName(s.name)}
-                  photoUrl={s.photoUrl}
-                  ageSec={liveAgeSec(s.lastActiveAt, nowMs)}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-semibold text-zinc-200 truncate flex items-center gap-1.5">
-                    {/* prettyName strips "888_" roll-prefix so the
-                        live widget reads "Kushagra" not "888_Kushagra". */}
-                    {prettyName(s.name)}
-                    {s.hidden && (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold tracking-wider">
-                        HIDDEN
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 truncate">
-                    {s.section || "no section"} ·{" "}
-                    <span className="text-emerald-400 font-medium">
-                      {formatAge(liveAgeSec(s.lastActiveAt, nowMs))}
-                    </span>
-                  </div>
-                </div>
+                {/* Whole card is the link — previous version only
+                    wrapped a tiny "→" arrow, so an admin had to aim
+                    for a 12x12px target on a phone. Teacher also
+                    reported that the destination dropped them on the
+                    /admin/people list WITHOUT opening the clicked
+                    student's drawer — because the query param was
+                    `?focus=` but /admin/people reads `?student=`.
+                    Fixed both here. */}
                 <Link
-                  href={`/admin/people?focus=${encodeURIComponent(s.email)}`}
-                  className="shrink-0 text-[10px] font-semibold text-zinc-400 hover:text-white px-2 py-1 rounded-md hover:bg-white/[0.06] transition-colors"
-                  title="Open this student in /admin/people"
+                  href={`/admin/people?student=${encodeURIComponent(s.email)}`}
+                  title={`Open ${prettyName(s.name)}'s profile`}
+                  className="flex items-center gap-3 p-2.5 rounded-xl transition-colors hover:bg-emerald-500/10 focus-glow"
+                  style={{
+                    background: "rgba(16,185,129,0.04)",
+                    border: "1px solid rgba(16,185,129,0.12)",
+                  }}
                 >
-                  →
+                  <Avatar
+                    name={prettyName(s.name)}
+                    photoUrl={s.photoUrl}
+                    ageSec={liveAgeSec(s.lastActiveAt, nowMs)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] font-semibold text-zinc-200 truncate flex items-center gap-1.5">
+                      {/* prettyName strips "888_" roll-prefix so the
+                          live widget reads "Kushagra" not "888_Kushagra". */}
+                      {prettyName(s.name)}
+                      {s.hidden && (
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold tracking-wider">
+                          HIDDEN
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 truncate">
+                      {s.section || "no section"} ·{" "}
+                      <span className="text-emerald-400 font-medium">
+                        {formatAge(liveAgeSec(s.lastActiveAt, nowMs))}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-[12px] text-zinc-500"
+                  >
+                    →
+                  </span>
                 </Link>
               </motion.div>
             ))}
