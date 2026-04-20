@@ -957,14 +957,36 @@ export default function McqQuiz({
               {answeredCount}/{total} answered · {total - answeredCount > 0 ? `${total - answeredCount} remaining` : "All done!"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {completed && (
-              <button
-                onClick={() => setViewMode("review")}
-                className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white/10 text-white/70 hover:text-white transition-colors"
-              >
-                Review All
-              </button>
+              <>
+                <button
+                  onClick={() => setViewMode("review")}
+                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white/10 text-white/70 hover:text-white transition-colors"
+                >
+                  Review All
+                </button>
+                {/* Prominent "Redo quiz" button in the QUIZ-MODE header.
+                    Shows whenever the topic is completed — same visual
+                    weight as the review-mode Redo button, same
+                    handler. Exists because the completed state
+                    previously only exposed a quiet reset icon that a
+                    panicked student couldn't find. Teacher spec:
+                    "make it easy to redo when the admin has deleted
+                    questions mid-session." */}
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="text-[11px] font-bold px-3 py-1 rounded-full text-white transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: "rgba(255,255,255,0.18)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                  title="Start this quiz over from scratch"
+                >
+                  ↻ Redo quiz
+                </button>
+              </>
             )}
             <div className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all ${
               score >= Math.ceil(total * 0.8)
