@@ -481,14 +481,32 @@ export default function McqQuiz({
   const isCorrect = picked === sq.ans;
 
   function handlePick(oi: number) {
-    if (isAnswered) return;
+    // Locking semantics: once the student has rated their confidence
+    // ("Guessing / Maybe / Pretty sure / Certain") we reveal the
+    // correct answer and lock the pick in place — changing it at that
+    // point would defeat the calibration metric. BUT if they've picked
+    // an option and just haven't rated confidence yet, we let them
+    // change their mind. Students consistently want to reconsider
+    // after the confidence picker opens; blocking them there is the
+    // scariest UX surface on the quiz.
+    if (confidenceRated) return;
+    // No-op click on the already-selected option.
+    if (picked === oi) return;
+
+    const correctIdx = shuffled[currentQ].ans;
+    const prevWasRight = picked !== null && picked === correctIdx;
+    const nextIsRight = oi === correctIdx;
+
     const newAnswered = [...answered];
     newAnswered[currentQ] = oi;
 
+    // Score delta accounts for the previous pick (if any) so that a
+    // right→wrong change decrements and a wrong→right change
+    // increments. Was: "score + 1 if correct" which over-counted when
+    // the student flipped right→wrong→right.
     let newScore = score;
-    if (shuffled[currentQ].ans === oi) {
-      newScore = score + 1;
-    }
+    if (!prevWasRight && nextIsRight) newScore = score + 1;
+    else if (prevWasRight && !nextIsRight) newScore = Math.max(0, score - 1);
 
     setAnswered(newAnswered);
     setScore(newScore);
@@ -945,14 +963,20 @@ export default function McqQuiz({
                     }
                   }
 
+                  // Options become clickable-to-change until the
+                  // student commits by rating their confidence. This
+                  // matches the new handlePick logic and lets a
+                  // student reconsider when the confidence picker
+                  // opens (previously a dead-end).
+                  const canChange = !confidenceRated;
                   return (
                     <motion.button
                       key={oi}
-                      whileHover={!isAnswered ? { x: 4 } : {}}
-                      whileTap={!isAnswered ? { scale: 0.98 } : {}}
-                      animate={isAnswered && isPicked ? (isCorrect ? { scale: [1, 1.02, 1] } : { x: [0, -4, 4, -3, 2, 0] }) : {}}
+                      whileHover={canChange ? { x: 4 } : {}}
+                      whileTap={canChange ? { scale: 0.98 } : {}}
+                      animate={isAnswered && isPicked && showFeedback ? (isCorrect ? { scale: [1, 1.02, 1] } : { x: [0, -4, 4, -3, 2, 0] }) : {}}
                       onClick={() => handlePick(oi)}
-                      disabled={isAnswered}
+                      disabled={!canChange}
                       className="w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left text-[13px] font-medium transition-all disabled:cursor-default focus-glow"
                       style={{ background: bg, border: `1px solid ${border}`, color }}
                     >
@@ -997,9 +1021,19 @@ export default function McqQuiz({
                       border: '1px solid rgba(99,102,241,0.2)',
                     }}
                   >
-                    <div className="text-[11px] text-zinc-400 mb-3">
+                    <div className="text-[11px] text-zinc-400 mb-1">
                       Before we reveal the answer —{" "}
                       <span className="text-white font-semibold">how sure are you?</span>
+                    </div>
+                    {/* Explicit escape hatch for students who want to
+                        reconsider their pick after seeing the
+                        confidence step. Picks stay editable until
+                        they rate confidence. Previously this wasn't
+                        discoverable; students thought they were
+                        locked in the moment they clicked an option. */}
+                    <div className="text-[10px] text-zinc-500 mb-3">
+                      Changed your mind? Tap another option above to
+                      switch your answer.
                     </div>
                     {/* 2x2 on small screens, 4-across from sm (640px) up.
                          Four labels on 375px were cramped and truncated. */}
