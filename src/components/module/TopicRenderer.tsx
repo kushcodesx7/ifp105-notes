@@ -213,7 +213,13 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-zinc-200 mb-0.5">{step.title}</h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">{step.description}</p>
+                {/* Match cards/era-cards: render inline HTML so authors
+                    can use <strong>, <em>, <mark> in step descriptions
+                    without seeing literal tags on screen. */}
+                <p
+                  className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+                  dangerouslySetInnerHTML={{ __html: step.description }}
+                />
               </div>
             </motion.div>
           ))}
