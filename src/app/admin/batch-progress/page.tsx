@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
+import { parseUtcIso } from "@/lib/parse-utc";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 
 interface SectionBreakdown {
@@ -379,7 +380,7 @@ export default function BatchProgressListPage() {
                   const daysAgo = s.lastActive
                     ? Math.floor(
                         // eslint-disable-next-line react-hooks/purity
-                        (Date.now() - new Date(s.lastActive).getTime()) /
+                        (Date.now() - parseUtcIso(s.lastActive)) /
                           86400000
                       )
                     : null;

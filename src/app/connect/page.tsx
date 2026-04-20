@@ -10,6 +10,7 @@ import { SKILLS, getSkill } from "@/lib/skills";
 import { sizedAvatar } from "@/lib/avatar";
 import { sectionColor } from "@/lib/sectionColors";
 import { prettyName, initials } from "@/lib/names";
+import { parseUtcIso } from "@/lib/parse-utc";
 
 interface Student {
   enrollmentNo: string;
@@ -33,7 +34,10 @@ interface Student {
 // shared with HomeConnectGlimpse + HomeActivityStrip + admin views).
 
 function daysSince(dateStr: string): number {
-  const t = new Date(dateStr).getTime();
+  // parseUtcIso — force UTC for naive Supabase timestamps so Tashkent
+  // (UTC+5) students don't see "joined 5h ago" for events that just
+  // happened now.
+  const t = parseUtcIso(dateStr);
   if (Number.isNaN(t)) return 9999;
   return Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24));
 }
@@ -142,7 +146,9 @@ export default function IFSConnectPage() {
   // Recently joined — top 5 most recent
   const recentlyJoined = useMemo(() => {
     return [...students]
-      .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
+      .sort(
+        (a, b) => parseUtcIso(b.addedAt) - parseUtcIso(a.addedAt)
+      )
       .slice(0, 5);
   }, [students]);
 

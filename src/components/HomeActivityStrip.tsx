@@ -20,8 +20,10 @@ interface ActivityEvent {
 
 // Palette from @/lib/sectionColors; prettyName/initials from @/lib/names.
 
+import { parseUtcIso } from "@/lib/parse-utc";
+
 function timeAgo(iso: string): string {
-  const then = new Date(iso).getTime();
+  const then = parseUtcIso(iso);
   if (!then || Number.isNaN(then)) return "";
   const secs = Math.max(0, Math.floor((Date.now() - then) / 1000));
   if (secs < 30) return "just now";

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
+import { parseUtcIso } from "@/lib/parse-utc";
 import ActiveNowWidget from "@/components/admin/ActiveNowWidget";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -70,7 +71,7 @@ function healthColor(pct: number): string {
 function daysAgo(dateStr: string | null): string {
   if (!dateStr) return "—";
   const d = Math.floor(
-    (Date.now() - new Date(dateStr).getTime()) / 86400000
+    (Date.now() - parseUtcIso(dateStr)) / 86400000
   );
   if (d <= 0) return "today";
   if (d === 1) return "1d";

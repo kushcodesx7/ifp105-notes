@@ -10,6 +10,7 @@ import StudentDrawer, { type AdminStudent } from "@/components/admin/StudentDraw
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { compareSections } from "@/lib/sections";
 import { sizedAvatar } from "@/lib/avatar";
+import { parseUtcIso } from "@/lib/parse-utc";
 
 // ─── Page ───────────────────────────────────────────────────────────
 
@@ -253,7 +254,7 @@ function PeoplePage() {
         // the admin home so the table feels like a continuation of it.
         // `nowTick` is used instead of Date.now() so render stays pure.
         const liveTs = (s: AdminStudent): number =>
-          s.lastActive ? new Date(s.lastActive).getTime() : 0;
+          s.lastActive ? parseUtcIso(s.lastActive) : 0;
         sorted.sort((a, b) => {
           const aLive = a.lastActive
             ? nowTick - liveTs(a) < LIVE_NOW_MS
@@ -474,7 +475,7 @@ function PeoplePage() {
                 const checked = selected.has(s.email);
                 const live =
                   s.lastActive &&
-                  nowTick - new Date(s.lastActive).getTime() < LIVE_NOW_MS;
+                  nowTick - parseUtcIso(s.lastActive) < LIVE_NOW_MS;
                 return (
                   <div
                     key={s.email}
@@ -741,7 +742,7 @@ function PeoplePage() {
                                   `nowTick` (updates every 30s) so render
                                   output is pure. */}
                               {s.lastActive &&
-                                nowTick - new Date(s.lastActive).getTime() <
+                                nowTick - parseUtcIso(s.lastActive) <
                                   LIVE_NOW_MS && (
                                   <span
                                     className="relative inline-flex h-2 w-2 shrink-0"
