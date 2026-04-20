@@ -102,8 +102,19 @@ interface McqQuizProps {
 
 const letters = ["A", "B", "C", "D"];
 
-// Deterministic shuffle so answers stay consistent for the same topic
-function shuffleQuestions(questions: Question[], seed: number): { opts: string[]; ans: number }[] {
+// Deterministic shuffle so answers stay consistent for the same topic.
+//
+// SHUFFLE V1 (legacy): kept verbatim so students with saved mid-quiz
+// state keep seeing their options in the same positions they picked
+// them. Had a latent bias — `(n * 2654435761) % 4` uses the LOW bits
+// of a multiplicative hash, which are NOT uniform (golden-ratio
+// multiplier is odd, so mod 2/4 just repeats the input's low bits).
+// Some users ended up seeing the correct answer at position A for
+// 30-40% of questions, defeating the anti-guessing intent.
+function shuffleQuestionsV1(
+  questions: Question[],
+  seed: number
+): { opts: string[]; ans: number }[] {
   return questions.map((q, qi) => {
     const indices = q.opts.map((_, i) => i);
     for (let i = indices.length - 1; i > 0; i--) {
@@ -117,6 +128,61 @@ function shuffleQuestions(questions: Question[], seed: number): { opts: string[]
   });
 }
 
+// Mulberry32: small, fast, uniformly-distributed PRNG. Seeded per-
+// question so the shuffle is deterministic (same user + same topic
+// always sees the same order), but uses the HIGH bits of a proper
+// avalanching hash for Fisher-Yates — giving a genuine ~25% per
+// position across the bank.
+function mulberry32(seed: number): () => number {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// SHUFFLE V2 (current): Fisher-Yates driven by mulberry32. Per-
+// question seed mixes the topic seed with qi via Math.imul so
+// different questions are genuinely independent.
+function shuffleQuestionsV2(
+  questions: Question[],
+  seed: number
+): { opts: string[]; ans: number }[] {
+  return questions.map((q, qi) => {
+    const rand = mulberry32((seed ^ Math.imul(qi + 1, 2654435761)) >>> 0);
+    const indices = q.opts.map((_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return {
+      opts: indices.map((i) => q.opts[i]),
+      ans: indices.indexOf(q.ans),
+    };
+  });
+}
+
+const CURRENT_SHUFFLE_VERSION = 2;
+
+// Dispatch helper: newer code passes no version and always gets V2;
+// rehydration passes the saved state's version (defaulting to 1 for
+// pre-v2 saves) so a student mid-quiz keeps seeing the same shuffle
+// their saved `answers[]` indices refer to. Without this guard, a
+// student who answered correctly in V1 would have their saved
+// indices re-interpreted against a V2 shuffle and their score would
+// silently change on refresh.
+function shuffleQuestions(
+  questions: Question[],
+  seed: number,
+  version: number = CURRENT_SHUFFLE_VERSION
+): { opts: string[]; ans: number }[] {
+  if (version <= 1) return shuffleQuestionsV1(questions, seed);
+  return shuffleQuestionsV2(questions, seed);
+}
+
 interface SavedQuizState {
   answers: (number | null)[];
   // Bloom's metacognition: capture self-rated confidence per question BEFORE
@@ -125,6 +191,11 @@ interface SavedQuizState {
   confidences?: (ConfidenceLevel | null)[];
   score: number;
   shuffleSeed: number;
+  // Which shuffleQuestions algorithm produced the positions that
+  // `answers` indices refer to. Missing = v1 (legacy). New saves
+  // always write CURRENT_SHUFFLE_VERSION so we can evolve the shuffle
+  // without silently breaking mid-quiz scores.
+  shuffleVersion?: number;
   completed: boolean;
   // Stable fingerprint per question (hash of q.q text). Present on states
   // saved by this app version and later; absent on older states. When
@@ -182,7 +253,14 @@ function rehydrateByFingerprint(
     // comparing them against `q.ans` (the unshuffled correct index)
     // mis-counts every question whose shuffle moved the answer from
     // position `q.ans`. This was the 3/6-when-all-6-right bug.
-    const shuffled = shuffleQuestions(currentQs, saved.shuffleSeed);
+    // Use whichever shuffle algorithm matches the saved answers'
+    // indices. Otherwise a student who picked correctly under V1
+    // would see their score change on refresh once V2 rolled out.
+    const shuffled = shuffleQuestions(
+      currentQs,
+      saved.shuffleSeed,
+      saved.shuffleVersion ?? 1
+    );
     let score = 0;
     currentQs.forEach((_, i) => {
       if (answers[i] != null && answers[i] === shuffled[i].ans) score++;
@@ -248,6 +326,7 @@ export default function McqQuiz({
   const initialState = useState(() => {
     const defaults = {
       shuffleSeed: (topicId * 1000 + moduleNumber) ^ userSalt,
+      shuffleVersion: CURRENT_SHUFFLE_VERSION,
       answers: new Array(total).fill(null) as (number | null)[],
       confidences: new Array(total).fill(null) as (ConfidenceLevel | null)[],
       score: 0,
@@ -263,6 +342,11 @@ export default function McqQuiz({
       const firstUnanswered = rehydrated.answers.findIndex((a) => a === null);
       return {
         shuffleSeed: saved.shuffleSeed,
+        // Preserve the saved shuffle version so the `answers[]` indices
+        // keep pointing to the correct option positions for this
+        // student's in-progress quiz. New saves below upgrade to the
+        // current version only after a reset/submit.
+        shuffleVersion: saved.shuffleVersion ?? 1,
         answers: rehydrated.answers,
         confidences: rehydrated.confidences,
         score: rehydrated.score,
@@ -276,6 +360,14 @@ export default function McqQuiz({
 
   // Load saved state or create fresh
   const [shuffleSeed, setShuffleSeed] = useState(initialState.shuffleSeed);
+  // Which shuffle algorithm version the current session's `answered[]`
+  // indices refer to. A fresh start writes CURRENT_SHUFFLE_VERSION; a
+  // session rehydrated from an old save keeps the saved version so the
+  // student's in-progress answers don't get silently re-interpreted
+  // against a new shuffle.
+  const [shuffleVersion, setShuffleVersion] = useState<number>(
+    initialState.shuffleVersion
+  );
   const [answered, setAnswered] = useState<(number | null)[]>(initialState.answers);
 
   // Per-question confidence (null until the student rates themselves).
@@ -290,8 +382,14 @@ export default function McqQuiz({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [viewMode, setViewMode] = useState<"quiz" | "review">("quiz");
 
-  // Shuffle options deterministically
-  const shuffled = useMemo(() => shuffleQuestions(questions, shuffleSeed), [questions, shuffleSeed]);
+  // Shuffle options deterministically. `shuffleVersion` stays v1 for
+  // in-progress legacy saves and is CURRENT_SHUFFLE_VERSION for fresh
+  // sessions — so a student mid-quiz never sees their options jump
+  // positions because of a rollout.
+  const shuffled = useMemo(
+    () => shuffleQuestions(questions, shuffleSeed, shuffleVersion),
+    [questions, shuffleSeed, shuffleVersion]
+  );
 
   // Count answered questions
   const answeredCount = answered.filter((a) => a !== null).length;
@@ -362,6 +460,9 @@ export default function McqQuiz({
           confidences: newConfidences,
           score: newScore,
           shuffleSeed,
+          // Persist the version so the next load uses the same shuffle
+          // the `answers[]` indices were picked against.
+          shuffleVersion,
           completed: isCompleted,
           // Store the current question set's fingerprints so a future
           // rehydrate can re-align across add/delete/reorder.
@@ -370,7 +471,7 @@ export default function McqQuiz({
         localStorage.setItem(LS_KEY, JSON.stringify(state));
       } catch {}
     },
-    [LS_KEY, shuffleSeed]
+    [LS_KEY, shuffleSeed, shuffleVersion]
   );
 
   const q = questions[currentQ];
@@ -448,6 +549,11 @@ export default function McqQuiz({
     setShowResult(false);
     setCompleted(false);
     setShuffleSeed(newSeed);
+    // A reset is a genuinely fresh start → adopt the current shuffle
+    // version. This is the only path that upgrades a legacy-v1 session
+    // to v2; in-progress quizzes keep their saved version to avoid
+    // silent score drift mid-attempt.
+    setShuffleVersion(CURRENT_SHUFFLE_VERSION);
     setViewMode("quiz");
     setShowResetConfirm(false);
     // Clear saved state
