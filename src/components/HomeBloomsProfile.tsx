@@ -221,30 +221,49 @@ function ShareProfileButton({
     ? `Just discovered my thinking profile on IFP105! Strongest at ${strongMeta.label} (${strongest.pct}%), weakest at ${weakMeta.label} (${weakest!.pct}%). Bloom's Taxonomy-based learning is changing how I study.${signoff}`
     : `Just discovered my thinking profile on IFP105! Strongest at ${strongMeta.label} (${strongest.pct}%). Bloom's Taxonomy-based learning is changing how I study.${signoff}`;
 
-  const url =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://ifp105-notes.vercel.app";
-
+  // Teacher's note (Apr 20, live class): do NOT attach the site URL
+  // to the LinkedIn post. Other schools were seeing the link preview
+  // and pulling the materials — we want the thinking profile shared
+  // as a caption + screenshot, NOT as a crawlable link. Replaced the
+  // share-offsite endpoint with the plain composer, and dropped the
+  // URL from the Web Share API payload so native-share sheets don't
+  // auto-attach a link card either. Students are prompted to paste
+  // the caption + screenshot their radar manually.
   async function handleShare() {
-    const shareData = {
-      title: "My IFP105 thinking profile",
-      text,
-      url,
-    };
-    // Prefer native share on mobile (better UX — picks Instagram, WA, etc)
+    // Copy the caption so "Start a post → paste" just works on the
+    // LinkedIn composer. Fail-safe: even if clipboard is blocked,
+    // we still open the composer — student can type manually.
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      /* clipboard may be blocked on old iOS Safari — ignore */
+    }
+
+    // Native share on mobile: omit the URL entirely so link previews
+    // never attach. Most native share sheets fall back to plain-text
+    // when url is missing, which is what we want.
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share(shareData);
+        await navigator.share({
+          title: "My IFP105 thinking profile",
+          text,
+        });
         return;
       } catch {
-        // user cancelled — fall through to LinkedIn
+        // user cancelled — fall through to LinkedIn composer
       }
     }
-    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-      url
-    )}&summary=${encodeURIComponent(text)}`;
-    window.open(shareUrl, "_blank", "noopener,noreferrer");
+
+    // LinkedIn: open the plain composer (shareActive=true) rather
+    // than the share-offsite endpoint. Share-offsite auto-scrapes
+    // the given URL and creates a crawlable link-card preview —
+    // exactly the behaviour the teacher wants to avoid. Composer
+    // opens empty + the caption is already on the clipboard.
+    window.open(
+      "https://www.linkedin.com/feed/?shareActive=true",
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   return (

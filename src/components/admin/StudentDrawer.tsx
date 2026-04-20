@@ -273,6 +273,7 @@ type ActionKind =
   | "change-email"
   | "change-name"
   | "reset-progress"
+  | "reset-module"
   | "unlink";
 
 function OverviewTab({
@@ -301,6 +302,10 @@ function OverviewTab({
   const [newRollListName, setNewRollListName] = useState(
     student.rollListName || ""
   );
+  // Per-module reset selector (default to Module 1). Admin picks which
+  // single module to wipe for this one student. The "Reset all quiz
+  // progress" row above still wipes every module in one shot.
+  const [resetModuleNumber, setResetModuleNumber] = useState<number>(1);
 
   // Reset form state when student changes
   useEffect(() => {
@@ -413,6 +418,30 @@ function OverviewTab({
       toast({
         kind: "success",
         message: `Reset · deleted ${data.deletedRows} rows (${data.deletedTopics} topics, ${data.deletedQuizzes} quizzes).`,
+      });
+      setPendingAction(null);
+      onMutated?.();
+    } catch (e) {
+      toast({ kind: "error", message: (e as Error).message });
+    }
+  }
+
+  /**
+   * Scoped variant of confirmResetProgress — wipes only the currently
+   * selected module's rows for this student. Powered by the same
+   * endpoint; `moduleNumber` narrows the scope server-side. Lets a
+   * teacher say "redo Module 3 only" without forcing a redo of
+   * everything else the student already finished.
+   */
+  async function confirmResetModule() {
+    try {
+      const data = await callApi("/api/admin/students/reset-progress", {
+        email: student.email,
+        moduleNumber: resetModuleNumber,
+      });
+      toast({
+        kind: "success",
+        message: `Module ${resetModuleNumber} reset · deleted ${data.deletedRows} rows (${data.deletedTopics} topics, ${data.deletedQuizzes} quizzes).`,
       });
       setPendingAction(null);
       onMutated?.();
@@ -595,8 +624,53 @@ function OverviewTab({
               border: "1px solid rgba(239,68,68,0.25)",
             }}
           >
-            Reset
+            Reset all
           </button>
+        </div>
+
+        {/* Per-module reset — narrower than "Reset all", lets a
+             teacher reset just one module for one student (e.g.
+             "redo Module 3"). Uses the same endpoint with an
+             optional moduleNumber in the body. */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] font-semibold text-zinc-200">
+              Reset one module
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              Wipes just the selected module for this student. Other
+              modules stay.
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <select
+              value={resetModuleNumber}
+              onChange={(e) =>
+                setResetModuleNumber(parseInt(e.target.value, 10))
+              }
+              className="text-[11px] font-semibold px-2 py-1.5 rounded-lg text-zinc-200 focus:outline-none"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  Module {n}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setPendingAction("reset-module")}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-red-300 transition-all active:scale-95"
+              style={{
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.25)",
+              }}
+            >
+              Reset
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -685,6 +759,17 @@ function OverviewTab({
         loading={loading}
         onCancel={() => setPendingAction(null)}
         onConfirm={confirmResetProgress}
+      />
+      <ConfirmDialog
+        open={pendingAction === "reset-module"}
+        title={`Reset Module ${resetModuleNumber} for ${student.name}?`}
+        description={`Deletes only Module ${resetModuleNumber}'s completed topics and quiz scores for this student. Other modules stay exactly as they are.`}
+        kind="danger"
+        confirmLabel={`Reset Module ${resetModuleNumber}`}
+        warning="Cannot be undone — student will need to redo this module."
+        loading={loading}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={confirmResetModule}
       />
       <ConfirmDialog
         open={pendingAction === "unlink"}
