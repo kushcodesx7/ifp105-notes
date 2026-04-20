@@ -260,7 +260,19 @@ export default function Flashcards({
   if (!resolved || resolved.length === 0) return null;
   const cards = resolved;
 
-  const card = cards[current];
+  // Clamp the current-card index inline. The useEffect above ALSO
+  // clamps `current`, but effects run AFTER render, so on the first
+  // render following a deck shrink (admin deleted cards, or DB
+  // override landed with fewer cards than the TS fallback) `current`
+  // could still point past the end — and `cards[current].front`
+  // throws "Cannot read properties of undefined (reading 'front')".
+  // Production bug seen Apr 20 during live class: saved current=6
+  // on a deck that's now 4 long. Defensive clamp here avoids the
+  // error-boundary fallback while the effect catches up on the
+  // next render.
+  const safeIdx = Math.min(Math.max(0, current), cards.length - 1);
+  const card = cards[safeIdx];
+  if (!card) return null;
 
   function flip() { setFlipped(!flipped); }
 
@@ -384,7 +396,7 @@ export default function Flashcards({
               >
                 <div className="text-[9px] font-bold tracking-widest uppercase mb-3"
                   style={{ color: flipped ? '#818CF8' : '#71717a' }}>
-                  {flipped ? "Answer" : "Question"} · {current + 1}/{cards.length}
+                  {flipped ? "Answer" : "Question"} · {safeIdx + 1}/{cards.length}
                 </div>
                 <div className={`text-base font-semibold leading-relaxed max-w-md ${
                   flipped ? 'text-indigo-200' : 'text-zinc-200'
