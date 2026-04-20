@@ -394,6 +394,12 @@ function TopicEditor({
   >("idle");
   const [blockSaveError, setBlockSaveError] = useState<string | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Separate debounce timer for the flashcards autosave. Must not
+  // share the blocks timer — otherwise fast-typing in one editor
+  // could cancel a pending save in the other.
+  const flashcardsAutosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const serverBlocks = detailData?.topic.contentJson;
   useEffect(() => {
@@ -419,7 +425,16 @@ function TopicEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(serverFlashcards)]);
 
-  async function saveFlashcards() {
+  /**
+   * Persist flashcards to the server. Accepts an optional `next` so
+   * the autosave path can pass the freshest state directly —
+   * relying on the closure-captured `flashcards` state would lose
+   * updates made between the debounce tick and the fetch starting.
+   * Omit the arg when triggered by the explicit Save button (which
+   * already reads from the same state).
+   */
+  async function saveFlashcards(next?: Flashcard[]) {
+    const payload = next ?? flashcards;
     setSavingFlashcards(true);
     try {
       const res = await fetch(
@@ -430,7 +445,7 @@ function TopicEditor({
             "Content-Type": "application/json",
             "x-id-token": idToken,
           },
-          body: JSON.stringify({ flashcardsJson: flashcards }),
+          body: JSON.stringify({ flashcardsJson: payload }),
         }
       );
       if (!res.ok) {
@@ -620,8 +635,21 @@ function TopicEditor({
           onChange={(next) => {
             setFlashcards(next);
             setFlashcardsDirty(true);
+            // Autosave — matches the content-blocks flow. Without this,
+            // a teacher deleting a card during class saw the card
+            // disappear from the editor but it stayed in the DB until
+            // they clicked Save, so student tabs never converged even
+            // after the live-poll fetch landed. 1.2s debounce so a
+            // burst of front/back edits coalesces into one PATCH.
+            if (flashcardsAutosaveTimer.current) {
+              clearTimeout(flashcardsAutosaveTimer.current);
+            }
+            flashcardsAutosaveTimer.current = setTimeout(
+              () => void saveFlashcards(next),
+              1200
+            );
           }}
-          onSave={saveFlashcards}
+          onSave={() => saveFlashcards()}
           saving={savingFlashcards}
           dirty={flashcardsDirty || detailData?.topic.flashcardsSource === "ts"}
         />
