@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/connect/glimpse
@@ -108,25 +109,33 @@ export async function GET(req: NextRequest) {
     })
     .slice(0, 3);
 
-  // All-time completion only for those up-to-3 emails — narrow query
+  // All-time completion only for those up-to-3 emails — narrow query.
+  // Grouped BY module so we can compute the module-weighted percentage
+  // (each of the 5 modules counts 20% toward overall). Old version
+  // just counted flat completions and divided by 48 total topics,
+  // which meant finishing Module 1's 11 topics = 23%, not 20% —
+  // teacher specifically asked for the even-weighted model.
   const topEmails = rankedTop
     .map((s) => s.email)
     .filter((e): e is string => !!e);
-  const allTimeDone: Record<string, number> = {};
+  const allTimeByModule: Record<string, Record<number, number>> = {};
   if (topEmails.length > 0) {
     const { data: allTimeRows } = await supabase
       .from("student_progress")
-      .select("student_email, completed")
+      .select("student_email, module_number, completed")
       .in("student_email", topEmails)
       .eq("completed", true);
     for (const row of allTimeRows || []) {
-      if (!row.student_email) continue;
-      allTimeDone[row.student_email] = (allTimeDone[row.student_email] || 0) + 1;
+      if (!row.student_email || typeof row.module_number !== "number") continue;
+      const byMod =
+        allTimeByModule[row.student_email] ??
+        (allTimeByModule[row.student_email] = {});
+      byMod[row.module_number] = (byMod[row.module_number] || 0) + 1;
     }
   }
 
   const topLearners = rankedTop.map((s) => {
-    const allTime = s.email ? allTimeDone[s.email] || 0 : 0;
+    const byMod = s.email ? allTimeByModule[s.email] || {} : {};
     return {
       enrollmentNo: s.enrollment_no,
       name: preferName(s),
@@ -134,7 +143,8 @@ export async function GET(req: NextRequest) {
       photoUrl: s.photo_url,
       skills: (s as { skills?: string[] }).skills || [],
       lastThree: (s.enrollment_no || "").slice(-3),
-      completionPct: Math.min(100, Math.round((allTime / TOTAL_TOPICS) * 100)),
+      // 5 modules × 20% = 100%. Module 1 complete → 20 exactly.
+      completionPct: Math.min(100, moduleWeightedPct(byMod)),
       topicsThisWeek: s.email ? weeklyDone[s.email] || 0 : 0,
     };
   });

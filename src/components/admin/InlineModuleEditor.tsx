@@ -649,6 +649,18 @@ function TopicEditor({
               1200
             );
           }}
+          onImmediateChange={(next) => {
+            // Structural change (add / delete / reorder). Cancel any
+            // pending text-edit debounce and fire the save right now
+            // so closing the tab immediately can't lose the delete.
+            if (flashcardsAutosaveTimer.current) {
+              clearTimeout(flashcardsAutosaveTimer.current);
+              flashcardsAutosaveTimer.current = null;
+            }
+            setFlashcards(next);
+            setFlashcardsDirty(true);
+            void saveFlashcards(next);
+          }}
           onSave={() => saveFlashcards()}
           saving={savingFlashcards}
           dirty={flashcardsDirty || detailData?.topic.flashcardsSource === "ts"}

@@ -31,3 +31,36 @@ export const MODULE_TOTALS: Record<number, number> = Object.fromEntries(
 export function getModule(id: number): ModuleMeta | undefined {
   return MODULES.find((m) => m.id === id);
 }
+
+/**
+ * Module-weighted completion percentage.
+ *
+ * Every module counts equally (with 5 modules, each = 20% of overall
+ * completion). A student who finishes Module 1 sees 20%, not
+ * "11/48 = 23%". Rationale: the teacher's mental model is
+ * "how many modules done?" and uneven topic counts per module made
+ * the flat percentage confusing — finishing the 11-topic Module 1
+ * read higher than finishing the 7-topic Module 3 despite being one
+ * module either way.
+ *
+ * Usage:
+ *   moduleWeightedPct({ 1: 11, 2: 0, 3: 0, 4: 0, 5: 0 }) // 20
+ *   moduleWeightedPct({ 1: 11, 2: 9, 3: 0, 4: 0, 5: 0 }) // 40
+ *   moduleWeightedPct({ 1: 5,  2: 0, 3: 0, 4: 0, 5: 0 }) // 9
+ *     (5 of 11 = 45% of Module 1 = 9% of overall)
+ */
+export function moduleWeightedPct(
+  completedByModule: Record<number, number>
+): number {
+  if (MODULES.length === 0) return 0;
+  const perModuleWeight = 100 / MODULES.length;
+  let total = 0;
+  for (const m of MODULES) {
+    const done = completedByModule[m.id] || 0;
+    const clampedDone = Math.min(done, m.topicCount);
+    if (m.topicCount > 0) {
+      total += (clampedDone / m.topicCount) * perModuleWeight;
+    }
+  }
+  return Math.round(total);
+}

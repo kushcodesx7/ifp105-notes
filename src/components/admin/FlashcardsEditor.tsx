@@ -59,6 +59,15 @@ interface Props {
   onChange: (next: Flashcard[]) => void;
   /** Called when the parent should flush changes to the server. */
   onSave: () => Promise<void> | void;
+  /**
+   * Optional: called for STRUCTURAL changes (add / delete / reorder)
+   * that should save RIGHT NOW rather than wait for the text-edit
+   * debounce. If omitted we fall back to onChange (parent's normal
+   * debounced flow). Teacher feedback Apr 20: deleting a card and
+   * immediately closing admin cancelled the pending debounce and
+   * the delete never persisted — structural ops need to fire synchronously.
+   */
+  onImmediateChange?: (next: Flashcard[]) => void;
   /** True while a save is in flight — disables the Save button. */
   saving: boolean;
   /** True when `value` differs from what the server last confirmed. */
@@ -69,9 +78,14 @@ export default function FlashcardsEditor({
   value,
   onChange,
   onSave,
+  onImmediateChange,
   saving,
   dirty,
 }: Props) {
+  // Emit a value via the "save right now" channel if the parent wired
+  // it up; otherwise fall back to the normal (debounced) channel so
+  // this component is still drop-in compatible with any older caller.
+  const emitImmediate = onImmediateChange ?? onChange;
   const [justAddedIdx, setJustAddedIdx] = useState<number | null>(null);
   const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
   const frontRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
@@ -102,7 +116,10 @@ export default function FlashcardsEditor({
 
   function addCard() {
     const newLive = [...live, { front: "", back: "" } as Flashcard];
-    onChange(compose(newLive, value));
+    // Structural change — fire the immediate save path so the new
+    // (empty) card lands in the DB right away. Front/back edits
+    // that follow will debounce normally.
+    emitImmediate(compose(newLive, value));
     setJustAddedIdx(newLive.length - 1);
   }
 
@@ -122,7 +139,13 @@ export default function FlashcardsEditor({
     const newLive = live.filter((_, idx) => idx !== confirmDeleteIdx);
     // Append the trashed card to the existing trash list (newest last)
     // so /admin/tools/trash can sort by deletedAt DESC.
-    onChange([...newLive, ...trashOf(value), trashedCard]);
+    //
+    // IMPORTANT: deletes fire through the IMMEDIATE save channel. The
+    // old path debounced the save by 1.2s — so an admin who deleted a
+    // card and closed the tab within that window lost the delete
+    // entirely (teacher report Apr 20). Structural changes must
+    // commit right away.
+    emitImmediate([...newLive, ...trashOf(value), trashedCard]);
     setConfirmDeleteIdx(null);
   }
 
@@ -131,7 +154,9 @@ export default function FlashcardsEditor({
     if (j < 0 || j >= live.length) return;
     const newLive = [...live];
     [newLive[i], newLive[j]] = [newLive[j], newLive[i]];
-    onChange(compose(newLive, value));
+    // Reorder is also structural — save immediately so refreshing
+    // won't rewind the order.
+    emitImmediate(compose(newLive, value));
   }
 
   return (
