@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { prettyName } from "@/lib/names";
+import { parseUtcIso } from "@/lib/parse-utc";
 
 // "Live now" widget for the admin home page.
 //
@@ -272,13 +274,15 @@ export default function ActiveNowWidget({ idToken }: Props) {
                 }}
               >
                 <Avatar
-                  name={s.name}
+                  name={prettyName(s.name)}
                   photoUrl={s.photoUrl}
                   ageSec={liveAgeSec(s.lastActiveAt, nowMs)}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-semibold text-zinc-200 truncate flex items-center gap-1.5">
-                    {s.name}
+                    {/* prettyName strips "888_" roll-prefix so the
+                        live widget reads "Kushagra" not "888_Kushagra". */}
+                    {prettyName(s.name)}
                     {s.hidden && (
                       <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold tracking-wider">
                         HIDDEN
@@ -364,17 +368,34 @@ function Avatar({
   );
 }
 
+// Friendly relative-time string that cascades into hours & days.
+// Old version said "300m ago" for anything > 60 minutes, which looked
+// like a bug to users. New cascade:
+//   <30s        → "just now"
+//   30-59s      → "45s ago"
+//   1m          → "1 min ago"
+//   2-59m       → "17 min ago"
+//   60m         → "1 hour ago"
+//   1-23h       → "5 hours ago"
+//   24h         → "1 day ago"
+//   ≥2 days     → "3 days ago"
 function formatAge(sec: number): string {
   if (sec < 30) return "just now";
   if (sec < 60) return `${sec}s ago`;
   const min = Math.floor(sec / 60);
-  if (min === 1) return "1m ago";
-  return `${min}m ago`;
+  if (min < 60) return min === 1 ? "1 min ago" : `${min} min ago`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "1 day ago" : `${days} days ago`;
 }
 
 // Compute age against the React-state-tracked `nowMs` so the displayed
 // label updates every 10s (the heartbeat above) instead of being frozen
 // to whatever the server snapshotted at fetch time.
+// Uses parseUtcIso so naive Supabase timestamps (no `Z` suffix) don't
+// get parsed as local time — otherwise a Tashkent admin (UTC+5) sees
+// events that just happened as "5 hours ago" / "300m ago".
 function liveAgeSec(lastActiveAt: string, nowMs: number): number {
-  return Math.max(0, Math.floor((nowMs - new Date(lastActiveAt).getTime()) / 1000));
+  return Math.max(0, Math.floor((nowMs - parseUtcIso(lastActiveAt)) / 1000));
 }
