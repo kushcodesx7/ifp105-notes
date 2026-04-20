@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
+import { moduleWeightedPct } from "@/lib/modules";
 import { verifyGoogleIdToken } from "@/lib/verify-google-token";
 import { isAdminEmail } from "@/lib/admins";
 import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -69,10 +70,13 @@ export async function GET(req: NextRequest) {
   if (section) rollQuery.eq("section", section);
 
   // Pull completion data so each card can show a progress bar.
-  // Only the minimum columns we need to compute a percentage.
+  // Include module_number so the percentage can use the module-weighted
+  // formula (each module = 100/MODULES.length of overall), not a flat
+  // done/TOTAL_TOPICS. Teacher wants 1 module done = 20% exactly, not
+  // the uneven "11 of 48 = 23%" the flat formula produced.
   const progressQuery = supabase
     .from("student_progress")
-    .select("student_email, completed");
+    .select("student_email, module_number, completed");
 
   // All three queries in parallel (borrowed from the admin perf work)
   const [studentsRes, rollRes, progressRes] = await Promise.all([
@@ -110,11 +114,17 @@ export async function GET(req: NextRequest) {
     rollNameByKey.set(key, r.name);
   }
 
-  // Aggregate per-email completion count
-  const doneByEmail: Record<string, number> = {};
+  // Aggregate per-email BY MODULE so we can feed the module-weighted
+  // percentage helper. Flat "count of completed rows" would hit the
+  // same uneven-module bias we fixed on /api/connect/glimpse.
+  const doneByEmailByModule: Record<string, Record<number, number>> = {};
   for (const row of progressRes.data || []) {
     if (!row.student_email || !row.completed) continue;
-    doneByEmail[row.student_email] = (doneByEmail[row.student_email] || 0) + 1;
+    if (typeof row.module_number !== "number") continue;
+    const byMod =
+      doneByEmailByModule[row.student_email] ??
+      (doneByEmailByModule[row.student_email] = {});
+    byMod[row.module_number] = (byMod[row.module_number] || 0) + 1;
   }
 
   // Filter out test/hidden sections before mapping — unless the caller is
@@ -133,8 +143,11 @@ export async function GET(req: NextRequest) {
   // client-side `prettyName()` helper strips numeric prefixes from the
   // legacy format — it's a no-op on the real name path.
   const students = visibleStudentRows.map((s) => {
-    const done = s.email ? doneByEmail[s.email] || 0 : 0;
-    const completionPct = Math.min(100, Math.round((done / TOTAL_TOPICS) * 100));
+    const byMod = s.email ? doneByEmailByModule[s.email] || {} : {};
+    // Each module contributes 20% to overall completion (5 modules ×
+    // 20% = 100%). Matches the teacher's mental model and the fixed
+    // glimpse endpoint.
+    const completionPct = Math.min(100, moduleWeightedPct(byMod));
     const rollKey = `${s.batch_id || ""}__${s.section || ""}__${
       s.enrollment_no || ""
     }`;

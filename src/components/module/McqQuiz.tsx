@@ -769,6 +769,25 @@ export default function McqQuiz({
               }`}>
                 {score}/{total}
               </div>
+              {/* Prominent "Redo" affordance in the review header.
+                  The plain "Reset" button was harder to find than it
+                  should have been for a scared 17-year-old who wants
+                  to improve their score. Explicit white-on-indigo
+                  pill reads as a first-class action, not a destructive
+                  undo — opens a confirm dialog via the existing
+                  resetQuiz flow. */}
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="text-[11px] font-bold px-3 py-1 rounded-full text-white transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: "rgba(255,255,255,0.18)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  backdropFilter: "blur(8px)",
+                }}
+                title="Take this quiz again"
+              >
+                ↻ Redo quiz
+              </button>
             </div>
           </div>
           {/* Full progress bar */}

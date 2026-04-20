@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -737,6 +737,13 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Preview: how many rows the CURRENT scope would delete if we
+  // pulled the trigger right now. Refetched whenever moduleScope /
+  // topicScope changes so the admin sees the blast radius BEFORE
+  // typing the arm phrase. Null = loading / not yet fetched.
+  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // Restorable list
   const [restorable, setRestorable] = useState<RestorableReset[] | null>(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
@@ -752,6 +759,41 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
     if (idToken) h["x-id-token"] = idToken;
     return h;
   }, [idToken]);
+
+  // Dry-run count: show the admin exactly how many progress rows
+  // their current scope would delete BEFORE they type the arm
+  // phrase. Avoids the "wait, did I mean Module 3 or Topic 3?" mis-
+  // scope panic during live class. Fires on every scope change AND
+  // when the card opens for the first time.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    const body: { moduleNumber?: number; topicId?: number } = {};
+    if (moduleScope !== "all") {
+      body.moduleNumber = parseInt(moduleScope, 10);
+      if (topicScope != null) body.topicId = topicScope;
+    }
+    setPreviewLoading(true);
+    fetch("/api/admin/students/preview-reset", {
+      method: "POST",
+      headers: fetchHeaders,
+      body: JSON.stringify(body),
+    })
+      .then((r) => (r.ok ? r.json() : { count: null }))
+      .then((json) => {
+        if (!alive) return;
+        setPreviewCount(typeof json.count === "number" ? json.count : null);
+      })
+      .catch(() => {
+        if (alive) setPreviewCount(null);
+      })
+      .finally(() => {
+        if (alive) setPreviewLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, moduleScope, topicScope, fetchHeaders]);
 
   // Load the restorable list once the card opens, and refresh after
   // every reset/restore so the UI stays in sync without a page reload.
@@ -1037,6 +1079,49 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                           ? `Wipes only Module ${moduleScope} Topic ${topicScope} for every student. Other topics + modules untouched.`
                           : `Wipes only Module ${moduleScope} for every student. Other modules untouched.`}
                     </div>
+                  </div>
+
+                  {/* Blast-radius preview. Re-fetched on every scope
+                      change, so the teacher always sees the exact
+                      count that would be deleted for the CURRENT
+                      selection. Empty-state (0 rows) still shows so
+                      the admin knows the scope is valid but nothing
+                      matches. Null = fetch error; we hide rather
+                      than lie about a number. */}
+                  <div
+                    className="rounded-lg px-3 py-2 text-[12px]"
+                    style={{
+                      background:
+                        previewCount != null && previewCount > 0
+                          ? "rgba(239,68,68,0.06)"
+                          : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${
+                        previewCount != null && previewCount > 0
+                          ? "rgba(239,68,68,0.22)"
+                          : "rgba(255,255,255,0.06)"
+                      }`,
+                    }}
+                  >
+                    {previewLoading ? (
+                      <span className="text-zinc-500">
+                        Counting rows in scope…
+                      </span>
+                    ) : previewCount == null ? (
+                      <span className="text-zinc-500">
+                        Couldn&apos;t preview row count. The reset will still
+                        run — you just won&apos;t see the number first.
+                      </span>
+                    ) : previewCount === 0 ? (
+                      <span className="text-emerald-300">
+                        ✓ Nothing to delete — scope is empty. No rows match.
+                      </span>
+                    ) : (
+                      <span className="text-red-300">
+                        ⚠️ Will delete{" "}
+                        <strong>{previewCount.toLocaleString()}</strong>{" "}
+                        progress rows matching this scope.
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-zinc-500 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
