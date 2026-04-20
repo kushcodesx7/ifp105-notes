@@ -65,7 +65,13 @@ function RenderBlock({ block }: { block: ContentBlock }) {
             >
               <span className="text-xl mb-2 block">{card.icon}</span>
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">{card.description}</p>
+              {/* description may include safe inline HTML (e.g. <strong>,
+                  <em>, <mark>). Match the text-block pattern so bold
+                  actually renders bold instead of showing literal tags. */}
+              <p
+                className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: card.description }}
+              />
               {card.tag && (
                 <span
                   className="inline-block mt-2 text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
@@ -101,7 +107,11 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               <span className="text-xl mb-2 block">{card.icon}</span>
               <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1">{card.period}</div>
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">{card.description}</p>
+              {/* Same inline-HTML support as the regular `cards` block. */}
+              <p
+                className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: card.description }}
+              />
               <div className="text-xs font-semibold mt-2 pt-2 text-zinc-500" style={{ borderTop: '1px solid #2a2a33' }}>
                 {card.limitation}
               </div>
