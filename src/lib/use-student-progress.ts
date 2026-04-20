@@ -239,15 +239,30 @@ export function useStudentProgress({
         const needsRecovery = wasFirstLoad && localOnly.length > 0;
 
         if (needsRecovery) {
-          // Retry the failed saves. Fire-and-forget; if these fail
-          // silently again (persistent auth issue), the next refresh
-          // will retry — and setNeedsReauth in saveToSupabase will
-          // surface a banner if the token is missing.
-          for (const topicId of localOnly) {
-            saveToSupabase({ topicId, completed: true });
+          // Retry the failed saves ONLY if we have an id token right
+          // now. Google ID tokens are in-memory only — on every hard
+          // refresh the in-memory token is gone until the next sign-in
+          // (or Google One-Tap silent re-auth). If we called
+          // saveToSupabase here without a token, the `!token` branch
+          // inside saveToSupabase would pop the LoginPrompt on every
+          // hard refresh for any student who has local progress — not
+          // what we want. Instead, show the merged UI set so they see
+          // their topics, and defer the retry until they re-authenticate
+          // (the next loadProgress on focus will re-enter this path
+          // with a valid token and then push the saves).
+          //
+          // Password-login users still trigger the retry because their
+          // token IS persisted to localStorage and getIdToken() returns
+          // it across refreshes.
+          const tokenForRetry = getIdToken();
+          if (tokenForRetry) {
+            for (const topicId of localOnly) {
+              saveToSupabase({ topicId, completed: true });
+            }
           }
           // UI shows both sets unioned so the student doesn't see
-          // their previously-completed topics vanish mid-session.
+          // their previously-completed topics vanish mid-session, even
+          // if we couldn't push them up this load.
           const merged = new Set<number>([...remoteDone, ...localDoneFromLs]);
           setDone(merged);
           return;
