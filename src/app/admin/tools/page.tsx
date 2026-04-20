@@ -134,6 +134,7 @@ const ACTION_META: Record<
   change_name: { icon: "🪪", label: "Name changed", color: "#818CF8" },
   reset_progress: { icon: "🔄", label: "Progress reset", color: "#F87171" },
   reset_progress_all: { icon: "🧹", label: "All progress wiped", color: "#EF4444" },
+  restore_progress_all: { icon: "♻️", label: "Progress restored", color: "#34D399" },
   unlink: { icon: "🔗", label: "Account unlinked", color: "#F87171" },
   delete_student: { icon: "🗑", label: "Student deleted", color: "#F87171" },
   create_batch: { icon: "🎓", label: "Batch created", color: "#34D399" },
@@ -684,18 +685,67 @@ function MigrateTsFlashcardsCard({
 //      be deleted AFTER a preflight request.
 //   4. On success the input is cleared and the card collapses so you
 //      can't accidentally re-run it.
+interface RestorableReset {
+  id: number;
+  createdAt: string;
+  actorEmail: string;
+  moduleNumber: number | null;
+  deletedRows: number;
+  scope: string;
+  snapshotSize: number;
+}
+
 function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   const [open, setOpen] = useState(false);
   const [phrase, setPhrase] = useState("");
+  const [moduleScope, setModuleScope] = useState<"all" | "1" | "2" | "3" | "4" | "5">("all");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<{
     deletedRows: number;
     epoch: string;
+    actionId: number;
+    scope: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Restorable list
+  const [restorable, setRestorable] = useState<RestorableReset[] | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+
   const ARM_PHRASE = "RESET ALL PROGRESS";
   const armed = phrase === ARM_PHRASE;
+
+  const fetchHeaders = useMemo(() => {
+    const h: Record<string, string> = { "content-type": "application/json" };
+    if (idToken) h["x-id-token"] = idToken;
+    return h;
+  }, [idToken]);
+
+  // Load the restorable list once the card opens, and refresh after
+  // every reset/restore so the UI stays in sync without a page reload.
+  async function loadRestorable() {
+    setRestoreLoading(true);
+    setRestoreError(null);
+    try {
+      const res = await fetch("/api/admin/students/restorable-resets", {
+        headers: fetchHeaders,
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setRestoreError(json.error || `HTTP ${res.status}`);
+      } else {
+        setRestorable(json.rows || []);
+      }
+    } catch (e) {
+      setRestoreError((e as Error).message);
+    } finally {
+      setRestoreLoading(false);
+    }
+  }
 
   async function run() {
     if (!armed) return;
@@ -703,26 +753,61 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
     setError(null);
     setResult(null);
     try {
-      const headers: Record<string, string> = {
-        "content-type": "application/json",
+      const body: { confirm: string; moduleNumber?: number } = {
+        confirm: ARM_PHRASE,
       };
-      if (idToken) headers["x-id-token"] = idToken;
+      if (moduleScope !== "all") body.moduleNumber = parseInt(moduleScope, 10);
+
       const res = await fetch("/api/admin/students/reset-all-progress", {
         method: "POST",
-        headers,
-        body: JSON.stringify({ confirm: ARM_PHRASE }),
+        headers: fetchHeaders,
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error || `HTTP ${res.status}`);
       } else {
-        setResult({ deletedRows: json.deletedRows, epoch: json.epoch });
+        setResult({
+          deletedRows: json.deletedRows,
+          epoch: json.epoch,
+          actionId: json.actionId,
+          scope: json.scope,
+        });
         setPhrase("");
+        // Refresh the restore list so the just-created row shows up
+        // with a Restore button next to it.
+        loadRestorable();
       }
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function runRestore(id: number) {
+    setRestoringId(id);
+    setRestoreError(null);
+    setRestoreSuccess(null);
+    try {
+      const res = await fetch("/api/admin/students/restore-progress", {
+        method: "POST",
+        headers: fetchHeaders,
+        body: JSON.stringify({ actionId: id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setRestoreError(json.error || `HTTP ${res.status}`);
+      } else {
+        setRestoreSuccess(
+          `♻️ Restored ${json.restoredRows} progress rows from reset #${id}.`
+        );
+        loadRestorable();
+      }
+    } catch (e) {
+      setRestoreError((e as Error).message);
+    } finally {
+      setRestoringId(null);
     }
   }
 
@@ -797,10 +882,15 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
             </div>
             <button
               onClick={() => {
-                setOpen((v) => !v);
+                const next = !open;
+                setOpen(next);
                 setPhrase("");
                 setError(null);
                 setResult(null);
+                // Fetch the restore list the first time the card
+                // opens so a teacher who just wiped can immediately
+                // undo without clicking refresh.
+                if (next && restorable === null) loadRestorable();
               }}
               className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
               style={{
@@ -825,8 +915,46 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                 className="overflow-hidden"
               >
                 <div className="mt-4 pt-4 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="text-[11px] text-zinc-500">
-                    To arm this button, type{" "}
+                  {/* Scope selector: which module(s) to wipe. "All" is
+                      the nuclear option; 1-5 wipes just that module's
+                      rows for every student. Every scope is snapshot-
+                      backed via admin_actions so restore works the
+                      same regardless of scope. */}
+                  <div>
+                    <div className="text-[11px] text-zinc-400 font-semibold mb-1.5">
+                      Scope
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(["all", "1", "2", "3", "4", "5"] as const).map((k) => {
+                        const label = k === "all" ? "All modules" : `Module ${k}`;
+                        const isActive = moduleScope === k;
+                        return (
+                          <button
+                            key={k}
+                            onClick={() => setModuleScope(k)}
+                            className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
+                            style={{
+                              background: isActive
+                                ? "linear-gradient(135deg, #EF4444, #B91C1C)"
+                                : "rgba(255,255,255,0.04)",
+                              color: isActive ? "#fff" : "#A1A1AA",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="text-[11px] text-zinc-500 mt-1.5">
+                      {moduleScope === "all"
+                        ? "Wipes every module for every student."
+                        : `Wipes only Module ${moduleScope} for every student. Other modules untouched.`}
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-zinc-500 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                    To arm the button, type{" "}
                     <code className="px-1.5 py-0.5 rounded bg-white/[0.06] text-red-300 font-semibold">
                       {ARM_PHRASE}
                     </code>{" "}
@@ -863,7 +991,9 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                     {running
                       ? "Wiping…"
                       : armed
-                        ? "🧹  Wipe every student's progress"
+                        ? moduleScope === "all"
+                          ? "🧹  Wipe every student's progress (all modules)"
+                          : `🧹  Wipe Module ${moduleScope} for every student`
                         : "Type the phrase above to enable"}
                   </button>
 
@@ -888,14 +1018,92 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                       }}
                     >
                       ✅ Done. Deleted <strong>{result.deletedRows}</strong>{" "}
-                      progress rows. Epoch{" "}
-                      <code className="text-emerald-400">
-                        {new Date(result.epoch).toLocaleString()}
-                      </code>
-                      . Students will see 0% on their next page load; their
-                      local caches clear automatically.
+                      rows (scope: <code>{result.scope}</code>, reset id{" "}
+                      <strong>#{result.actionId}</strong>). Students will
+                      see 0% on next page load; local caches auto-clear.
+                      You can still undo this from the bin below.
                     </div>
                   )}
+
+                  {/* ─── Restore bin ─────────────────────────────────
+                      Every reset above stores a snapshot of the
+                      deleted rows in its admin_actions.details JSON.
+                      This panel lists reset actions that haven't been
+                      restored yet, with a single-click Undo button
+                      per entry. Once restored, the entry drops out
+                      of the list (but the underlying audit row stays,
+                      marked restored: true, for history). */}
+                  <div className="pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                        🗑 Recent resets (undo bin)
+                      </div>
+                      <button
+                        onClick={loadRestorable}
+                        disabled={restoreLoading}
+                        className="text-[10px] text-zinc-500 hover:text-zinc-300 disabled:opacity-40"
+                      >
+                        {restoreLoading ? "Refreshing…" : "Refresh"}
+                      </button>
+                    </div>
+                    {restoreError && (
+                      <div className="p-2 rounded-lg text-[11px] text-red-300" style={{ background: "rgba(239,68,68,0.08)" }}>
+                        {restoreError}
+                      </div>
+                    )}
+                    {restoreSuccess && (
+                      <div className="p-2 rounded-lg text-[11px] text-emerald-300 mb-2" style={{ background: "rgba(34,197,94,0.08)" }}>
+                        {restoreSuccess}
+                      </div>
+                    )}
+                    {restorable !== null && restorable.length === 0 && !restoreLoading && (
+                      <div className="text-[11px] text-zinc-500 italic py-2">
+                        Nothing to restore yet. Resets you perform will
+                        appear here with a one-click Undo.
+                      </div>
+                    )}
+                    {restorable && restorable.length > 0 && (
+                      <div className="space-y-1.5">
+                        {restorable.map((r) => (
+                          <div
+                            key={r.id}
+                            className="flex items-center gap-3 p-2.5 rounded-lg"
+                            style={{
+                              background: "rgba(255,255,255,0.02)",
+                              border: "1px solid rgba(255,255,255,0.06)",
+                            }}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12px] font-semibold text-zinc-200 truncate">
+                                {r.moduleNumber != null
+                                  ? `Module ${r.moduleNumber} reset`
+                                  : "All-modules reset"}{" "}
+                                <span className="text-zinc-500 font-normal">
+                                  · {r.deletedRows} rows
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                by {r.actorEmail} ·{" "}
+                                {new Date(r.createdAt).toLocaleString()} ·
+                                id #{r.id}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => runRestore(r.id)}
+                              disabled={restoringId === r.id}
+                              className="text-[11px] font-bold px-3 py-1.5 rounded-full text-white shrink-0 disabled:opacity-50"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #10B981, #059669)",
+                              }}
+                            >
+                              {restoringId === r.id ? "Restoring…" : "♻️ Undo"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}

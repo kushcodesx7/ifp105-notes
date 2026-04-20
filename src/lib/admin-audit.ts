@@ -17,6 +17,7 @@ export type AdminActionKind =
   | "change_name"
   | "reset_progress"
   | "reset_progress_all"
+  | "restore_progress_all"
   | "unlink"
   | "delete_student"
   | "create_batch"
@@ -62,22 +63,35 @@ export interface LogAdminActionInput {
   details?: Record<string, unknown>;
 }
 
-export async function logAdminAction(input: LogAdminActionInput): Promise<void> {
+/**
+ * Append one row to the audit log. Returns the inserted row's id on
+ * success, or null if the insert failed (missing table, RLS, etc).
+ * Callers that need the id (e.g. reset-progress storing a restore
+ * handle) use it; callers that don't can ignore it — matches the
+ * old void return semantically.
+ */
+export async function logAdminAction(
+  input: LogAdminActionInput
+): Promise<number | null> {
   try {
-    const { error } = await supabase.from("admin_actions").insert({
-      actor_email: input.actorEmail,
-      action: input.action,
-      subject_email: input.subjectEmail ?? null,
-      subject_batch_id: input.subjectBatchId ?? null,
-      subject_section: input.subjectSection ?? null,
-      details: input.details ?? {},
-    });
+    const { data, error } = await supabase
+      .from("admin_actions")
+      .insert({
+        actor_email: input.actorEmail,
+        action: input.action,
+        subject_email: input.subjectEmail ?? null,
+        subject_batch_id: input.subjectBatchId ?? null,
+        subject_section: input.subjectSection ?? null,
+        details: input.details ?? {},
+      })
+      .select("id")
+      .single();
 
     if (error) {
       // "relation does not exist" means the migration hasn't run yet.
       // Don't explode — just note it and move on.
       if (/relation.*admin_actions|42P01/i.test(error.message)) {
-         
+
         console.warn(
           "[admin-audit] admin_actions table missing — run migration-add-admin-actions.sql"
         );
@@ -88,11 +102,15 @@ export async function logAdminAction(input: LogAdminActionInput): Promise<void> 
           actorEmail: input.actorEmail,
         });
       }
+      return null;
     }
+
+    return (data?.id as number | undefined) ?? null;
   } catch (e) {
     // Never let audit logging break the actual operation
     const { logError } = await import("@/lib/log-error");
     logError("admin-audit.threw", e, { action: input.action });
+    return null;
   }
 }
 
