@@ -446,6 +446,108 @@ export default function McqQuiz({
   const fingerprintsRef = useRef<string[]>(fingerprints);
   fingerprintsRef.current = fingerprints;
 
+  // Live-edit realignment.
+  // The quiz's in-memory state (answered / confidences / currentQ) is
+  // keyed by position in the CURRENT shuffled array. When an admin
+  // deletes a question during class, `questions` changes, `total`
+  // shrinks — but `answered` stays at the old length, so handleNext's
+  // `currentQ < total - 1` check and the allAnswered calc both drift
+  // off. Teacher report Apr 20: "I answered what should have been the
+  // last question and instead of the review screen the quiz advanced
+  // and the panel closed." Classic state/props desync.
+  //
+  // Fix: whenever the fingerprints array changes (i.e. questions were
+  // added/removed/reordered), map the CURRENT answers by old
+  // fingerprint, then rebuild the arrays against the new fingerprint
+  // list. Answers for surviving questions keep their slot; deleted
+  // ones silently drop; new questions get null. Matches the on-mount
+  // rehydration in spirit, just reusing in-memory state instead of
+  // localStorage.
+  const prevFingerprintsRef = useRef<string[]>(fingerprints);
+  useEffect(() => {
+    const prev = prevFingerprintsRef.current;
+    // Fast path: same length + same entries → nothing to do.
+    if (prev.length === fingerprints.length) {
+      let same = true;
+      for (let i = 0; i < prev.length; i++) {
+        if (prev[i] !== fingerprints[i]) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return;
+    }
+
+    // Build lookup by OLD fingerprint so we can re-project answers
+    // onto the new question order.
+    const lookup = new Map<string, { answer: number | null; confidence: ConfidenceLevel | null }>();
+    prev.forEach((fp, i) => {
+      lookup.set(fp, {
+        answer: answered[i] ?? null,
+        confidence: confidences[i] ?? null,
+      });
+    });
+
+    const newAnswers: (number | null)[] = new Array(fingerprints.length).fill(null);
+    const newConfidences: (ConfidenceLevel | null)[] = new Array(
+      fingerprints.length
+    ).fill(null);
+    fingerprints.forEach((fp, i) => {
+      const hit = lookup.get(fp);
+      if (hit) {
+        newAnswers[i] = hit.answer;
+        newConfidences[i] = hit.confidence;
+      }
+    });
+
+    // Recompute score against the new shuffled answer key.
+    const newShuffled = shuffleQuestions(questions, shuffleSeed, shuffleVersion);
+    let newScore = 0;
+    newAnswers.forEach((a, i) => {
+      if (a !== null && a === newShuffled[i]?.ans) newScore += 1;
+    });
+
+    // Clamp currentQ to the new bounds; if all slots are filled the
+    // quiz is complete, flip to review + result view.
+    const nowAllAnswered =
+      fingerprints.length > 0 && newAnswers.every((a) => a !== null);
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAnswered(newAnswers);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConfidences(newConfidences);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setScore(newScore);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCompleted(nowAllAnswered);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentQ((c) => {
+      if (fingerprints.length === 0) return 0;
+      // Prefer the first unanswered slot so the student lands on a
+      // question that actually needs their input.
+      const firstUnanswered = newAnswers.findIndex((a) => a === null);
+      if (firstUnanswered >= 0) return firstUnanswered;
+      // All answered — keep clamp valid for the review transition.
+      return Math.min(c, fingerprints.length - 1);
+    });
+    if (nowAllAnswered) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowResult(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setViewMode("review");
+    }
+
+    // Persist the realigned state so the next tab / refresh starts
+    // from this aligned point.
+    saveState(newAnswers, newScore, nowAllAnswered, newConfidences);
+
+    prevFingerprintsRef.current = fingerprints;
+    // answered / confidences intentionally omitted — we only re-run
+    // when the fingerprint list changes. Adding them would re-fire
+    // on every pick and overwrite fresh answers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fingerprints]);
+
   // Save state to localStorage whenever answers or confidences change
   const saveState = useCallback(
     (
