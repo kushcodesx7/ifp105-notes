@@ -18,6 +18,34 @@ interface PeopleResponse {
   students: AdminStudent[];
 }
 
+// Friendly relative-time label for the LAST ACTIVE column.
+// Teacher asked for finer resolution — "Today" was too coarse when
+// she needed to know whether someone had been active 5 minutes ago
+// or 23 hours ago. Cascade:
+//   null            → "Never"
+//   < 60s           → "just now"
+//   < 60 min        → "17 min ago"
+//   < 24 h          → "5 hours ago"
+//   24-48 h ago     → "Yesterday"
+//   ≥ 2 days ago    → "3 days ago"
+function formatLastActive(
+  iso: string | null | undefined,
+  now: number
+): string {
+  if (!iso) return "Never";
+  const then = parseUtcIso(iso);
+  if (Number.isNaN(then)) return "Never";
+  const sec = Math.max(0, Math.floor((now - then) / 1000));
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min === 1 ? "1 min ago" : `${min} min ago`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  return `${days} days ago`;
+}
+
 type FilterKey =
   | "all"
   | "active7"
@@ -615,11 +643,7 @@ function PeoplePage() {
                           Active
                         </div>
                         <span className="text-[11px] tabular-nums text-zinc-400 whitespace-nowrap">
-                          {s.daysSinceActive === null
-                            ? "Never"
-                            : s.daysSinceActive === 0
-                            ? "Today"
-                            : `${s.daysSinceActive}d ago`}
+                          {formatLastActive(s.lastActive, nowTick)}
                         </span>
                       </div>
                     </div>
@@ -833,11 +857,7 @@ function PeoplePage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-zinc-500 whitespace-nowrap">
-                        {s.daysSinceActive === null
-                          ? "Never"
-                          : s.daysSinceActive === 0
-                          ? "Today"
-                          : `${s.daysSinceActive}d ago`}
+                        {formatLastActive(s.lastActive, nowTick)}
                       </td>
                     </motion.tr>
                     );
