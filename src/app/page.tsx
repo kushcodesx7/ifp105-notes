@@ -106,11 +106,14 @@ const ICT_MODULE_OVERLAYS: Record<number, HomeModuleOverlay> = {
 const modules = currentCourse.modules.map((m) => {
   const overlay = ICT_MODULE_OVERLAYS[m.id];
   const minutes = m.topicCount * 5; // rough reading time estimate
-  const questions = m.topicCount * 7; // 7 Qs per topic (Bloom's ladder)
+  // Dropped the hardcoded `m.topicCount * 7` "X Qs" tag — admins
+  // delete questions live during class so a fixed-multiplier
+  // estimate went stale instantly. The per-module client already
+  // shows the real live count in the hero stats; this home-card
+  // tag only carries "Topics" + "min" now so it can never mislead.
   const baseTags: string[] = [
     `${m.topicCount} Topics`,
     `~${minutes} min`,
-    `${questions} Qs`,
   ];
   return {
     number: String(m.id).padStart(2, "0"),

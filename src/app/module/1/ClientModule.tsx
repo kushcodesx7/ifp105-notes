@@ -5,6 +5,13 @@ import ModulePage from "@/components/module/ModulePage";
 import { getCurrentCourse, getCourseModule, CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 import { useInlineEditMode } from "@/lib/use-inline-edit";
 import type { Topic } from "@/types/content";
+import { mcqData as _mcqData1 } from "@/data/module1-mcq";
+// Live count of MCQs for the hero stats badge. Reading the TS
+// module's array at render so admin deletes in the admin panel
+// still show the original count (Mon fix: prefer LIVE DB count).
+// For now, this beats the hardcoded number it used to show and
+// stays correct so long as admins don't hot-edit the TS files.
+const _mcqCount1 = Object.values(_mcqData1).reduce((sum, arr) => sum + (arr?.length ?? 0), 0);
 
 // Inline editor is dynamically loaded — keeps the editor JS out of the
 // student bundle entirely. Students who navigate to ?edit=1 without
@@ -47,7 +54,7 @@ export default function Module1Client({ topics }: { topics: Topic[] }) {
       stats={[
         { n: String(meta?.topicCount ?? topics.length), l: "Topics" },
         { n: `~${(meta?.topicCount ?? topics.length) * 5}`, l: "Minutes" },
-        { n: String((meta?.topicCount ?? topics.length) * 7), l: "Practice Qs" },
+        { n: String(_mcqCount1), l: "Practice Qs" },
       ]}
     />
   );

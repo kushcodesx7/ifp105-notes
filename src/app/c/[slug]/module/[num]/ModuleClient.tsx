@@ -71,10 +71,15 @@ export default function ModuleClient({
 
   const { c1, c2 } = pickOrbColors(accent);
   const topicCount = topics.length;
+  // Dropped the `topicCount * 7` "Practice Qs" stat — this generic
+  // module route doesn't know which module's MCQ data to count
+  // statically, and the hardcoded multiplier went stale the moment
+  // an admin deleted a question live. Students now see "Topics" +
+  // "Minutes" only on this route; the per-module /module/N clients
+  // show the real live count from their imported MCQ data.
   const stats: Stat[] = [
     { n: String(topicCount), l: "Topics" },
     { n: `~${topicCount * 5}`, l: "Minutes" },
-    { n: String(topicCount * 7), l: "Practice Qs" },
   ];
 
   return (

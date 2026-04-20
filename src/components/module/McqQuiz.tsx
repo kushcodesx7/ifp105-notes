@@ -608,6 +608,27 @@ export default function McqQuiz({
     return { confidentWrong, humbleRight, ratedCount };
   }, [answered, confidences, shuffled, total]);
 
+  // ─── EMPTY STATE ───
+  // If an admin deletes every question in a topic (e.g. during a live
+  // class while culling), `questions.length === 0` so `q = questions[0]`
+  // and `sq = shuffled[0]` are undefined, and the render below would
+  // crash with a white screen on `sq.opts.map`. Guard BEFORE any render
+  // path runs — all hooks above already ran with total = 0, which is
+  // fine (useMemo returns an empty array, accumulators stay at zero).
+  if (total === 0) {
+    return (
+      <div className="mt-6 rounded-2xl overflow-hidden card-glass p-6 text-center">
+        <div className="text-3xl mb-2">📝</div>
+        <div className="text-sm font-semibold text-zinc-200 mb-1">
+          No questions in this topic yet
+        </div>
+        <div className="text-xs text-zinc-500">
+          Your teacher is updating this section. Check back in a minute.
+        </div>
+      </div>
+    );
+  }
+
   // ─── REVIEW MODE: Show all questions with results ───
   if (viewMode === "review" && completed) {
     return (

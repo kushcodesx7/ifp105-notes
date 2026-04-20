@@ -6,6 +6,13 @@ import ShortcutTrainer from "@/components/module/ShortcutTrainer";
 import { CURRENT_COURSE_SLUG } from "@/lib/course-registry";
 import { useInlineEditMode } from "@/lib/use-inline-edit";
 import type { Topic } from "@/types/content";
+import { mcqData as _mcqData2 } from "@/data/module2-mcq";
+// Live count of MCQs for the hero stats badge. Reading the TS
+// module's array at render so admin deletes in the admin panel
+// still show the original count (Mon fix: prefer LIVE DB count).
+// For now, this beats the hardcoded number it used to show and
+// stays correct so long as admins don't hot-edit the TS files.
+const _mcqCount2 = Object.values(_mcqData2).reduce((sum, arr) => sum + (arr?.length ?? 0), 0);
 
 const InlineModuleEditor = dynamic(
   () => import("@/components/admin/InlineModuleEditor"),
@@ -65,7 +72,7 @@ export default function Module2Client({ topics }: { topics: Topic[] }) {
       stats={[
         { n: "9", l: "Topics" },
         { n: "~45", l: "Minutes" },
-        { n: "63", l: "Practice Qs" },
+        { n: String(_mcqCount2), l: "Practice Qs" },
       ]}
       renderAfterContent={(topicId) => (
         <>
