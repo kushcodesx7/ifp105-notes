@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { progressKey, quizStateKey } from "@/lib/storage-keys";
+import {
+  progressKey,
+  quizStateKey,
+  flashcardStateKey,
+} from "@/lib/storage-keys";
 
 // Centralised hook for everything that touches a student's per-module
 // progress: localStorage cache, Supabase sync, silent-fail recovery,
@@ -215,7 +219,18 @@ export function useStudentProgress({
           // this course/module. Leave identity and skills alone.
           try {
             localStorage.removeItem(LS_KEY);
+            // Wipe BOTH quiz-state blobs AND flashcard-state blobs
+            // for this module. Previous version only cleared quiz
+            // state — so after a reset the student still saw
+            // "4/5 known" on their flashcards from the pre-reset
+            // session. quizStateKey prefix + flashcardStateKey prefix
+            // are both strippable by trimming the trailing "0".
             const quizPrefix = quizStateKey(
+              courseSlug,
+              moduleNumber,
+              0
+            ).replace(/0$/, "");
+            const flashPrefix = flashcardStateKey(
               courseSlug,
               moduleNumber,
               0
@@ -223,7 +238,12 @@ export function useStudentProgress({
             const keysToClear: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
-              if (key && key.startsWith(quizPrefix)) keysToClear.push(key);
+              if (
+                key &&
+                (key.startsWith(quizPrefix) || key.startsWith(flashPrefix))
+              ) {
+                keysToClear.push(key);
+              }
             }
             keysToClear.forEach((k) => localStorage.removeItem(k));
             localStorage.setItem(RESET_EPOCH_KEY, serverEpoch);
@@ -317,7 +337,16 @@ export function useStudentProgress({
         // own MCQ counters via the callback.
         if (remoteCount === 0 && !wasFirstLoad) {
           try {
+            // Same prefix-sweep as the epoch-reset branch above —
+            // clears BOTH quiz-state blobs AND flashcard-state blobs
+            // for this module so the student doesn't see stale
+            // "4/5 known" after their teacher resets them.
             const quizPrefix = quizStateKey(
+              courseSlug,
+              moduleNumber,
+              0
+            ).replace(/0$/, "");
+            const flashPrefix = flashcardStateKey(
               courseSlug,
               moduleNumber,
               0
@@ -325,7 +354,12 @@ export function useStudentProgress({
             const keysToClear: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
-              if (key && key.startsWith(quizPrefix)) keysToClear.push(key);
+              if (
+                key &&
+                (key.startsWith(quizPrefix) || key.startsWith(flashPrefix))
+              ) {
+                keysToClear.push(key);
+              }
             }
             keysToClear.forEach((k) => localStorage.removeItem(k));
           } catch {}
