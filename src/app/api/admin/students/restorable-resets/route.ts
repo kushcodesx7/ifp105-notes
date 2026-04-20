@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       restoredAt?: string;
       deletedRows?: number;
       moduleNumber?: number | null;
+      topicId?: number | null;
       scope?: string;
       snapshot?: unknown[];
     } | null;
@@ -66,6 +67,10 @@ export async function GET(req: NextRequest) {
       createdAt: r.created_at,
       actorEmail: r.actor_email,
       moduleNumber: r.details?.moduleNumber ?? null,
+      // topicId is only present on per-topic resets (newer ones). Null
+      // on module-wide and all-modules resets so the UI shows the
+      // right label variant.
+      topicId: r.details?.topicId ?? null,
       deletedRows: r.details?.deletedRows ?? 0,
       scope: r.details?.scope ?? "unknown",
       snapshotSize: Array.isArray(r.details?.snapshot)

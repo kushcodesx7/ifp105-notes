@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return Response.json(
       {
         error:
-          "This endpoint wipes student progress. Send body {confirm:'RESET ALL PROGRESS', moduleNumber?} to proceed.",
+          "This endpoint wipes student progress. Send body {confirm:'RESET ALL PROGRESS', moduleNumber?, topicId?} to proceed.",
       },
       { status: 400 }
     );
@@ -53,9 +53,29 @@ export async function POST(req: NextRequest) {
       ? Math.floor(rawMod)
       : null;
 
+  // Optional topic scope. Only applied when a moduleNumber is also
+  // given — a bare topicId is ambiguous across modules, so we reject
+  // that shape rather than guess.
+  const rawTopic = body.topicId;
+  const topicIdRaw =
+    typeof rawTopic === "number" && Number.isFinite(rawTopic) && rawTopic > 0
+      ? Math.floor(rawTopic)
+      : null;
+  if (topicIdRaw != null && moduleNumber == null) {
+    return Response.json(
+      {
+        error:
+          "topicId requires moduleNumber to be set (topics aren't unique across modules).",
+      },
+      { status: 400 }
+    );
+  }
+  const topicId = topicIdRaw;
+
   // Build the scoped select/delete query. `.neq("student_email", "")`
   // matches every real row; adding `.eq("module_number", ...)` narrows
-  // to a single module.
+  // to a single module; adding `.eq("topic_id", ...)` narrows further
+  // to one specific topic within that module.
   const scopedSelect = (() => {
     let q = supabase
       .from("student_progress")
@@ -64,6 +84,7 @@ export async function POST(req: NextRequest) {
       )
       .neq("student_email", "");
     if (moduleNumber != null) q = q.eq("module_number", moduleNumber);
+    if (topicId != null) q = q.eq("topic_id", topicId);
     return q;
   })();
 
@@ -82,6 +103,7 @@ export async function POST(req: NextRequest) {
   const deleteQuery = (() => {
     let q = supabase.from("student_progress").delete().neq("student_email", "");
     if (moduleNumber != null) q = q.eq("module_number", moduleNumber);
+    if (topicId != null) q = q.eq("topic_id", topicId);
     return q;
   })();
   const { error: delErr } = await deleteQuery;
@@ -102,7 +124,17 @@ export async function POST(req: NextRequest) {
   // localStorage since the server truth takes over immediately.
   const nowIso = new Date().toISOString();
   const scope =
-    moduleNumber != null ? `module_${moduleNumber}` : "all_modules";
+    topicId != null
+      ? `module_${moduleNumber}_topic_${topicId}`
+      : moduleNumber != null
+        ? `module_${moduleNumber}`
+        : "all_modules";
+  const reason =
+    topicId != null
+      ? `module-${moduleNumber}-topic-${topicId} reset`
+      : moduleNumber != null
+        ? `module-${moduleNumber} reset`
+        : "all-modules reset";
 
   const actionId = await logAdminAction({
     actorEmail: actorFromAuth(admin),
@@ -113,7 +145,8 @@ export async function POST(req: NextRequest) {
       epoch: nowIso,
       scope,
       moduleNumber,
-      reason: moduleNumber != null ? `module-${moduleNumber} reset` : "all-modules reset",
+      topicId,
+      reason,
       // Snapshot for restore. Each entry is the student_progress row
       // verbatim; restore endpoint upserts them back using the natural
       // key (student_email, course_id, module_number, topic_id).

@@ -701,15 +701,33 @@ interface RestorableReset {
   createdAt: string;
   actorEmail: string;
   moduleNumber: number | null;
+  topicId: number | null;
   deletedRows: number;
   scope: string;
   snapshotSize: number;
 }
 
+// Topic counts per module, used to build the per-topic dropdown.
+// Mirrors MODULE_TOTALS from @/lib/modules — inlined here as a plain
+// array so the dropdown can map 1..N without importing the registry.
+const TOPICS_PER_MODULE: Record<number, number> = {
+  1: 11, // Hardware
+  2: 9,  // Office
+  3: 7,  // Social
+  4: 11, // HTML
+  5: 10, // Tech
+};
+
 function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   const [open, setOpen] = useState(false);
   const [phrase, setPhrase] = useState("");
+  // "all" = every module, 1-5 = just that module.
   const [moduleScope, setModuleScope] = useState<"all" | "1" | "2" | "3" | "4" | "5">("all");
+  // Optional narrower scope: null = wipe the whole chosen module,
+  // number = wipe only that topic. Reset whenever moduleScope
+  // changes to avoid pointing at a topic that doesn't exist in
+  // the newly-selected module.
+  const [topicScope, setTopicScope] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<{
     deletedRows: number;
@@ -764,10 +782,20 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
     setError(null);
     setResult(null);
     try {
-      const body: { confirm: string; moduleNumber?: number } = {
+      const body: {
+        confirm: string;
+        moduleNumber?: number;
+        topicId?: number;
+      } = {
         confirm: ARM_PHRASE,
       };
-      if (moduleScope !== "all") body.moduleNumber = parseInt(moduleScope, 10);
+      if (moduleScope !== "all") {
+        body.moduleNumber = parseInt(moduleScope, 10);
+        // Topic scope is only valid when a specific module is selected.
+        // If moduleScope flipped to "all" but topicScope was still set,
+        // the server would reject it anyway — but we'd rather not send.
+        if (topicScope != null) body.topicId = topicScope;
+      }
 
       const res = await fetch("/api/admin/students/reset-all-progress", {
         method: "POST",
@@ -942,7 +970,14 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                         return (
                           <button
                             key={k}
-                            onClick={() => setModuleScope(k)}
+                            onClick={() => {
+                              setModuleScope(k);
+                              // Topic scope only makes sense inside a
+                              // specific module; clear it whenever the
+                              // module selection changes so the dropdown
+                              // resets to "whole module".
+                              setTopicScope(null);
+                            }}
                             className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
                             style={{
                               background: isActive
@@ -957,10 +992,50 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                         );
                       })}
                     </div>
+
+                    {/* Per-topic narrowing. Only meaningful when a
+                        specific module is selected — a single topic id
+                        isn't unique across modules, and "reset Topic 3
+                        of every module" isn't a real use case. So this
+                        dropdown hides itself when scope = "all". */}
+                    {moduleScope !== "all" && (
+                      <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                        <label className="text-[11px] text-zinc-500">
+                          Narrow to topic (optional):
+                        </label>
+                        <select
+                          value={topicScope ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setTopicScope(v === "" ? null : parseInt(v, 10));
+                          }}
+                          className="text-[11px] font-semibold px-2 py-1.5 rounded-lg text-zinc-200 focus:outline-none"
+                          style={{
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          <option value="">
+                            Whole module ({TOPICS_PER_MODULE[parseInt(moduleScope, 10)] || 0} topics)
+                          </option>
+                          {Array.from(
+                            { length: TOPICS_PER_MODULE[parseInt(moduleScope, 10)] || 0 },
+                            (_, i) => i + 1
+                          ).map((n) => (
+                            <option key={n} value={n}>
+                              Only Topic {n}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="text-[11px] text-zinc-500 mt-1.5">
                       {moduleScope === "all"
                         ? "Wipes every module for every student."
-                        : `Wipes only Module ${moduleScope} for every student. Other modules untouched.`}
+                        : topicScope != null
+                          ? `Wipes only Module ${moduleScope} Topic ${topicScope} for every student. Other topics + modules untouched.`
+                          : `Wipes only Module ${moduleScope} for every student. Other modules untouched.`}
                     </div>
                   </div>
 
@@ -1004,7 +1079,9 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                       : armed
                         ? moduleScope === "all"
                           ? "🧹  Wipe every student's progress (all modules)"
-                          : `🧹  Wipe Module ${moduleScope} for every student`
+                          : topicScope != null
+                            ? `🧹  Wipe Module ${moduleScope} · Topic ${topicScope} for every student`
+                            : `🧹  Wipe Module ${moduleScope} for every student`
                         : "Type the phrase above to enable"}
                   </button>
 
@@ -1086,9 +1163,11 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                           >
                             <div className="flex-1 min-w-0">
                               <div className="text-[12px] font-semibold text-zinc-200 truncate">
-                                {r.moduleNumber != null
-                                  ? `Module ${r.moduleNumber} reset`
-                                  : "All-modules reset"}{" "}
+                                {r.moduleNumber != null && r.topicId != null
+                                  ? `Module ${r.moduleNumber} · Topic ${r.topicId} reset`
+                                  : r.moduleNumber != null
+                                    ? `Module ${r.moduleNumber} reset`
+                                    : "All-modules reset"}{" "}
                                 <span className="text-zinc-500 font-normal">
                                   · {r.deletedRows} rows
                                 </span>
