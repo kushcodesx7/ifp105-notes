@@ -10,18 +10,56 @@ interface LoginPromptProps {
   onClose: () => void;
 }
 
+/**
+ * LoginPrompt — shown when the student needs to (re-)authenticate to
+ * save quiz progress. Offers BOTH sign-in paths:
+ *   1. Google OAuth (one-click) — the default.
+ *   2. Enrollment + password — for students who logged in with a
+ *      teacher-issued password. Without this path, password users
+ *      who hit the re-auth flow were stranded with no way back in.
+ */
 export default function LoginPrompt({ onClose }: LoginPromptProps) {
-  const { login } = useAuth();
+  const { login, setIdToken, loginWithPassword } = useAuth();
+  const [mode, setMode] = useState<"google" | "password">("google");
   const [error, setError] = useState("");
+  const [pwEnrollment, setPwEnrollment] = useState("");
+  const [pwPassword, setPwPassword] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
 
   function handleGoogleSuccess(response: { credential?: string }) {
     if (!response.credential) return;
     const payload = decodeJwt(response.credential);
     if (payload?.name && payload?.email) {
-      login({ name: payload.name, email: payload.email });
+      // CRITICAL: the previous version called login() but NOT
+      // setIdToken(), so even a successful Google re-auth left the in-
+      // memory token empty — the very next save would re-pop this
+      // prompt. Store the Google credential as the id token so the
+      // next /api/progress call authenticates cleanly.
+      setIdToken(response.credential);
+      login({
+        name: payload.name,
+        email: payload.email,
+        photo: payload.picture,
+      });
       onClose();
     } else {
       setError("Could not read Google account info.");
+    }
+  }
+
+  async function handlePasswordSubmit() {
+    if (!pwEnrollment.trim() || !pwPassword) {
+      setError("Enter your enrollment number and password.");
+      return;
+    }
+    setError("");
+    setPwLoading(true);
+    const res = await loginWithPassword(pwEnrollment.trim(), pwPassword);
+    setPwLoading(false);
+    if (res.ok) {
+      onClose();
+    } else {
+      setError(res.error);
     }
   }
 
@@ -57,33 +95,87 @@ export default function LoginPrompt({ onClose }: LoginPromptProps) {
             </svg>
           </button>
 
-          <div className="text-center mb-6">
+          <div className="text-center mb-5">
             <div className="text-3xl mb-3">🚀</div>
             <h2 className="text-lg font-bold text-white mb-1.5">
               Save your progress!
             </h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Sign in with Google to save your quiz scores and progress across all your devices.
+              Sign in to save your quiz scores across all your devices.
             </p>
           </div>
 
-          <div className="flex justify-center mb-4">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError("Google sign-in failed.")}
-              theme="filled_black"
-              size="large"
-              shape="pill"
-              text="signin_with"
-            />
+          {/* Mode toggle */}
+          <div
+            className="flex items-center gap-1 p-1 rounded-full mb-5 text-[11px] font-semibold"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <button
+              onClick={() => { setMode("google"); setError(""); }}
+              className={`flex-1 py-1.5 rounded-full transition-colors ${mode === "google" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+              style={mode === "google" ? { background: "linear-gradient(135deg, #6366F1, #8B5CF6)" } : undefined}
+            >
+              Google
+            </button>
+            <button
+              onClick={() => { setMode("password"); setError(""); }}
+              className={`flex-1 py-1.5 rounded-full transition-colors ${mode === "password" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+              style={mode === "password" ? { background: "linear-gradient(135deg, #6366F1, #8B5CF6)" } : undefined}
+            >
+              Roll + password
+            </button>
           </div>
 
+          {mode === "google" ? (
+            <div className="flex justify-center mb-2">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google sign-in failed.")}
+                theme="filled_black"
+                size="large"
+                shape="pill"
+                text="signin_with"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <input
+                type="text"
+                placeholder="Enrollment number (e.g. A70055123456)"
+                value={pwEnrollment}
+                onChange={(e) => setPwEnrollment(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handlePasswordSubmit(); }}
+                autoComplete="username"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={pwPassword}
+                onChange={(e) => setPwPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handlePasswordSubmit(); }}
+                autoComplete="current-password"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              />
+              <button
+                onClick={handlePasswordSubmit}
+                disabled={pwLoading}
+                className="w-full py-2.5 text-sm font-bold rounded-lg text-white disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
+              >
+                {pwLoading ? "Signing in…" : "Sign in"}
+              </button>
+            </div>
+          )}
+
           {error && (
-            <p className="text-sm text-red-400 text-center mt-2">{error}</p>
+            <p className="text-sm text-red-400 text-center mt-3">{error}</p>
           )}
 
           <p className="text-[11px] text-zinc-600 text-center mt-4">
-            One click. No forms. Your progress syncs everywhere.
+            Use the same method you used to sign in before.
           </p>
         </motion.div>
       </motion.div>
