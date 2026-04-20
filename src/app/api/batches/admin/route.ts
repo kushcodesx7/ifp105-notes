@@ -32,10 +32,31 @@ export async function GET(req: NextRequest) {
 
   const result = await Promise.all(
     (batches || []).map(async (batch) => {
-      const { data: rolls } = await supabase
-        .from("roll_list")
-        .select("enrollment_no, section")
-        .eq("batch_id", batch.id);
+      // Pull the teacher-verified roster name (roll_list.name) so the
+      // roster UI can render "Zokirova Dilnura" instead of a bare
+      // "A85456325166". Falls back gracefully if the name column is
+      // missing (pre-migration DB) — see the catch below.
+      let rolls:
+        | { enrollment_no: string; section: string | null; name: string | null }[]
+        | null = null;
+      {
+        const r1 = await supabase
+          .from("roll_list")
+          .select("enrollment_no, section, name")
+          .eq("batch_id", batch.id);
+        if (r1.error && /name|PGRST204/i.test(r1.error.message)) {
+          const r2 = await supabase
+            .from("roll_list")
+            .select("enrollment_no, section")
+            .eq("batch_id", batch.id);
+          rolls = (r2.data || []).map((r) => ({
+            ...(r as { enrollment_no: string; section: string | null }),
+            name: null,
+          }));
+        } else {
+          rolls = r1.data ?? [];
+        }
+      }
 
       const { data: students } = await supabase
         .from("students")
@@ -51,6 +72,10 @@ export async function GET(req: NextRequest) {
         rolls: (rolls || []).map((r) => ({
           enrollmentNo: r.enrollment_no,
           section: (r as { section?: string | null }).section || "Section 1",
+          // Teacher-verified name from roll_list.name (nullable until
+          // the teacher uploads a named roll list). Empty string
+          // rather than null so the UI doesn't have to guard.
+          name: r.name || null,
         })),
         students: (students || []).map((s) => ({
           enrollmentNo: s.enrollment_no,

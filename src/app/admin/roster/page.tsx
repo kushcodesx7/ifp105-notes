@@ -10,12 +10,17 @@ import CreateBatchWizard from "@/components/admin/CreateBatchWizard";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { compareSections } from "@/lib/sections";
+import { prettyName } from "@/lib/names";
 
 // ─── Types ──────────────────────────────────────────────────────
 
 interface Roll {
   enrollmentNo: string;
   section: string;
+  /** Teacher-verified name from roll_list.name (null if teacher
+   *  uploaded the list as roll-only, before the names column was
+   *  populated). UI falls back to the enrollment number when absent. */
+  name: string | null;
 }
 interface RegisteredStudent {
   enrollmentNo: string;
@@ -297,12 +302,16 @@ function BatchDetail({
   onAction: (body: Record<string, unknown>) => Promise<unknown>;
   toast: ReturnType<typeof useToast>["toast"];
 }) {
-  // Group rolls by section; compute per-section registered count
+  // Group rolls by section; compute per-section registered count.
+  // Rolls carry the teacher-verified name now (roll_list.name), so
+  // the chip can render "Zokirova Dilnura" instead of a bare
+  // enrollment number. We keep the full Roll object in the grouping
+  // instead of `string[]` so SectionCard has access to `.name`.
   const sectionMap = useMemo(() => {
-    const rollsBy: Record<string, string[]> = {};
+    const rollsBy: Record<string, Roll[]> = {};
     for (const r of batch.rolls) {
       if (!rollsBy[r.section]) rollsBy[r.section] = [];
-      rollsBy[r.section].push(r.enrollmentNo);
+      rollsBy[r.section].push(r);
     }
     const studentsBy: Record<string, RegisteredStudent[]> = {};
     for (const s of batch.students) {
@@ -353,7 +362,7 @@ function SectionCard({
 }: {
   batch: AdminBatch;
   section: string;
-  rolls: string[];
+  rolls: Roll[];
   students: RegisteredStudent[];
   onMutated: () => void;
   onAction: (body: Record<string, unknown>) => Promise<unknown>;
@@ -370,8 +379,16 @@ function SectionCard({
   >(null);
   const [rollToRemove, setRollToRemove] = useState<string | null>(null);
 
+  // Index registered students BY enrollment_no so each chip can
+  // resolve its student record in O(1) — used to pick the best name
+  // (registered display name > teacher roll-list name > enrollment).
+  const registeredByRoll = useMemo(() => {
+    const m = new Map<string, RegisteredStudent>();
+    for (const s of students) m.set(s.enrollmentNo, s);
+    return m;
+  }, [students]);
   const registeredRolls = new Set(students.map((s) => s.enrollmentNo));
-  const pending = rolls.filter((r) => !registeredRolls.has(r));
+  const pending = rolls.filter((r) => !registeredRolls.has(r.enrollmentNo));
   const pct = rolls.length > 0 ? Math.round((students.length / rolls.length) * 100) : 0;
 
   async function doRename() {
@@ -654,14 +671,32 @@ function SectionCard({
                     {rolls
                       .slice()
                       .sort((a, b) =>
-                        a.localeCompare(b, undefined, { numeric: true })
+                        a.enrollmentNo.localeCompare(b.enrollmentNo, undefined, {
+                          numeric: true,
+                        })
                       )
                       .map((roll) => {
-                        const claimed = registeredRolls.has(roll);
+                        const rollNo = roll.enrollmentNo;
+                        const claimed = registeredRolls.has(rollNo);
+                        // Pick the best human name available:
+                        //   1. Registered student's chosen display name
+                        //      (prettyName strips "453_" roll prefix).
+                        //   2. Teacher-verified roll_list.name.
+                        //   3. Fall back to the enrollment number.
+                        // Teacher asked for names so they can call out
+                        // students during class; the enrollment number
+                        // still appears on hover + below the name so
+                        // the roll reference isn't lost.
+                        const registered = registeredByRoll.get(rollNo);
+                        const displayName = registered
+                          ? prettyName(registered.name)
+                          : roll.name || "";
+                        const hasName = displayName.trim().length > 0;
+                        const label = hasName ? displayName : rollNo;
                         return (
                           <span
-                            key={roll}
-                            className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full"
+                            key={rollNo}
+                            className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full ${hasName ? "" : "font-mono"}`}
                             style={{
                               background: claimed
                                 ? "rgba(34,197,94,0.06)"
@@ -673,16 +708,32 @@ function SectionCard({
                               }`,
                               color: claimed ? "#86efac" : "#a1a1aa",
                             }}
-                            title={claimed ? "Registered" : "Unclaimed"}
+                            // Tooltip always shows both bits of info,
+                            // so an admin hovering can confirm the
+                            // enrollment match when two students share
+                            // a first name.
+                            title={`${
+                              claimed ? "Registered" : "Unclaimed"
+                            } — ${rollNo}${hasName ? "" : ""}`}
                           >
-                            {claimed ? "✓" : "○"} {roll}
+                            <span aria-hidden="true">
+                              {claimed ? "✓" : "○"}
+                            </span>{" "}
+                            <span className="truncate max-w-[140px]">
+                              {label}
+                            </span>
+                            {hasName && (
+                              <span className="text-[9px] opacity-60 font-mono">
+                                {rollNo.slice(-4)}
+                              </span>
+                            )}
                             <button
                               onClick={() => {
-                                setRollToRemove(roll);
+                                setRollToRemove(rollNo);
                                 setConfirmAction("remove-roll");
                               }}
                               className="text-zinc-600 hover:text-red-400 ml-0.5"
-                              aria-label={`Remove ${roll}`}
+                              aria-label={`Remove ${rollNo}`}
                             >
                               ✕
                             </button>
