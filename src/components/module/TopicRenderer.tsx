@@ -35,7 +35,13 @@ function RenderBlock({ block }: { block: ContentBlock }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={vp}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[14px] text-zinc-400 leading-[1.9] my-3 [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+          className="text-[14px] text-zinc-400 leading-[1.9] my-3
+            [&_strong]:text-zinc-200 [&_strong]:font-semibold
+            [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20
+            [&_mark]:text-white [&_mark]:font-semibold
+            [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5
+            [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30
+            [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]"
           dangerouslySetInnerHTML={{ __html: block.html }}
         />
       );
@@ -69,7 +75,14 @@ function RenderBlock({ block }: { block: ContentBlock }) {
                   <em>, <mark>). Match the text-block pattern so bold
                   actually renders bold instead of showing literal tags. */}
               <p
-                className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+                className="text-xs text-zinc-400 leading-relaxed
+                  [&_strong]:text-zinc-200 [&_strong]:font-semibold
+                  [&_em]:text-zinc-300
+                  [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20
+                  [&_mark]:text-white [&_mark]:font-semibold
+                  [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5
+                  [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30
+                  [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]"
                 dangerouslySetInnerHTML={{ __html: card.description }}
               />
               {card.tag && (
@@ -109,7 +122,14 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
               {/* Same inline-HTML support as the regular `cards` block. */}
               <p
-                className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+                className="text-xs text-zinc-400 leading-relaxed
+                  [&_strong]:text-zinc-200 [&_strong]:font-semibold
+                  [&_em]:text-zinc-300
+                  [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20
+                  [&_mark]:text-white [&_mark]:font-semibold
+                  [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5
+                  [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30
+                  [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]"
                 dangerouslySetInnerHTML={{ __html: card.description }}
               />
               <div className="text-xs font-semibold mt-2 pt-2 text-zinc-500" style={{ borderTop: '1px solid #2a2a33' }}>
@@ -128,7 +148,26 @@ function RenderBlock({ block }: { block: ContentBlock }) {
           whileInView={{ opacity: 1, x: 0 }}
           viewport={vp}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="my-4 px-4 py-3 rounded-r-xl text-[13px] leading-[1.85] [&_strong]:font-bold"
+          // Theme-consistent <mark> inside callouts. Browser default
+          // is a bright yellow fill (what the teacher screenshotted as
+          // "not looking good") which clashes with the indigo/violet
+          // palette used everywhere else. Swap it for a soft violet
+          // pill — same treatment as text/cards/steps blocks — with a
+          // tiny top-and-bottom bleed + inline padding so the highlight
+          // reads as an emphasis chip rather than a raw browser default.
+          // `[&_code]` also gets the theme-aware pill in case an author
+          // inlines short code within a callout.
+          className="my-4 px-4 py-3 rounded-r-xl text-[13px] leading-[1.85]
+            [&_strong]:font-bold
+            [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20
+            [&_mark]:text-white [&_mark]:font-semibold
+            [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5
+            [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30
+            [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]
+            [&_em]:text-white/90
+            [&_code]:bg-white/10 [&_code]:text-violet-200 [&_code]:px-1.5
+            [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px]
+            [&_code]:font-mono [&_code]:font-semibold"
           style={{
             background: colors.bg,
             borderLeft: `3px solid ${colors.border}`,
@@ -150,7 +189,16 @@ function RenderBlock({ block }: { block: ContentBlock }) {
         >
           <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #7C3AED, #4F46E5, #2563EB)' }} />
           <div className="text-[9px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2 pl-3">{block.label}</div>
-          <div className="text-[13px] text-zinc-400 leading-[1.85] pl-3 [&_strong]:text-zinc-200 [&_strong]:font-semibold" dangerouslySetInnerHTML={{ __html: block.html }} />
+          <div
+            className="text-[13px] text-zinc-400 leading-[1.85] pl-3
+              [&_strong]:text-zinc-200 [&_strong]:font-semibold
+              [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20
+              [&_mark]:text-white [&_mark]:font-semibold
+              [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5
+              [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30
+              [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]"
+            dangerouslySetInnerHTML={{ __html: block.html }}
+          />
         </motion.div>
       );
 
@@ -217,7 +265,14 @@ function RenderBlock({ block }: { block: ContentBlock }) {
                     can use <strong>, <em>, <mark> in step descriptions
                     without seeing literal tags on screen. */}
                 <p
-                  className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-violet-500/15 [&_mark]:text-violet-300 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:rounded [&_mark]:font-semibold"
+                  className="text-xs text-zinc-400 leading-relaxed
+                  [&_strong]:text-zinc-200 [&_strong]:font-semibold
+                  [&_em]:text-zinc-300
+                  [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20
+                  [&_mark]:text-white [&_mark]:font-semibold
+                  [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5
+                  [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30
+                  [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]"
                   dangerouslySetInnerHTML={{ __html: step.description }}
                 />
               </div>
