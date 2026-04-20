@@ -223,13 +223,16 @@ export default function ModulePage({
   // (Supabase remote load + silent-fail recovery + admin-reset
   // detection all moved into useStudentProgress.)
 
-  // Session ping + token presence check. Runs on mount and whenever the
-  // logged-in state changes. Two jobs:
-  //   1. If we have a fresh token, ping /api/session/ping so admin sees
-  //      the student is active even before they complete any topic.
-  //   2. If user object exists but token is null (page reload / token
-  //      expiry), set the needsReauth banner so the student knows their
-  //      next "Mark as done" won't actually save.
+  // Session ping on mount / logged-in change. Was previously doing
+  // double duty and also setting `needsReauth = true` when the user
+  // object existed but the in-memory token was null (post-reload, post-
+  // token-expiry). That was user-hostile: a student hard-refreshing
+  // their module page saw a scary "sign-in expired" banner across the
+  // top of the screen before they'd tried to do anything. The banner
+  // now fires ONLY when a save is actually attempted (saveToSupabase
+  // inside useStudentProgress), so a student who's just browsing
+  // sees nothing — matches how the silent-fail recovery was
+  // previously tightened.
   useEffect(() => {
     if (!isLoggedIn || !user) {
       setNeedsReauth(false);
@@ -237,9 +240,11 @@ export default function ModulePage({
     }
     const token = getIdToken();
     if (!token) {
-      setNeedsReauth(true);
+      // No token → skip the session-ping. Don't flip the banner here.
       return;
     }
+    // If we have a valid token we also clear any lingering banner
+    // from an earlier save failure — the student just re-authed.
     setNeedsReauth(false);
     // Fire-and-forget; ping failure isn't user-visible. Includes the
     // current page path so the admin live-class-digest can show
