@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
+import { verifyGoogleIdToken } from "@/lib/verify-google-token";
+import { isAdminEmail } from "@/lib/admins";
 import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/connect/glimpse
@@ -28,6 +30,31 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const weekAgo = new Date(now - WEEK_MS).toISOString();
   const twoWeeksAgo = new Date(now - TWO_WEEKS_MS).toISOString();
+
+  // Hidden-section visibility: mirrors /api/connect so the home
+  // widget and the /connect page always agree on who's counted.
+  // An admin OR a student who themselves sits in a hidden section
+  // sees test accounts here; everyone else sees the public view.
+  // Teacher report Apr 20: "home says 47 students, /connect says
+  // 49" — exactly the 2 hidden test accounts the admin was seeing
+  // on /connect but not on home. Now both endpoints filter with
+  // the same `includeHidden` flag.
+  const idToken = req.headers.get("x-id-token");
+  const caller = idToken ? await verifyGoogleIdToken(idToken) : null;
+  let callerOwnSectionIsHidden = false;
+  if (caller) {
+    const { data: self } = await supabase
+      .from("students")
+      .select("section")
+      .eq("email", caller.email)
+      .maybeSingle();
+    const selfSection = (self as { section?: string | null } | null)?.section;
+    if (selfSection && isHiddenSection(selfSection)) {
+      callerOwnSectionIsHidden = true;
+    }
+  }
+  const includeHidden =
+    !!caller && (isAdminEmail(caller.email) || callerOwnSectionIsHidden);
 
   // ── All fat queries in parallel ──
   const [studentsRes, rollRes, recentProgressRes] = await Promise.all([
@@ -86,9 +113,12 @@ export async function GET(req: NextRequest) {
     s.name ||
     "";
 
-  // Exclude hidden sections (e.g. Test Section) from every public number
+  // Exclude hidden sections (Test Section etc.) from the counts by
+  // default. Admins / students-in-hidden-sections see them so the
+  // home widget matches /connect for the SAME caller — previously
+  // those two diverged (home 47 vs /connect 49).
   const allStudents = (studentsRes.data || []).filter(
-    (s) => !isHiddenSection(s.section)
+    (s) => includeHidden || !isHiddenSection(s.section)
   );
 
   // Count weekly completions per email
@@ -162,12 +192,15 @@ export async function GET(req: NextRequest) {
       lastThree: (s.enrollment_no || "").slice(-3),
     }));
 
-  // Section leader + registered counts (hidden sections excluded)
+  // Section leader + registered counts. Same visibility rule as
+  // the student-count filter above so the "X of Y students" in the
+  // header lines up with the section-leader percentage.
   const perSectionRolls: Record<string, number> = {};
   let visibleRollCount = 0;
   for (const r of rollRows || []) {
     const sec = r.section || "";
-    if (!sec || isHiddenSection(sec)) continue;
+    if (!sec) continue;
+    if (!includeHidden && isHiddenSection(sec)) continue;
     perSectionRolls[sec] = (perSectionRolls[sec] || 0) + 1;
     visibleRollCount += 1;
   }
@@ -198,8 +231,14 @@ export async function GET(req: NextRequest) {
     },
     {
       headers: {
-        // 5-minute browser cache + 30 min stale-while-revalidate. Public stats.
-        "Cache-Control": "public, max-age=300, stale-while-revalidate=1800",
+        // Cache scope depends on who's seeing hidden sections.
+        // Public (default): shared cache, 5-min browser + 30-min SWR.
+        // Admin/self-hidden view: private-only, short max-age so
+        //   a student request can never hit a CDN-cached response
+        //   that includes test accounts.
+        "Cache-Control": includeHidden
+          ? "private, max-age=15, stale-while-revalidate=60"
+          : "public, max-age=300, stale-while-revalidate=1800",
       },
     }
   );

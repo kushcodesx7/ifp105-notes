@@ -48,13 +48,22 @@ interface Glimpse {
 // Section palette moved to @/lib/sectionColors; prettyName/initials to @/lib/names.
 
 export default function HomeConnectGlimpse() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getIdToken } = useAuth();
   const [data, setData] = useState<Glimpse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/connect/glimpse")
+    // Pass the id token so the glimpse endpoint can decide whether
+    // to include hidden-section students (admin / self-hidden view).
+    // Without this the admin's home widget always sees the public
+    // count (47) even when /connect showed them 49 — a drift the
+    // teacher explicitly flagged. Token is in-memory for Google
+    // sign-ins / persisted for password sign-ins (see auth-context).
+    const token = getIdToken();
+    fetch("/api/connect/glimpse", {
+      headers: token ? { "x-id-token": token } : {},
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!cancelled) {
