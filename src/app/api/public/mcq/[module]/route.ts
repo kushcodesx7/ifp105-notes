@@ -63,15 +63,14 @@ export async function GET(
     { mcq: loaded.mcq },
     {
       headers: {
-        // 5 min fresh + 30 min SWR. Rationale: the student-facing module
-        // page already revalidates every 30s via ISR, so teacher text
-        // edits propagate fast through the TopicRenderer side. MCQ
-        // content changes much less frequently — bumping this to 5min
-        // fresh / 30min SWR cuts the DB round-trip rate on Vercel's
-        // edge by ~10× vs the old 60s / 5min window, with no visible
-        // impact on edit-to-student latency. Previously the endpoint
-        // was the single heaviest route on every module page load.
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
+        // 30 s fresh + 2 min SWR. Short enough that admin MCQ edits
+        // (add/delete/tweak options) propagate to students within
+        // ~30 s, long enough to absorb the Monday-morning herd so
+        // this stays the cheapest hot-path. The endpoint was
+        // previously the heaviest route on every module page load;
+        // even 30s CDN caching cuts DB round-trips by >95% during a
+        // class session. Matched to the flashcards endpoint cadence.
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
       },
     }
   );

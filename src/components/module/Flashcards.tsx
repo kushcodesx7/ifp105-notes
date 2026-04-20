@@ -57,14 +57,16 @@ export default function Flashcards({
     if (moduleNumber == null || topicId == null) return;
     let alive = true;
     const slug = courseSlug ?? CURRENT_COURSE_SLUG;
-    // Server sets `public, s-maxage=300, stale-while-revalidate=1800`
-    // — use the browser HTTP cache so flipping back to a topic
-    // inside the SWR window is instant (no network). Safe: flashcards
-    // aren't user-specific; admin edits invalidate via a different
-    // code path on save.
+    // `cache: "no-store"` bypasses the browser's HTTP cache so an admin
+    // editing a flashcard in the studio sees the change immediately on
+    // their next refresh. The server still sets a short CDN cache
+    // (s-maxage=30), which protects against Monday-morning traffic
+    // spikes without making admin edits invisible. Tried `cache:
+    // "default"` earlier — perf win was marginal vs the correctness
+    // problem of stale flashcards.
     fetch(
       `/api/public/flashcards/${moduleNumber}/${topicId}?course=${encodeURIComponent(slug)}`,
-      { cache: "default" }
+      { cache: "no-store" }
     )
       .then((r) => (r.ok ? r.json() : { cards: null }))
       .then((json: { cards: FlashcardData[] | null }) => {

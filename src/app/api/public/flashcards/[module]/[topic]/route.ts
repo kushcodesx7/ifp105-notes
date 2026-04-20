@@ -94,10 +94,13 @@ export async function GET(
 function cacheHeaders() {
   return {
     headers: {
-      // 5 min fresh + 30 min SWR. Flashcards change infrequently;
-      // students rarely need sub-5-minute freshness. Same cadence as
-      // the MCQ endpoint for consistency.
-      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
+      // 30 s fresh + 2 min SWR. Was 5 min + 30 min but that made admin
+      // flashcard edits invisible to students for up to 5 minutes —
+      // unacceptable UX when the teacher is actively correcting a card
+      // during class. 30 s still absorbs the Monday-morning thundering
+      // herd (≈218 students × 50 topics loaded in the first 10 min) so
+      // we don't lose the protection entirely.
+      "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
     },
   };
 }
