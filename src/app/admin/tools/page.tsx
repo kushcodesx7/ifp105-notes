@@ -130,6 +130,7 @@ const ACTION_META: Record<
   change_email: { icon: "✉", label: "Email changed", color: "#818CF8" },
   change_name: { icon: "🪪", label: "Name changed", color: "#818CF8" },
   reset_progress: { icon: "🔄", label: "Progress reset", color: "#F87171" },
+  reset_progress_all: { icon: "🧹", label: "All progress wiped", color: "#EF4444" },
   unlink: { icon: "🔗", label: "Account unlinked", color: "#F87171" },
   delete_student: { icon: "🗑", label: "Student deleted", color: "#F87171" },
   create_batch: { icon: "🎓", label: "Batch created", color: "#34D399" },

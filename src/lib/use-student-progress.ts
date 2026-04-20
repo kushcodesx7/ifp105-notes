@@ -196,6 +196,46 @@ export function useStudentProgress({
         const wasFirstLoad = !supabaseLoaded.current;
         supabaseLoaded.current = true;
 
+        // ──── Reset-epoch check ────
+        // Server tells us the timestamp of the last bulk reset. If our
+        // stored epoch is older (or missing), a bulk reset happened
+        // after our last successful save → wipe our local progress
+        // cache for this module BEFORE the silent-fail recovery runs.
+        // Otherwise the recovery below would cheerfully re-upload a
+        // student's pre-wipe completions and silently un-do the reset.
+        const serverEpoch: string | null = data.resetEpoch ?? null;
+        const RESET_EPOCH_KEY = "ifp105_reset_epoch_seen";
+        let localEpoch: string | null = null;
+        try {
+          localEpoch = localStorage.getItem(RESET_EPOCH_KEY);
+        } catch {}
+        if (serverEpoch && serverEpoch !== localEpoch) {
+          // Bulk reset landed while we had stale local data. Wipe the
+          // per-module done-topics key + every quiz-state blob for
+          // this course/module. Leave identity and skills alone.
+          try {
+            localStorage.removeItem(LS_KEY);
+            const quizPrefix = quizStateKey(
+              courseSlug,
+              moduleNumber,
+              0
+            ).replace(/0$/, "");
+            const keysToClear: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith(quizPrefix)) keysToClear.push(key);
+            }
+            keysToClear.forEach((k) => localStorage.removeItem(k));
+            localStorage.setItem(RESET_EPOCH_KEY, serverEpoch);
+          } catch {}
+          // Reflect the wipe in React state before we compute
+          // recovery sets — otherwise we'd merge stale in-memory
+          // `done` with the fresh server set.
+          setDone(new Set());
+          onAdminResetDetected?.();
+          return;
+        }
+
         const remoteProgress = (data.progress ?? {}) as Record<
           number,
           { completed: boolean; mcqScore: number | null; mcqTotal: number | null }

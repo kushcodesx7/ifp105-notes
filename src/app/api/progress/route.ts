@@ -98,7 +98,29 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  return Response.json({ progress });
+  // Reset epoch — the timestamp of the most recent global
+  // `reset_progress_all` admin action. Clients store the last value
+  // they've seen in localStorage; when a fresh epoch arrives, they
+  // wipe their local progress before the silent-fail recovery runs.
+  // This prevents students from silently re-uploading pre-wipe
+  // progress after a bulk reset. If the admin_actions query fails
+  // we silently return null — the wipe still works via the server;
+  // only the local re-upload guard is skipped.
+  let resetEpoch: string | null = null;
+  try {
+    const { data: resetRows } = await supabase
+      .from("admin_actions")
+      .select("created_at")
+      .eq("action", "reset_progress_all")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    resetEpoch = resetRows?.[0]?.created_at ?? null;
+  } catch {
+    // admin_actions table might not exist yet on older deployments —
+    // fall through with null. Not critical.
+  }
+
+  return Response.json({ progress, resetEpoch });
 }
 
 // POST — Save/update progress for a topic.

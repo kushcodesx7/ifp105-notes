@@ -16,6 +16,7 @@ export type AdminActionKind =
   | "change_email"
   | "change_name"
   | "reset_progress"
+  | "reset_progress_all"
   | "unlink"
   | "delete_student"
   | "create_batch"
