@@ -187,9 +187,14 @@ export async function GET(req: NextRequest) {
         // Response contains personalized data (hidden sections) when a
         // privileged caller is signed in → private cache so a student's
         // request can't be served the admin's cached response.
+        // Was `public, max-age=120, stale-while-revalidate=600` — but
+        // students complained their completions didn't appear on their
+        // IFS Connect card because the CDN served 2-12 min stale data.
+        // Cut to 30s fresh + 2 min SWR so progress updates propagate
+        // fast while the DB-hit rate stays reasonable.
         "Cache-Control": includeHidden
           ? "private, max-age=30"
-          : "public, max-age=120, stale-while-revalidate=600",
+          : "public, max-age=30, stale-while-revalidate=120",
       },
     }
   );

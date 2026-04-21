@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { requireSelf } from "@/lib/verify-google-token";
 import { getCourseIdBySlug } from "@/lib/course-registry";
@@ -282,6 +283,23 @@ export async function POST(req: NextRequest) {
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
+
+  // Bust the aggregated-view caches so the student's updated completion
+  // propagates to /connect (their classmate-visible card), the home
+  // glimpse widget (Top Learners), and their own module-level views.
+  // Without this, /api/connect was CDN-cached for 2 min fresh + 10 min
+  // SWR — students who completed a topic saw their own card on IFS
+  // Connect still showing the pre-completion number for up to 12
+  // minutes. Teacher report Apr 21: "students complaining their
+  // progress isn't reflecting on IFS Connect even though they finished."
+  try {
+    revalidatePath("/connect");
+    revalidatePath("/");
+    revalidatePath("/api/connect");
+    revalidatePath("/api/connect/glimpse");
+    revalidatePath("/api/connect/activity");
+    revalidatePath("/api/me/blooms");
+  } catch {}
 
   return Response.json({ ok: true });
 }

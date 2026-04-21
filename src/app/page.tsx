@@ -220,9 +220,17 @@ const quizQuestions = [
 ];
 
 export default function Home() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, getIdToken } = useAuth();
   const [continueData, setContinueData] = useState<ContinueData | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  // Bumps whenever we finish hydrating localStorage from the server.
+  // Used to force ModuleCard remounts so their "read localStorage on
+  // mount" hook picks up the freshly-synced completions. Teacher
+  // report Apr 21: "not able to see my progress graph on home" —
+  // caused by the home page being localStorage-only, so a sign-in
+  // on a new device / after a logout showed empty progress until
+  // each module page had been opened once.
+  const [progressHydrationTick, setProgressHydrationTick] = useState(0);
   // Respect prefers-reduced-motion. globals.css covers CSS animations,
   // but framer-motion's `animate={{ x: [...], y: [...] }}` runs on JS
   // rAF and ignores that media query. We gate the infinite hero orb
@@ -296,6 +304,116 @@ export default function Home() {
     // Load bookmarks
     setBookmarks(getBookmarks());
   }, []);
+
+  // ── Server → localStorage progress hydration ───────────────────
+  // When a signed-in student opens the home page, pull THEIR OWN
+  // progress from the server and write it into the per-module
+  // localStorage keys that ModuleCard reads on mount. This is what
+  // makes the progress bars on the home page reflect real completions
+  // even on a fresh device / browser / incognito session — before
+  // this, the home page was reading only from localStorage, so a
+  // student signing in at the library computer saw "0 / 11 done"
+  // on Module 1 despite having finished it on their phone.
+  //
+  // Runs after isLoggedIn flips true, and again if the user object
+  // changes (different student signs in on the same tab). Also
+  // respects the server's reset epoch: if a bulk reset landed while
+  // we had stale local state, wipe everything first.
+  useEffect(() => {
+    if (!isLoggedIn || !user) return;
+    const token = getIdToken();
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/progress/mine?course=${encodeURIComponent(currentCourse.slug)}`,
+          { headers: { "x-id-token": token }, cache: "no-store" }
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          resetEpoch: string | null;
+          byModule: Record<number, number[]>;
+        };
+
+        // Reset-epoch check: if the server's last reset is newer than
+        // what our localStorage knows about, nuke the local progress
+        // keys before hydrating. Matches the per-module hook's
+        // behaviour so a bulk reset propagates to the home page too.
+        const RESET_EPOCH_KEY = "ifp105_reset_epoch_seen";
+        try {
+          const localEpoch = localStorage.getItem(RESET_EPOCH_KEY);
+          if (data.resetEpoch && data.resetEpoch !== localEpoch) {
+            for (const mod of modules) {
+              if (mod.lsKey) localStorage.removeItem(mod.lsKey);
+            }
+            localStorage.setItem(RESET_EPOCH_KEY, data.resetEpoch);
+          }
+        } catch {}
+
+        // Write per-module completions into the exact keys ModuleCard
+        // + the /module/[N] hooks read. Empty arrays are written as
+        // "no key" (removeItem) so a module with zero completions
+        // shows no progress bar, same as before.
+        for (const mod of modules) {
+          if (!mod.lsKey) continue;
+          const moduleNum = parseInt(mod.number, 10);
+          const done = data.byModule[moduleNum] || [];
+          try {
+            if (done.length > 0) {
+              localStorage.setItem(mod.lsKey, JSON.stringify(done));
+            } else {
+              localStorage.removeItem(mod.lsKey);
+            }
+          } catch {}
+        }
+
+        // Bump the tick so ModuleCards remount and re-read localStorage.
+        // Continue-where-you-left-off is re-derived from the same data
+        // in one pass below so /the "Continue Module 3" strip also
+        // reflects the server state immediately.
+        if (!cancelled) {
+          setProgressHydrationTick((t) => t + 1);
+
+          // Recompute continue-data from the just-hydrated map.
+          const entries: ContinueData[] = [];
+          for (const mod of modules) {
+            const moduleNum = parseInt(mod.number, 10);
+            const done = new Set(data.byModule[moduleNum] || []);
+            if (done.size === 0 || done.size >= mod.totalTopics) continue;
+            const topics = MODULE_TOPICS[moduleNum] || [];
+            let nextTopicId = 1;
+            for (let i = 1; i <= mod.totalTopics; i++) {
+              if (!done.has(i)) {
+                nextTopicId = i;
+                break;
+              }
+            }
+            entries.push({
+              moduleNumber: moduleNum,
+              moduleTitle: mod.title,
+              topicTitle: topics[nextTopicId - 1] || `Topic ${nextTopicId}`,
+              topicId: nextTopicId,
+              done: done.size,
+              total: mod.totalTopics,
+              href: mod.href!,
+              accent: mod.accent,
+            });
+          }
+          if (entries.length > 0) {
+            entries.sort((a, b) => b.done - a.done);
+            setContinueData(entries[0]);
+          }
+        }
+      } catch {
+        // Silent: offline / token expired etc. ModuleCard's
+        // localStorage-only fallback still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, user, getIdToken]);
 
   function handleQuizAnswer(idx: number) {
     if (showQuizResult) return;
@@ -660,7 +778,16 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {modules.map((mod, i) => (
               <div key={mod.number} data-tour={i === 0 ? "module-1" : undefined}>
-                <ModuleCard {...mod} delay={i * 0.08} />
+                {/* key includes progressHydrationTick so ModuleCard's
+                    localStorage-on-mount hook re-reads after we sync
+                    from the server. Without this, a signed-in student
+                    on a fresh browser sees 0/N done until they visit
+                    each module page. */}
+                <ModuleCard
+                  key={`${mod.number}-${progressHydrationTick}`}
+                  {...mod}
+                  delay={i * 0.08}
+                />
               </div>
             ))}
           </div>
