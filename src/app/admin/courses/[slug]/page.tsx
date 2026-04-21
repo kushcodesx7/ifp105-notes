@@ -126,15 +126,18 @@ export default function CourseEditPage({
               </p>
             </div>
 
-            {/* Phase 5.5: ICT can be seeded into the DB and edited from
-                the UI. When the DB is empty for ICT (modules.length === 0)
-                we offer a one-click seeder that copies the TS files in.
-                After seeding, students read from the DB (with TS fallback
-                if anything goes wrong). See `/api/admin/seed-ict`. */}
-            {isICT && modules.length === 0 && (
+            {/* ICT seed / re-seed prompt. Always visible on ICT —
+                previously gated on `modules.length === 0` so it
+                hid once seeded. Teachers need a way to PUSH fresh
+                TS content into the DB when they've updated the
+                source files (e.g., after rewriting MCQs). The
+                endpoint is idempotent (upsert-on-conflict), so
+                re-running is safe. See `/api/admin/seed-ict`. */}
+            {isICT && (
               <IctSeedPrompt
                 idToken={idToken}
                 password={password}
+                isEmpty={modules.length === 0}
                 onSeeded={() => mutate()}
               />
             )}
@@ -589,10 +592,12 @@ function LabelledInput({
 function IctSeedPrompt({
   idToken,
   password,
+  isEmpty,
   onSeeded,
 }: {
   idToken: string | null;
   password: string;
+  isEmpty: boolean;
   onSeeded: () => void;
 }) {
   const [seeding, setSeeding] = useState(false);
@@ -629,14 +634,26 @@ function IctSeedPrompt({
       }}
     >
       <h3 className="text-sm font-bold text-white mb-1">
-        📥 Port ICT into the database
+        {isEmpty ? "📥 Port ICT into the database" : "♻️ Re-seed ICT from TS files"}
       </h3>
       <p className="text-[12px] text-zinc-400 mb-3 leading-relaxed">
-        ICT content currently lives in TypeScript files (<code>src/data/module*.ts</code>).
-        Click below to copy all 5 modules, ~48 topics, and ~336 MCQs into the DB
-        tables so you can edit them from this UI. <strong>Students keep seeing
-        the same content</strong> — the module pages prefer the DB copy and fall
-        back to TS automatically if anything goes wrong.
+        {isEmpty ? (
+          <>
+            ICT content currently lives in TypeScript files (<code>src/data/module*.ts</code>).
+            Click below to copy all 5 modules, 48 topics, and 370 MCQs into the DB
+            tables so you can edit them from this UI. <strong>Students keep seeing
+            the same content</strong> — the module pages prefer the DB copy and fall
+            back to TS automatically if anything goes wrong.
+          </>
+        ) : (
+          <>
+            <strong>Pushes the latest TS source into the DB</strong>, overwriting any
+            content with the same module/topic/question position. Use after editing
+            the source TS files (e.g., MCQ rewrites). DB-edited rows that share a
+            slot will be overwritten by TS — the seeder is &ldquo;reset to TS source.&rdquo;
+            Safe to run multiple times.
+          </>
+        )}
       </p>
       {result ? (
         <div className="space-y-1 text-[12px]">
@@ -667,7 +684,11 @@ function IctSeedPrompt({
           disabled={seeding}
           className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 active:scale-95 transition-all"
         >
-          {seeding ? "Seeding (takes ~20s)…" : "Seed ICT into database"}
+          {seeding
+            ? "Seeding (takes ~20s)…"
+            : isEmpty
+              ? "Seed ICT into database"
+              : "♻️ Re-seed from TS source"}
         </button>
       )}
       {err && <p className="text-[12px] text-red-400 mt-2">{err}</p>}
