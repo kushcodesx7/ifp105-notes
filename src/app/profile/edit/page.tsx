@@ -3,52 +3,46 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import QuickLoginPasswordCard from "@/components/QuickLoginPasswordCard";
 import { useAuth } from "@/lib/auth-context";
 import { decodeJwt } from "@/lib/jwt";
 import { GoogleLogin } from "@react-oauth/google";
+import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
 
-type Status = "working" | "studying" | "freelancing" | "looking";
+// ─── /profile/edit ────────────────────────────────────────────────
+//
+// The ONE profile page for current students. Simple by design:
+//   · Photo       (upload OR auto-fetch from LinkedIn on save)
+//   · Name        (pre-filled from Google, editable)
+//   · Bio         (single line, 120 char cap — same as /connect modal)
+//   · Interests   (pick up to 3 tags from /lib/skills)
+//   · LinkedIn    (OPTIONAL — if provided, we fetch the profile photo)
+//
+// Saves to the `students` table via /api/students/profile. Everything
+// here is visible on /connect immediately after save — no separate
+// alumni career table involved.
+//
+// (Historical note: this page USED to be a 16-field alumni career form
+// that required LinkedIn and wrote to a separate `student_profiles`
+// table. That was wrong for 17-year-old first-year ICT students and
+// blocked anyone without LinkedIn from saving. Rewritten Apr 2026.)
 
 interface ProfileData {
   name: string;
   photoUrl: string;
-  status: Status | "";
-  company: string;
-  jobTitle: string;
-  description: string;
-  university: string;
-  program: string;
-  country: string;
-  freelanceArea: string;
-  lookingFor: string;
-  skills: string;
+  bio: string;
+  skills: string[];
   linkedinUrl: string;
-  githubUrl: string;
-  telegramUrl: string;
-  portfolioUrl: string;
 }
 
-const STATUS_OPTIONS: {
-  value: Status;
-  label: string;
-  emoji: string;
-  color: string;
-  bg: string;
-  border: string;
-  desc: string;
-}[] = [
-  { value: "working", label: "Working", emoji: "🏢", color: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.25)", desc: "Currently employed" },
-  { value: "studying", label: "Studying Further", emoji: "🎓", color: "#3B82F6", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", desc: "Pursuing higher education" },
-  { value: "freelancing", label: "Freelancing", emoji: "🚀", color: "#8B5CF6", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.25)", desc: "Self-employed or own business" },
-  { value: "looking", label: "Looking", emoji: "🔍", color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.25)", desc: "Exploring opportunities" },
-];
-
 const EMPTY_PROFILE: ProfileData = {
-  name: "", photoUrl: "", status: "", company: "", jobTitle: "", description: "",
-  university: "", program: "", country: "", freelanceArea: "", lookingFor: "",
-  skills: "", linkedinUrl: "", githubUrl: "", telegramUrl: "", portfolioUrl: "",
+  name: "",
+  photoUrl: "",
+  bio: "",
+  skills: [],
+  linkedinUrl: "",
 };
 
 export default function EditProfilePage() {
@@ -56,34 +50,47 @@ export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<ProfileData>(EMPTY_PROFILE);
-  // Derived loading: true until EITHER the user is signed in OR the 500ms
-  // grace window passes (so signed-out visitors don't see a flash of the
-  // skeleton before the sign-in card paints). Replacing the old
-  // useEffect+setLoading pattern that React 19's purity lint flags.
+
+  // Grace window so a signed-out visitor doesn't see a flash of the
+  // skeleton before the sign-in card paints.
   const [minWaitDone, setMinWaitDone] = useState(false);
   const loading = !isLoggedIn && !minWaitDone;
+
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [toast, setToast] = useState<
+    { type: "success" | "error"; message: string } | null
+  >(null);
+  // Highlighted after a successful save — gives the student a clear
+  // next action ("See your card on IFS Connect").
+  const [saved, setSaved] = useState(false);
 
-  // Login step for users not yet authenticated
-  const [googleUser, setGoogleUser] = useState<{ name: string; email: string } | null>(null);
+  // Login step for unauthenticated visitors
+  const [googleUser, setGoogleUser] = useState<{ name: string; email: string } | null>(
+    null
+  );
   const [enrollmentNo, setEnrollmentNo] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [batches, setBatches] = useState<{ id: string; name: string }[]>([]);
   const [loginError, setLoginError] = useState("");
   const [loginStep, setLoginStep] = useState<"google" | "enroll">("google");
 
-  // Load batches for enrollment step
+  // Load batches for the register step
   useEffect(() => {
-    fetch("/api/batches").then(r => r.json()).then(d => {
-      setBatches((d.batches || []).map((b: { id: string; name: string }) => ({ id: b.id, name: b.name })));
-    }).catch(() => {});
+    fetch("/api/batches")
+      .then((r) => r.json())
+      .then((d) => {
+        setBatches(
+          (d.batches || []).map((b: { id: string; name: string }) => ({
+            id: b.id,
+            name: b.name,
+          }))
+        );
+      })
+      .catch(() => {});
   }, []);
 
-  // Flip the grace window off after 500ms so visitors who aren't signed in
-  // finally see the sign-in card. setState-in-effect for an external timer
-  // is the canonical use of useEffect — not a flagged anti-pattern.
+  // Flip the loading grace window off after 500ms.
   useEffect(() => {
     const timer = setTimeout(() => setMinWaitDone(true), 500);
     return () => clearTimeout(timer);
@@ -92,49 +99,36 @@ export default function EditProfilePage() {
   const loadProfile = useCallback(async () => {
     if (!user?.email) return;
     try {
-      // Fetch just this student's row by email. /api/profiles now
-      // requires auth and strips student_email from multi-row responses,
-      // so we can't scan a batch list and filter anymore — and we don't
-      // need to: the email lookup is auth-gated (requireSelf) and returns
-      // a single row with the caller's own email echoed back.
       const token = getIdToken() || "";
-      const res = await fetch(
-        `/api/profiles?email=${encodeURIComponent(user.email)}`,
-        { headers: { "x-id-token": token } }
-      );
+      // /api/connect returns the student's row (with bio, skills,
+      // linkedinUrl, photoUrl) — same data the /connect page already
+      // uses, so there's zero chance of drift between what the
+      // student edits here and what classmates see.
+      const res = await fetch("/api/connect", {
+        headers: token ? { "x-id-token": token } : {},
+      });
       if (!res.ok) return;
       const data = await res.json();
-      const existing = data.profiles?.[0];
-      if (existing) {
+      const me = (data.students || []).find(
+        (s: { email?: string }) => s.email === user.email
+      );
+      if (me) {
         setProfile({
-          name: existing.name || user.name,
-          photoUrl: existing.photoUrl || "",
-          status: existing.status || "",
-          company: existing.company || "",
-          jobTitle: existing.jobTitle || "",
-          description: existing.description || "",
-          university: existing.university || "",
-          program: existing.program || "",
-          country: existing.country || "",
-          freelanceArea: existing.freelanceArea || "",
-          lookingFor: existing.lookingFor || "",
-          skills: existing.skills || "",
-          linkedinUrl: existing.linkedinUrl || "",
-          githubUrl: existing.githubUrl || "",
-          telegramUrl: existing.telegramUrl || "",
-          portfolioUrl: existing.portfolioUrl || "",
+          name: me.name || user.name || "",
+          photoUrl: me.photoUrl || "",
+          bio: me.bio || "",
+          skills: Array.isArray(me.skills) ? me.skills : [],
+          linkedinUrl: me.linkedinUrl || "",
         });
       } else {
-        setProfile(prev => ({ ...prev, name: user.name }));
+        // New student — Google name is the best default for the form
+        setProfile((prev) => ({ ...prev, name: user.name }));
       }
-    } catch {}
+    } catch {
+      // Silent — page still renders with whatever the student types.
+    }
   }, [user, getIdToken]);
 
-  // Load the saved profile when the user becomes available. Intentionally
-  // allowed setState-in-effect: loadProfile() reaches out to the /api/profiles
-  // endpoint (a genuine external system) and writes the response back into
-  // local state — the standard data-fetching pattern. Lint would prefer a
-  // framework like SWR here; that's a bigger refactor than this pass.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) loadProfile();
@@ -145,23 +139,37 @@ export default function EditProfilePage() {
     setTimeout(() => setToast(null), 4000);
   }
 
-  function updateField(field: keyof ProfileData, value: string) {
-    setProfile(prev => ({ ...prev, [field]: value }));
+  function updateField<K extends keyof ProfileData>(
+    field: K,
+    value: ProfileData[K]
+  ) {
+    setProfile((prev) => ({ ...prev, [field]: value }));
+    // Any edit clears the "saved" banner — student is back in edit mode.
+    setSaved(false);
+  }
+
+  function toggleSkill(id: string) {
+    setProfile((prev) => {
+      if (prev.skills.includes(id)) {
+        return { ...prev, skills: prev.skills.filter((s) => s !== id) };
+      }
+      if (prev.skills.length >= MAX_SKILLS) return prev;
+      return { ...prev, skills: [...prev.skills, id] };
+    });
+    setSaved(false);
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      showToast("error", "Photo must be under 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("error", "Photo must be under 5MB");
       return;
     }
-
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("email", user?.email || "unknown");
-
     try {
       const token = getIdToken() || "";
       const res = await fetch("/api/profiles/upload", {
@@ -177,60 +185,74 @@ export default function EditProfilePage() {
         showToast("error", data.error || "Upload failed");
       }
     } catch {
-      showToast("error", "Upload failed");
+      showToast("error", "Upload failed. Check your connection.");
     }
     setUploading(false);
+    // Reset the input so the same file can be picked again after
+    // deleting it (browser otherwise ignores the "change" event).
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSave() {
-    const liRaw = profile.linkedinUrl.trim();
-    if (!liRaw) {
-      showToast("error", "LinkedIn URL is required");
+    if (!user?.email) return;
+
+    const trimmedName = profile.name.trim();
+    if (!trimmedName) {
+      showToast("error", "Please enter your name");
       return;
     }
-    // Shape check before server round-trip. Accept linkedin.com and the
-    // regional/mobile variants (uk.linkedin.com, m.linkedin.com). If a
-    // student pastes garbage like "my linkedin page", give them a clear
-    // error immediately instead of writing it to Supabase.
-    if (!/^https?:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(liRaw)) {
-      showToast("error", "LinkedIn URL must look like https://linkedin.com/in/yourname");
+
+    const trimmedLi = profile.linkedinUrl.trim();
+    if (
+      trimmedLi &&
+      !/^https?:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(trimmedLi)
+    ) {
+      showToast(
+        "error",
+        "LinkedIn link must look like https://linkedin.com/in/yourname"
+      );
       return;
     }
 
     setSaving(true);
+    setSaved(false);
     try {
       const token = getIdToken() || "";
-      const res = await fetch("/api/profiles", {
+      const res = await fetch("/api/students/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-id-token": token },
+        headers: {
+          "Content-Type": "application/json",
+          "x-id-token": token,
+        },
         body: JSON.stringify({
-          studentEmail: user!.email,
-          name: profile.name,
-          enrollmentNo: user!.enrollmentNo,
-          batchId: user!.batchId || null,
-          photoUrl: profile.photoUrl || null,
-          status: profile.status || null,
-          company: profile.company || null,
-          jobTitle: profile.jobTitle || null,
-          description: profile.description || null,
-          university: profile.university || null,
-          program: profile.program || null,
-          country: profile.country || null,
-          freelanceArea: profile.freelanceArea || null,
-          lookingFor: profile.lookingFor || null,
-          skills: profile.skills || null,
-          linkedinUrl: profile.linkedinUrl,
-          githubUrl: profile.githubUrl || null,
-          telegramUrl: profile.telegramUrl || null,
-          portfolioUrl: profile.portfolioUrl || null,
+          email: user.email,
+          name: trimmedName,
+          bio: profile.bio.trim(),
+          skills: profile.skills,
+          linkedinUrl: trimmedLi,
+          // Only send photoUrl if the student already has one (either
+          // uploaded OR previously auto-fetched). Sending empty string
+          // here would tell the server to blank the photo — we want
+          // LinkedIn auto-fetch to run instead when the field is empty.
+          ...(profile.photoUrl ? { photoUrl: profile.photoUrl } : {}),
         }),
       });
-
       const data = await res.json();
       if (!res.ok) {
-        showToast("error", data.error || "Failed to save profile");
+        showToast("error", data.error || "Couldn't save. Try again.");
       } else {
-        showToast("success", "Profile saved! View it on your batch page.");
+        // If the server auto-fetched a LinkedIn photo, reflect it
+        // immediately in the form.
+        if (data.linkedInPhotoFetched && data.photoUrl) {
+          updateField("photoUrl", data.photoUrl);
+        }
+        setSaved(true);
+        showToast(
+          "success",
+          data.linkedInPhotoFetched
+            ? "Saved! We also pulled your LinkedIn photo."
+            : "Profile saved!"
+        );
       }
     } catch {
       showToast("error", "Network error. Please try again.");
@@ -238,61 +260,60 @@ export default function EditProfilePage() {
     setSaving(false);
   }
 
-  function handleGoogleSuccess(response: { credential?: string }) {
-    if (!response.credential) return;
-    const decoded = decodeJwt(response.credential);
-    if (decoded?.name && decoded?.email) {
-      setGoogleUser({ name: decoded.name, email: decoded.email });
-      setLoginStep("enroll");
-    }
-  }
-
-  async function handleEnrollSubmit() {
-    if (!enrollmentNo.trim() || !selectedBatch) {
-      setLoginError("Select your batch and enter enrollment number");
-      return;
-    }
-    setLoginError("");
-
-    // Login through auth context
-    login({
-      name: googleUser!.name,
-      email: googleUser!.email,
-      enrollmentNo: enrollmentNo.trim().toUpperCase(),
-      batchId: selectedBatch,
-    });
-
-    setProfile(prev => ({ ...prev, name: googleUser!.name }));
-  }
-
-  const selectedStatus = STATUS_OPTIONS.find(s => s.value === profile.status);
-
-  // Not logged in — show login flow
+  // ─── Not signed in: show Google + enrollment flow ────────────
   if (!isLoggedIn && !loading) {
     return (
       <main className="relative min-h-screen">
-        <Navbar showBack title="Edit Profile" />
+        <Navbar showBack title="Your profile" />
         <div className="relative z-10 pt-24 pb-16 px-6 max-w-md mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
             <div className="text-4xl mb-4">👤</div>
-            <h1 className="text-2xl font-bold mb-2">Create Your Profile</h1>
-            <p className="text-sm text-zinc-400">Sign in with Google to get started</p>
+            <h1 className="text-2xl font-bold mb-2">Your profile</h1>
+            <p className="text-sm text-zinc-400">
+              Sign in to add a photo, bio, and LinkedIn — classmates will see
+              your card on IFS Connect.
+            </p>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="rounded-2xl p-6"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
             {loginStep === "google" ? (
               <div className="flex flex-col items-center gap-4">
-                <p className="text-xs text-zinc-500 text-center">Your name and email will be used for your profile</p>
+                <p className="text-xs text-zinc-500 text-center">
+                  Your name and email will be used for your profile
+                </p>
                 <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
+                  onSuccess={(response) => {
+                    if (!response.credential) return;
+                    const decoded = decodeJwt(response.credential);
+                    if (decoded?.name && decoded?.email) {
+                      setGoogleUser({
+                        name: decoded.name,
+                        email: decoded.email,
+                      });
+                      setLoginStep("enroll");
+                    }
+                  }}
                   onError={() => setLoginError("Google sign-in failed")}
                   theme="filled_black"
                   shape="pill"
                   size="large"
                 />
-                {loginError && <p className="text-sm text-red-400">{loginError}</p>}
+                {loginError && (
+                  <p className="text-sm text-red-400">{loginError}</p>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -302,27 +323,83 @@ export default function EditProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1.5 block">Batch</label>
-                  <select value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-white/20">
+                  <label className="text-xs text-zinc-400 mb-1.5 block">
+                    Batch
+                  </label>
+                  <select
+                    value={selectedBatch}
+                    onChange={(e) => setSelectedBatch(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-white/20"
+                  >
                     <option value="">Select your batch...</option>
-                    {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {batches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1.5 block">Enrollment Number</label>
-                  <input type="text" value={enrollmentNo} onChange={e => setEnrollmentNo(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleEnrollSubmit()}
+                  <label className="text-xs text-zinc-400 mb-1.5 block">
+                    Enrollment Number
+                  </label>
+                  <input
+                    type="text"
+                    value={enrollmentNo}
+                    onChange={(e) => setEnrollmentNo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        if (!enrollmentNo.trim() || !selectedBatch) {
+                          setLoginError(
+                            "Select your batch and enter enrollment number"
+                          );
+                          return;
+                        }
+                        login({
+                          name: googleUser!.name,
+                          email: googleUser!.email,
+                          enrollmentNo: enrollmentNo.trim().toUpperCase(),
+                          batchId: selectedBatch,
+                        });
+                        setProfile((prev) => ({
+                          ...prev,
+                          name: googleUser!.name,
+                        }));
+                      }
+                    }}
                     placeholder="e.g. A12345678"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20" />
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20"
+                  />
                 </div>
 
-                {loginError && <p className="text-sm text-red-400">{loginError}</p>}
+                {loginError && (
+                  <p className="text-sm text-red-400">{loginError}</p>
+                )}
 
-                <button onClick={handleEnrollSubmit}
-                  className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.02] transition-transform">
-                  Continue to Profile
+                <button
+                  onClick={() => {
+                    if (!enrollmentNo.trim() || !selectedBatch) {
+                      setLoginError(
+                        "Select your batch and enter enrollment number"
+                      );
+                      return;
+                    }
+                    setLoginError("");
+                    login({
+                      name: googleUser!.name,
+                      email: googleUser!.email,
+                      enrollmentNo: enrollmentNo.trim().toUpperCase(),
+                      batchId: selectedBatch,
+                    });
+                    setProfile((prev) => ({
+                      ...prev,
+                      name: googleUser!.name,
+                    }));
+                  }}
+                  className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:scale-[1.02] transition-transform"
+                >
+                  Continue to profile
                 </button>
               </div>
             )}
@@ -335,7 +412,7 @@ export default function EditProfilePage() {
   if (loading) {
     return (
       <main className="min-h-screen">
-        <Navbar showBack title="Edit Profile" />
+        <Navbar showBack title="Your profile" />
         <div className="flex justify-center pt-32">
           <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
         </div>
@@ -343,159 +420,258 @@ export default function EditProfilePage() {
     );
   }
 
+  // ─── Main edit view ──────────────────────────────────────────
+  const bioOver = profile.bio.length > MAX_BIO_LENGTH;
+
   return (
     <main className="relative min-h-screen">
-      <Navbar showBack title="Edit Profile" />
+      <Navbar showBack title="Your profile" />
 
-      <div className="relative z-10 pt-24 pb-16 px-6 max-w-2xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold mb-1">Your Career Profile</h1>
-          <p className="text-sm text-zinc-400 mb-8">This will be visible on your batch page</p>
+      <div className="relative z-10 pt-24 pb-16 px-6 max-w-xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h1 className="text-2xl font-bold mb-1">Your profile</h1>
+          <p className="text-sm text-zinc-400 mb-8">
+            This is how classmates see you on IFS Connect.
+          </p>
 
-          {/* Photo */}
+          {/* Photo + name */}
           <div className="flex items-center gap-5 mb-8">
             <div
-              className={`relative group ${uploading ? "cursor-wait opacity-80" : "cursor-pointer"}`}
+              className={`relative group ${
+                uploading ? "cursor-wait opacity-80" : "cursor-pointer"
+              }`}
               onClick={() => {
-                // Guard against double-click queueing another upload
-                // while the first POST is still in flight. Previously
-                // impatient clicks stacked requests → duplicate
-                // uploaded files + race conditions on the URL write.
                 if (uploading) return;
                 fileInputRef.current?.click();
               }}
+              title="Click to change photo"
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/[0.08] group-hover:border-indigo-500/50 transition-colors relative"
-                style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div
+                className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/[0.08] group-hover:border-indigo-500/50 transition-colors relative"
+                style={{ background: "rgba(255,255,255,0.04)" }}
+              >
                 {profile.photoUrl ? (
-                  // next/image with `fill` so the avatar fits the
-                  // 80x80 parent regardless of the source aspect.
-                  // unoptimized for Supabase storage URLs to skip the
-                  // Vercel image proxy (avatars are tiny + already
-                  // CDN-cached upstream).
                   <Image
                     src={profile.photoUrl}
-                    alt="Profile"
+                    alt="Your profile photo"
                     fill
-                    sizes="80px"
+                    sizes="96px"
                     unoptimized
                     className="object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-zinc-600">
-                    {profile.name ? profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "?"}
+                  <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-zinc-600">
+                    {profile.name
+                      ? profile.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()
+                      : "?"}
                   </div>
                 )}
               </div>
               <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="text-white text-xs font-medium">{uploading ? "..." : "Edit"}</span>
+                <span className="text-white text-[11px] font-semibold">
+                  {uploading ? "Uploading…" : "Change"}
+                </span>
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+                disabled={uploading}
+              />
             </div>
-            <div>
-              <input type="text" value={profile.name} onChange={e => updateField("name", e.target.value)}
-                className="text-lg font-semibold bg-transparent border-none outline-none text-white placeholder:text-zinc-600 w-full"
-                placeholder="Your Name" />
-              <p className="text-xs text-zinc-500">{user?.email}</p>
+            <div className="flex-1 min-w-0">
+              <label className="text-[11px] text-zinc-500 mb-1 block">
+                Display name
+              </label>
+              <input
+                type="text"
+                value={profile.name}
+                onChange={(e) => updateField("name", e.target.value)}
+                className="w-full text-lg font-semibold bg-transparent border-b border-white/[0.08] focus:border-indigo-500/40 outline-none text-white placeholder:text-zinc-600 pb-1 transition-colors"
+                placeholder="Your Name"
+              />
+              <p className="text-[11px] text-zinc-500 mt-1 truncate">
+                {user?.email}
+              </p>
             </div>
           </div>
 
-          {/* Status */}
+          {/* Bio */}
+          <div className="mb-6">
+            <label className="flex items-center justify-between text-xs font-semibold text-zinc-300 mb-2">
+              <span>One-line bio</span>
+              <span
+                className={`text-[10px] font-normal ${
+                  bioOver ? "text-red-400" : "text-zinc-500"
+                }`}
+              >
+                {profile.bio.length}/{MAX_BIO_LENGTH}
+              </span>
+            </label>
+            <input
+              type="text"
+              value={profile.bio}
+              onChange={(e) => updateField("bio", e.target.value)}
+              placeholder="e.g. First-year ICT · loves football · learning Python"
+              maxLength={MAX_BIO_LENGTH + 10}
+              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20"
+            />
+          </div>
+
+          {/* Interests */}
+          <div className="mb-6">
+            <label className="flex items-center justify-between text-xs font-semibold text-zinc-300 mb-2">
+              <span>Your interests (pick up to {MAX_SKILLS})</span>
+              <span className="text-[10px] font-normal text-zinc-500">
+                {profile.skills.length}/{MAX_SKILLS}
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {SKILLS.map((s) => {
+                const selected = profile.skills.includes(s.id);
+                const full =
+                  !selected && profile.skills.length >= MAX_SKILLS;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => toggleSkill(s.id)}
+                    disabled={full}
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{
+                      background: selected
+                        ? `linear-gradient(135deg, var(--tw-gradient-stops))`
+                        : "rgba(255,255,255,0.04)",
+                      backgroundImage: selected
+                        ? `linear-gradient(135deg, ${s.color
+                            .replace("from-", "")
+                            .replace(" to-", ", ")})`
+                        : undefined,
+                      color: selected ? "#fff" : "#a1a1aa",
+                      border: `1px solid ${
+                        selected
+                          ? "rgba(255,255,255,0.18)"
+                          : "rgba(255,255,255,0.08)"
+                      }`,
+                      boxShadow: selected
+                        ? "0 2px 8px rgba(99,102,241,0.25)"
+                        : "none",
+                    }}
+                  >
+                    <span className="mr-1">{s.emoji}</span>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* LinkedIn */}
           <div className="mb-8">
-            <label className="text-sm font-semibold text-zinc-300 mb-3 block">What are you doing now?</label>
-            <div className="grid grid-cols-2 gap-3">
-              {STATUS_OPTIONS.map(opt => (
-                <motion.button key={opt.value} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => updateField("status", profile.status === opt.value ? "" : opt.value)}
-                  className="p-4 rounded-xl text-left transition-all"
-                  style={{
-                    background: profile.status === opt.value ? opt.bg : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${profile.status === opt.value ? opt.border : "rgba(255,255,255,0.06)"}`,
-                  }}>
-                  <div className="text-xl mb-2">{opt.emoji}</div>
-                  <div className="text-sm font-semibold" style={{ color: profile.status === opt.value ? opt.color : "#a1a1aa" }}>{opt.label}</div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">{opt.desc}</div>
-                </motion.button>
-              ))}
-            </div>
+            <label className="text-xs font-semibold text-zinc-300 mb-2 block">
+              LinkedIn (optional)
+            </label>
+            <input
+              type="url"
+              value={profile.linkedinUrl}
+              onChange={(e) => updateField("linkedinUrl", e.target.value)}
+              placeholder="https://linkedin.com/in/yourname"
+              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20"
+            />
+            <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+              ✨ Paste your LinkedIn link — when you save, we&apos;ll try to
+              grab your profile photo automatically. No photo? No problem —
+              you can upload one above.
+            </p>
           </div>
 
-          {/* Status-specific fields */}
-          <AnimatePresence mode="wait">
-            {profile.status && (
-              <motion.div key={profile.status} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                className="mb-8 space-y-4 p-5 rounded-xl" style={{ background: selectedStatus?.bg, border: `1px solid ${selectedStatus?.border}` }}>
-
-                {profile.status === "working" && (<>
-                  <Field label="Company" value={profile.company} onChange={v => updateField("company", v)} placeholder="e.g. Google, Uzcard" />
-                  <Field label="Job Title" value={profile.jobTitle} onChange={v => updateField("jobTitle", v)} placeholder="e.g. Frontend Developer" />
-                  <Field label="Short Description (optional)" value={profile.description} onChange={v => updateField("description", v)} placeholder="What do you do?" />
-                </>)}
-                {profile.status === "studying" && (<>
-                  <Field label="University" value={profile.university} onChange={v => updateField("university", v)} placeholder="e.g. MIT, Oxford" />
-                  <Field label="Program" value={profile.program} onChange={v => updateField("program", v)} placeholder="e.g. Masters in AI" />
-                  <Field label="Country" value={profile.country} onChange={v => updateField("country", v)} placeholder="e.g. USA, UK" />
-                </>)}
-                {profile.status === "freelancing" && (<>
-                  <Field label="Area" value={profile.freelanceArea} onChange={v => updateField("freelanceArea", v)} placeholder="e.g. Web Development" />
-                  <Field label="Short Description (optional)" value={profile.description} onChange={v => updateField("description", v)} placeholder="What do you offer?" />
-                </>)}
-                {profile.status === "looking" && (<>
-                  <Field label="Looking For" value={profile.lookingFor} onChange={v => updateField("lookingFor", v)} placeholder="e.g. Frontend Developer role" />
-                  <Field label="Skills" value={profile.skills} onChange={v => updateField("skills", v)} placeholder="e.g. React, Python, SQL" />
-                </>)}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Links */}
-          <div className="mb-8 space-y-4">
-            <label className="text-sm font-semibold text-zinc-300 block">Links</label>
-            <Field label="LinkedIn URL *" value={profile.linkedinUrl} onChange={v => updateField("linkedinUrl", v)} placeholder="https://linkedin.com/in/yourname" required />
-            <Field label="GitHub (optional)" value={profile.githubUrl} onChange={v => updateField("githubUrl", v)} placeholder="https://github.com/yourname" />
-            <Field label="Telegram (optional)" value={profile.telegramUrl} onChange={v => updateField("telegramUrl", v)} placeholder="https://t.me/yourname" />
-            <Field label="Portfolio (optional)" value={profile.portfolioUrl} onChange={v => updateField("portfolioUrl", v)} placeholder="https://yourwebsite.com" />
-          </div>
-
-          {/* Quick-login password setup. Lives above the Save button so
-              students see it after filling in their links — at the
-              \"now what?\" moment when they're most likely to engage with
-              optional features. Self-contained: own auth, own toast. */}
+          {/* Quick-login password (students who signed in with Google can
+              also set a password for the enrollment+password path so the
+              lab computers work without Google every single time). */}
           <QuickLoginPasswordCard onToast={showToast} />
 
           {/* Save */}
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={handleSave} disabled={saving}
-            className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)", boxShadow: "0 4px 20px rgba(99,102,241,0.3)" }}>
-            {saving ? "Saving..." : "Save Profile"}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSave}
+            disabled={saving || bioOver}
+            className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+              boxShadow: "0 4px 20px rgba(99,102,241,0.3)",
+            }}
+          >
+            {saving
+              ? "Saving…"
+              : bioOver
+                ? `Bio is ${profile.bio.length - MAX_BIO_LENGTH} chars too long`
+                : "Save profile"}
           </motion.button>
+
+          {/* After-save action — point them at IFS Connect so they can
+              see how classmates view them. */}
+          <AnimatePresence>
+            {saved && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                className="mt-4 rounded-xl p-4 flex items-center justify-between gap-3"
+                style={{
+                  background: "rgba(16,185,129,0.08)",
+                  border: "1px solid rgba(16,185,129,0.22)",
+                }}
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-emerald-300 mb-0.5">
+                    ✓ Profile saved
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Your card is live on IFS Connect.
+                  </p>
+                </div>
+                <Link
+                  href="/connect"
+                  className="shrink-0 text-[12px] font-bold px-4 py-2 rounded-full text-white"
+                  style={{
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                  }}
+                >
+                  See your card →
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
 
       {/* Toast */}
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
             className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full text-sm font-medium ${
-              toast.type === "success" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"
-            }`}>
+              toast.type === "success"
+                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                : "bg-red-500/20 text-red-400 border border-red-500/30"
+            }`}
+          >
             {toast.message}
           </motion.div>
         )}
       </AnimatePresence>
     </main>
-  );
-}
-
-function Field({ label, value, onChange, placeholder, required }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder: string; required?: boolean;
-}) {
-  return (
-    <div>
-      <label className="text-xs text-zinc-400 mb-1.5 block">{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required={required}
-        className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20 transition-colors" />
-    </div>
   );
 }

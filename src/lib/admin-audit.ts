@@ -52,7 +52,12 @@ export type AdminActionKind =
   | "purge_flashcard"
   // ── Content migration / one-shot actions (Phase 5.5) ──
   | "seed_ict"
-  | "migrate_ts_flashcards";
+  | "migrate_ts_flashcards"
+  // ── Admin-only backfill actions (Apr 2026) ──
+  // Fills photo_url on student rows by fetching the og:image of each
+  // student's saved LinkedIn URL — no new data entry, just a pull from
+  // what students already filled out voluntarily.
+  | "backfill_linkedin_photos";
 
 export interface LogAdminActionInput {
   actorEmail: string;
