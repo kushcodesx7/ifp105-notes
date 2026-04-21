@@ -427,6 +427,23 @@ export default function McqQuiz({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Safety net: if at any point ALL questions are answered AND
+  // the quiz is marked complete, but viewMode/showResult are NOT
+  // in a terminal state — flip them. This catches the half-state
+  // bug where admin-delete realignment marks everything done but
+  // a stale `viewMode === "quiz"` left the card showing only the
+  // header (no result panel, no review screen). Without this guard
+  // the student saw a collapsed card and clicking anywhere did
+  // nothing.
+  useEffect(() => {
+    if (allAnswered && completed && !showResult && viewMode === "quiz") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowResult(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setViewMode("review");
+    }
+  }, [allAnswered, completed, showResult, viewMode]);
+
   // Notify parent about answer count changes (use ref to avoid infinite loop)
   const onAnswerCountChangeRef = useRef(onAnswerCountChange);
   onAnswerCountChangeRef.current = onAnswerCountChange;
@@ -641,8 +658,17 @@ export default function McqQuiz({
       const next = currentQ + 1;
       setTimeout(() => setCurrentQ(next), 50);
     } else if (allAnswered || answered.filter((a) => a !== null).length === total) {
-      // All questions answered — show results
+      // All questions answered — show results AND mark completed +
+      // flip to review. Previously only setShowResult(true) was
+      // called; if `completed` hadn't been set yet (which can
+      // happen after admin-delete realignment landed a fully-
+      // answered state without going through handlePick), the
+      // result panel's `showResult && completed` guard would fail
+      // and the card collapsed to just the header. Force all
+      // three signals here so the transition is self-healing.
+      setCompleted(true);
       setShowResult(true);
+      setViewMode("review");
 
       // Shape the Bloom + calibration payloads for the /api/progress save.
       // These are the same numbers shown on the results screen, just packaged
