@@ -342,30 +342,34 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
 
   // ━━━ Module 5: Tech Trends ━━━
   5: {
-    // Topic 1: Artificial Intelligence (AI)
+    // Topic 1: Artificial Intelligence (AI) — simple, school-level
     1: [
-      { front: "What is Artificial Intelligence (AI)?", back: "The ability of a machine to simulate human intelligence -- recognizing faces, understanding speech, making decisions." },
-      { front: "What are the 3 types of AI?", back: "Narrow AI (one task, exists today), General AI (human-level across all tasks, doesn't exist yet), Super AI (smarter than all humans, hypothetical)." },
-      { front: "What type of AI do we currently have?", back: "Narrow (Weak) AI only. It is good at ONE specific task but cannot generalise. Examples: Siri, Google Maps, Netflix recommendations." },
-      { front: "Name 4 real-world applications of AI.", back: "Voice assistants (Siri, Alexa), self-driving cars (Tesla), healthcare (X-ray analysis), recommendation engines (Netflix, Spotify)." },
+      { front: "What is Artificial Intelligence (AI), in simple words?", back: "Software that can do things that usually need a human brain — like recognising your face, understanding your voice, or guessing what video you'll like next on TikTok." },
+      { front: "Name 3 AI apps you probably used this week.", back: "Face ID on your phone, Yandex Taxi predicting your arrival time, and the TikTok or Instagram 'For You' feed picking videos for you." },
+      { front: "Why is today's AI called 'narrow' AI?", back: "Because each AI is built for just ONE task. Siri can answer questions but can't drive a car. Netflix picks shows but can't write your essay." },
+      { front: "How is AI different from a normal computer program?", back: "A normal program follows step-by-step rules written by a human. AI learns patterns by itself from lots of examples." },
+      { front: "Can AI be wrong?", back: "Yes. AI can sound very sure of itself and still be wrong (a 'hallucination'). Always check important facts with a trusted source." },
+      { front: "Why can AI end up being unfair?", back: "AI learns from past data. If the past was unfair (for example, past hiring favoured one group), the AI can copy that unfair pattern without anyone telling it to." },
     ],
 
-    // Topic 2: Machine Learning (ML)
+    // Topic 2: Machine Learning (ML) — simple, school-level
     2: [
-      { front: "What is Machine Learning?", back: "A subset of AI where computers learn from data without being explicitly programmed. They discover patterns on their own." },
-      { front: "What is the relationship between AI and ML?", back: "AI is the big umbrella goal (make machines smart). ML is one method to achieve AI. All ML is AI, but not all AI is ML." },
-      { front: "Name and define the 3 types of Machine Learning.", back: "Supervised (labeled data, teacher guides), Unsupervised (no labels, finds patterns alone), Reinforcement (trial and error with rewards/penalties)." },
-      { front: "Give an example of Supervised Learning.", back: "Spam detection -- Gmail learns from millions of emails labeled as 'spam' or 'not spam' to classify new emails." },
-      { front: "How does Reinforcement Learning work?", back: "The machine learns by trial and error -- rewarded for good actions, penalized for bad ones. Like training a dog with treats." },
+      { front: "What is Machine Learning (ML), in simple words?", back: "When a computer learns from lots of examples instead of following rules a person wrote. The more examples it sees, the better it gets." },
+      { front: "How is ML different from a normal program?", back: "A normal program: a human writes every rule. ML: you give the computer lots of examples, and it finds its own rules in the data." },
+      { front: "Give an everyday example of ML at work.", back: "Gmail spam filter. Millions of users clicked 'spam' or 'not spam' — Gmail learned from those clicks, so it can catch new spam it has never seen before." },
+      { front: "How does Spotify know which songs you'll like?", back: "ML watches what you play, skip, and save. It groups similar-sounding songs, then recommends more of what you already enjoy." },
+      { front: "How is ML related to AI?", back: "AI is the big goal ('make computers act smart'). ML is the most popular way to reach it ('let computers learn from examples'). Most AI apps today use ML inside." },
+      { front: "Why is good data so important for ML?", back: "ML is only as good as the examples it sees. Bad or unfair data teaches the model wrong patterns — the old rule: garbage in, garbage out." },
     ],
 
-    // Topic 3: Data Analytics
+    // Topic 3: Data Analytics — simple, school-level
     3: [
-      { front: "What is Data Analytics?", back: "The process of examining, cleaning, and modelling data to discover useful information and support decision-making." },
-      { front: "What are the 4 types of Data Analytics?", back: "Descriptive (what happened?), Diagnostic (why?), Predictive (what will happen?), Prescriptive (what should we do?)." },
-      { front: "What type of analytics answers 'What will happen next?'", back: "Predictive Analytics -- uses patterns in historical data to forecast future outcomes." },
-      { front: "What is Prescriptive Analytics?", back: "The most advanced type -- recommends specific actions to take. Example: 'Launch a sale in April to boost revenue.'" },
-      { front: "Name 3 tools commonly used for Data Analytics.", back: "Excel + SQL + Python is the classic starter trio. Beyond that: Tableau (dashboards), Power BI (Microsoft BI), Google Sheets, R (statistics). Every analyst job posting in 2026 asks for at least SQL + one of Excel/Python." },
+      { front: "What is Data Analytics, in simple words?", back: "Taking raw numbers and turning them into useful answers that help people make better decisions — like shops, banks, hospitals, or schools do every day." },
+      { front: "What are the four questions data analytics can answer?", back: "1) What happened? 2) Why did it happen? 3) What will happen next? 4) What should we do about it?" },
+      { front: "Which type of analytics does Uzum use when it shows 'phone sales went up 20% last month'?", back: "Descriptive analytics — 'what happened.' It summarises the past using totals and percentages." },
+      { front: "Which type of analytics is Yandex Taxi doing when it predicts 'high demand near the metro at 6 p.m.'?", back: "Predictive analytics — 'what will happen next.' It uses past rides and times to guess busy zones." },
+      { front: "Give a Tashkent example of prescriptive analytics.", back: "A ride app saying 'send more drivers to the metro at 5:45 p.m.' — it doesn't just predict, it recommends an action." },
+      { front: "Why is data analytics useful in real life?", back: "It helps shops stock the right items, banks catch fraud quickly, hospitals spot disease trends, and schools see which students need extra help. Decisions based on facts instead of guesses." },
     ],
 
     // Topic 4: Cloud Computing (simple, school-level)
@@ -380,54 +384,65 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "How do you keep your cloud account safe?", back: "Use a strong password (long, not reused) and turn on 2-step sign-in (a code to your phone). Your files sit on someone else's computer, so the account is the lock on the door." },
     ],
 
-    // Topic 5: Blockchain
+    // Topic 5: Blockchain — simple, school-level
     5: [
-      { front: "What is Blockchain, in plain English?", back: "A digital record book copied across many computers. Once something is written in, no one can change or delete it -- everyone would see the tampering." },
-      { front: "Is Blockchain the same as Bitcoin?", back: "No. Bitcoin is one application that USES blockchain. Blockchain is the underlying technology -- like the internet is technology and email is one app." },
-      { front: "What are the 4 key features of Blockchain?", back: "Decentralized (no single authority), Immutable (cannot be changed), Transparent (everyone sees transactions), Secure (uses cryptography)." },
-      { front: "Name 3 applications of Blockchain beyond cryptocurrency.", back: "Supply chain tracking, digital voting, medical records, smart contracts, land registry, digital identity verification." },
+      { front: "What is blockchain, in simple words?", back: "A shared digital notebook copied across many computers. When someone writes a new line, every copy updates, and nothing can be secretly changed later." },
+      { front: "Is blockchain the same as Bitcoin?", back: "No. Bitcoin is ONE kind of money that runs on a blockchain. Blockchain is the underlying technology — like the road, while Bitcoin is one car that drives on it." },
+      { front: "Why is it so hard to cheat a blockchain?", back: "Many computers keep copies of the same record. If you try to change one copy, all the other copies still show the original — so the cheat is caught." },
+      { front: "Name 3 real uses of blockchain today.", back: "1) Cryptocurrencies like Bitcoin and Ethereum. 2) Tracking food or medicine from factory to shop. 3) Testing new forms of land-ownership records in some countries." },
+      { front: "What are the biggest risks with crypto?", back: "Prices jump up and down a lot, scams are common, and if you lose your password ('private key') your coins are gone forever. In Uzbekistan, crypto rules are strict — always check the law." },
+      { front: "Does blockchain always make things better?", back: "No. It shines when many parties must share a record nobody should change. For simple tasks like a shop's stock list, a normal database is cheaper, simpler, and faster." },
     ],
 
-    // Topic 6: Virtual Reality (VR)
+    // Topic 6: Virtual Reality (VR) — simple, school-level
     6: [
-      { front: "What is Virtual Reality (VR)?", back: "A completely artificial, computer-generated environment that REPLACES the real world. You wear a headset that blocks reality entirely." },
-      { front: "Name 3 VR hardware components.", back: "VR headset (covers eyes), motion controllers (track hand movements), spatial audio (3D directional sound)." },
-      { front: "Name 4 applications of VR.", back: "Gaming (immersive play), medical training (practice surgery), real estate (virtual tours), education (explore historical sites)." },
-      { front: "What is the key distinction between VR and AR?", back: "VR REPLACES reality completely (you see only the virtual world). AR ADDS digital objects on top of the real world." },
+      { front: "What is Virtual Reality (VR), in simple words?", back: "A fake world made by a computer that you step into using a headset. The headset covers your eyes, so your real room disappears and you see only the virtual scene." },
+      { front: "What gear do you need to use VR?", back: "A VR headset like Meta Quest or PlayStation VR, hand controllers for pointing and grabbing, and built-in 3D sound that changes as you turn your head." },
+      { front: "Why does VR feel more real than watching a TV?", back: "The headset tracks your head — when you turn, the scene turns with you. Your real room is hidden, so the brain starts believing you're actually INSIDE the scene." },
+      { front: "Name 3 places VR is useful.", back: "1) Games (you physically duck and reach out). 2) Training doctors (practise surgery on a virtual patient, no risk). 3) History class — 'visit' old Samarkand or ancient Rome from your classroom." },
+      { front: "What is the main weakness of VR?", back: "The headset covers your eyes, so you can't see the real world. Bad for walking around a bazaar. Can also make people feel dizzy after 20–30 minutes — take breaks." },
+      { front: "What is the big difference between VR and AR?", back: "VR replaces the real world (you see only the virtual scene). AR adds digital things on top of the real world (you still see your room or the street)." },
     ],
 
-    // Topic 7: Augmented Reality (AR)
+    // Topic 7: Augmented Reality (AR) — simple, school-level
     7: [
-      { front: "What is Augmented Reality (AR)?", back: "Overlays digital content onto the real world. You can still see your surroundings -- AR just adds virtual objects on top." },
-      { front: "Name 4 everyday examples of AR.", back: "Snapchat/Instagram filters, Pokemon GO, IKEA Place app (virtual furniture), Google Maps Live View (arrows on real streets)." },
-      { front: "What device do you use for AR vs VR?", back: "AR: phone camera or smart glasses (real world visible). VR: headset covering eyes fully (real world blocked)." },
-      { front: "If you can still see the real world, is it AR or VR?", back: "AR (Augmented Reality). VR blocks the real world completely. This distinction appears in almost every exam." },
+      { front: "What is Augmented Reality (AR), in simple words?", back: "Adding digital things on top of the real world you can see. Instagram dog-ear filters, Uzum 'try this fridge in your room,' and Yandex Maps arrows on the street are all AR." },
+      { front: "Name 4 AR apps you probably use.", back: "1) Instagram / TikTok face filters. 2) Pokémon GO. 3) Uzum or IKEA 'place furniture in your room.' 4) Yandex or Google Maps Live View with arrows on the street." },
+      { front: "What device do you need for AR?", back: "Usually just a phone camera (Instagram, Uzum, Maps). Some fancier AR uses smart glasses. The real world stays visible — that's the point." },
+      { front: "AR or VR — if you can still see the real world?", back: "AR. VR completely blocks the real world. This one line shows up in almost every exam question on these two topics." },
+      { front: "Give a Tashkent example where AR is very useful.", back: "Uzum shows a 3D sofa sitting in your actual living room through your phone camera, so you can see if it fits before buying — no tape measure needed." },
+      { front: "Why is AR better than VR for walking around Chorsu bazaar?", back: "AR keeps the real street, people, and stalls visible — so you can still see where you're going. VR would cover your eyes and make that dangerous." },
     ],
 
-    // Topic 8: Internet of Things (IoT)
+    // Topic 8: Internet of Things (IoT) — simple, school-level
     8: [
-      { front: "What is the Internet of Things (IoT)?", back: "A network of physical objects embedded with sensors, software, and connectivity that collect and exchange data over the internet." },
-      { front: "What are the 4 components of an IoT system?", back: "Sensors (collect data), Connectivity (send data via Wi-Fi/Bluetooth), Data Processing (analyse in cloud), Action (respond -- turn on lights, send alert)." },
-      { front: "Give 4 examples of IoT devices.", back: "Smart watches, smart thermostats (Nest), smart speakers (Alexa), connected cars, soil sensors in agriculture." },
-      { front: "Name 2 benefits and 2 risks of IoT.", back: "Benefits: (1) automation — devices act on sensor data without humans; (2) remote monitoring — from anywhere on the internet. Risks: (1) privacy — devices constantly collect data about where you are and what you do; (2) security — weak default passwords make IoT devices common entry points for hackers." },
+      { front: "What is the Internet of Things (IoT), in simple words?", back: "Everyday objects connected to the internet so they can send data or be controlled from far away. A normal lamp is just a lamp — a lamp you control from your phone is IoT." },
+      { front: "Give 4 examples of IoT devices.", back: "1) Smart watches (count steps, read heart rate). 2) Smart doorbells (live video on your phone). 3) Smart AC and lights (control from phone). 4) Connected cars that send data to the maker." },
+      { front: "What three things does most IoT do?", back: "1) SENSES something (temperature, motion, heart rate). 2) SENDS the info over the internet. 3) Something useful HAPPENS — a notification, a light turns on, or data is saved." },
+      { front: "Give one Uzbek example of IoT that really helps.", back: "A smart doorbell at the front gate. You can see and speak to whoever is there from your phone, even when you're at school or work." },
+      { front: "What's the biggest security mistake with IoT?", back: "Leaving the default password. Many people never change the factory password, which lets hackers log in easily. Always change the password when you set up a new device." },
+      { front: "What's the privacy worry with IoT?", back: "IoT devices collect a LOT of data about you — where you go, when you sleep, who visits your home. If the company gets hacked, all that info can leak." },
     ],
 
-    // Topic 9: Introduction to Generative AI
+    // Topic 9: Introduction to Generative AI — simple, school-level
     9: [
-      { front: "What is Generative AI?", back: "AI systems that CREATE new, original content (text, images, music, video) based on patterns learned from massive training data." },
-      { front: "How does Generative AI differ from traditional AI?", back: "Traditional AI analyses and classifies data. Generative AI creates entirely new content that never existed before." },
-      { front: "Does ChatGPT actually 'understand' what it writes?", back: "No. It predicts the next most likely word based on patterns in training data. It is pattern matching, not comprehension." },
-      { front: "What does GPT stand for?", back: "Generative Pre-trained Transformer -- a type of large language model (LLM) that generates text." },
-      { front: "Name 4 types of content Generative AI can create.", back: "Text (ChatGPT, Claude), Images (DALL-E, Midjourney), Audio/Music (Suno, ElevenLabs), Video (Sora, Runway)." },
+      { front: "What is Generative AI, in simple words?", back: "AI that creates new content when you ask it to — text, images, music, videos. ChatGPT writing a birthday message and DALL·E drawing a cat are generative AI." },
+      { front: "How is Generative AI different from older AI like a spam filter?", back: "Older AI sorts or predicts from existing content (spam or not spam). Generative AI MAKES new content that didn't exist before." },
+      { front: "Does ChatGPT actually understand what it writes?", back: "No. It predicts the next most likely word based on patterns it learned from huge amounts of text. It's fluent pattern-matching, not real understanding." },
+      { front: "What does 'GPT' stand for?", back: "Generative Pre-trained Transformer — a type of large AI model (also called an LLM, Large Language Model) that generates text." },
+      { front: "Name 4 kinds of content Generative AI can make.", back: "1) Text (ChatGPT, Claude, Gemini, Yandex GPT). 2) Images (DALL·E, Midjourney). 3) Music and voice (Suno, ElevenLabs). 4) Short videos (Sora, Runway)." },
+      { front: "Why can ChatGPT be confidently wrong?", back: "It's built to pick the most likely next word, not to check if the answer is true. This is called a 'hallucination' — a fluent, confident lie. Always check important facts." },
     ],
 
-    // Topic 10: Ethical Use of GPTs
+    // Topic 10: Ethical Use of GPTs — simple, school-level
     10: [
-      { front: "What are the 4 key ethical concerns with AI/GPTs?", back: "Plagiarism/academic dishonesty, misinformation/hallucinations, bias/fairness, and privacy/data concerns." },
-      { front: "What is an AI 'hallucination'?", back: "When AI confidently generates false information that sounds convincing. Always fact-check AI output before trusting it." },
-      { front: "What is the golden rule of AI ethics?", back: "Use AI as a co-pilot, not an auto-pilot. Let it assist your thinking but never replace it. Always verify and disclose." },
-      { front: "What are Deepfakes?", back: "AI-generated fake videos or audio that make it look like real people said or did things they never did. A serious threat to trust." },
-      { front: "Is submitting AI-generated work as your own considered plagiarism?", back: "Yes. Using AI to write your assignment and claiming you wrote it is academic dishonesty. Always disclose AI assistance." },
+      { front: "What does GPT stand for?", back: "Generative Pre-trained Transformer — the kind of AI that powers ChatGPT, Claude, Gemini, and similar tools." },
+      { front: "What is an AI 'hallucination'?", back: "When an AI gives a wrong answer with full confidence, as if it were true. It happens because the AI guesses the next likely word, not the actually-true word. Always fact-check." },
+      { front: "What are deepfakes?", back: "Fake videos or voice clips made by AI that show a real person saying or doing things they never did. Scammers sometimes use them to fool families, schools, and banks." },
+      { front: "Is submitting a ChatGPT essay as your own work cheating?", back: "Yes — that's plagiarism. The assignment is meant to test YOUR thinking, not the AI's. Using AI to explain a topic is fine, but the words you submit should be yours." },
+      { front: "What's the golden rule for using AI?", back: "Use AI as a helper, not a replacement for your brain. Always check its facts, always say when you used it, and never share secrets with it." },
+      { front: "What should you NEVER type into a free AI chatbot?", back: "Passwords, bank card numbers, private family details, or other secrets. Whatever you type may be stored on the company's server." },
+      { front: "How should you react to a shocking deepfake video on Telegram?", back: "Don't forward it right away. Check if trusted news sites report the same story. Look at the real person's official account. Share only after you're sure it's real." },
     ],
   },
 };
