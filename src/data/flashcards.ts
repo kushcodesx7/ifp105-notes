@@ -200,156 +200,190 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
   3: {
     // Topic 1: Introduction to Social Media
     1: [
-      { front: "Define social media.", back: "Websites and apps that let users create, share, and interact with content and each other." },
-      { front: "What makes social media different from traditional media (TV, newspapers)?", back: "Social media is two-way communication where users CREATE the content. Traditional media is one-way broadcast." },
-      { front: "What is 'User-Generated Content'?", back: "Content created by the audience themselves -- posts, stories, videos, reviews. The audience IS the creator." },
-      { front: "How many social media users exist worldwide (approx)?", back: "Over 4.9 billion -- more than 60% of the planet's population." },
+      { front: "What is social media, in simple words?", back: "Any app or website where normal users make their own posts AND can reply to each other. Instagram, TikTok, Telegram, YouTube, and Facebook are all social media. The 'two-way' part is what makes it different from old TV." },
+      { front: "Why is social media 'two-way' but TV is 'one-way'?", back: "On TV you can only watch -- you can't answer back. On social media you can post, comment, reply, and share. Both sides send messages, not just the broadcaster." },
+      { front: "Name 3 everyday things you already do that count as social media.", back: "Posting an Instagram Story of your lunch, replying in a Telegram group chat, and leaving a comment on a YouTube video. Every time you post or reply -- that's social media." },
+      { front: "Why is social media so useful for a small Tashkent shop?", back: "It's almost free -- a Chorsu samsa shop can post a fresh photo every morning for zero som. Customers also leave instant feedback in the comments ('tasty!' / 'too salty') the same day." },
+      { front: "Name 3 things to watch out for on social media.", back: "1) Not everything is true -- people lie online. 2) Apps are built to keep you scrolling, so 2 hours feel like 10 minutes. 3) What you post stays online, even if you delete it later." },
+      { front: "Is a YouTube comment section social media?", back: "Yes. You post (your comment), other users reply, the creator can heart it. That's a two-way conversation -- the key feature of social media." },
     ],
 
     // Topic 2: Types of Social Media Platforms
     2: [
-      { front: "What type of platform is Instagram and who is its key audience?", back: "Media sharing (visual-first: photos, Reels, Stories). Key audience: 18-34 years old." },
-      { front: "What type of platform is LinkedIn?", back: "Professional networking -- resumes, job posts, industry articles. Best for B2B marketing." },
-      { front: "What makes TikTok unique among social platforms?", back: "Short-form vertical video, algorithm-driven discovery, dominated by Gen Z (16-30), fastest-growing platform in history." },
-      { front: "What is X (formerly Twitter) best used for?", back: "Real-time microblogging, breaking news, trending topics, and public conversations. Free accounts post up to 280 characters; Premium accounts can post longer." },
-      { front: "What is Facebook's key demographic?", back: "25-55+ years old. 3 billion users. Best for community building with groups, pages, marketplace, and events." },
+      { front: "Match the app to what it's best for: Instagram, TikTok, YouTube, Telegram, LinkedIn.", back: "Instagram = photos and Reels. TikTok = short vertical videos. YouTube = longer videos and learning. Telegram = chat and news channels (#1 in Uzbekistan). LinkedIn = jobs and online CV." },
+      { front: "Why does my TikTok For You page feel so personal?", back: "TikTok's algorithm watches what you finish, like, and share. Then it shows MORE of the same type. Watch three football videos and your feed fills with football -- the app learned your taste." },
+      { front: "Which app is most popular in Uzbekistan for news and group chats?", back: "Telegram. @gazeta_uz, school groups, class groups, and most Tashkent news channels live there. Teens in Uzbekistan use it every day." },
+      { front: "Who mostly uses Facebook in Uzbekistan?", back: "Adults over 30 -- parents, teachers, small-business owners. Teens mostly prefer Instagram and TikTok. Knowing WHO is on each app helps a shop pick the right one." },
+      { front: "Can you post the exact same thing on Instagram and LinkedIn?", back: "Usually no. A LinkedIn-style post looks boring on TikTok; a TikTok dance looks unprofessional on LinkedIn. Each app has its own style and audience -- adapt the post." },
+      { front: "What's LinkedIn for?", back: "A professional app -- like an online CV. It's used to find internships and first jobs after university. No party photos, no memes. Not popular with teens, but useful when you start job-hunting." },
+      { front: "Why does Instagram trap you in one topic over time?", back: "The algorithm shows more of what you already watched. Only football clips in = only football out. To widen the feed, like a few new kinds of posts on purpose." },
     ],
 
     // Topic 3: Social Media Management Tools
     3: [
-      { front: "Name 3 social media management tools.", back: "Buffer (free-tier, beginner default), Later (visual Instagram planner), Metricool (analytics-heavy; popular with small agencies in UZ). Hootsuite dropped its free tier in 2023 and is now enterprise-only." },
-      { front: "What are the 4 core functions of a social media management tool?", back: "Scheduling (auto-post at best times), Monitoring (track mentions), Analytics (track performance), Unified Inbox (all messages in one place)." },
-      { front: "What is a 'Unified Inbox' in social media management?", back: "All comments, messages, and mentions from every platform combined into ONE inbox -- reply without switching apps." },
-      { front: "Why do professionals use scheduling tools?", back: "Write posts in advance and auto-publish at optimal times. Saves hours, prevents mistakes, and enables data-driven decisions." },
+      { front: "What is a 'social media management tool'?", back: "An app that lets you post and reply across many social apps from one place. Instead of opening Instagram, TikTok, and Telegram separately, you write in one dashboard and the tool posts for you." },
+      { front: "Name 3 tools a student or small shop might use.", back: "Buffer, Later, and Metricool -- all have free plans that can schedule posts to Instagram, TikTok, and Facebook. Canva is a separate helper for designing the post's picture." },
+      { front: "What does 'scheduling a post' mean?", back: "You write the post now, pick a future time, and the tool posts it automatically at that time. Example: on Sunday, line up 5 posts for Monday-Friday at 7 p.m., then forget about it." },
+      { front: "What is a 'unified inbox'?", back: "One screen that shows DMs and comments from every app you use -- Instagram, Facebook, Telegram. You reply without jumping between apps, so nothing gets missed." },
+      { front: "Does Canva do the same thing as Buffer?", back: "No -- different jobs. Canva DESIGNS the picture (templates, drag-and-drop). Buffer SCHEDULES when to post. Small pages often use both together -- design in Canva, schedule in Buffer." },
+      { front: "Does scheduling replace replying to followers?", back: "No. Scheduling handles POSTS. Replies, comments, and DMs are a separate daily job. If you schedule 50 posts and ignore every comment for a month, followers feel unheard and leave." },
+      { front: "What's a catch with free plans?", back: "Most have a limit (often 10-30 posts per month). Enough for a student-run page or one-person shop. A big chain with 4 branches usually needs a paid plan." },
     ],
 
     // Topic 4: Social Media Measurement & Reporting
     4: [
-      { front: "What is the difference between Reach and Impressions?", back: "Reach = unique people who saw your post. Impressions = total times displayed (includes same person seeing it multiple times). Impressions >= Reach." },
-      { front: "What is Engagement Rate and how is it calculated?", back: "(Engagements / Reach) x 100. Industry average is 1-3%. Over 5% is excellent." },
-      { front: "What is CTR (Click-Through Rate)?", back: "(Clicks / Impressions) x 100. Measures how many people were interested enough to click your link." },
-      { front: "What are vanity metrics vs action metrics?", back: "Vanity metrics: likes, impressions -- look good but don't pay bills. Action metrics: CTR, conversions, ROI -- show actual business results." },
-      { front: "What is ROI and how is it calculated?", back: "Return on Investment = ((Revenue - Cost) / Cost) x 100. Tells you the percentage profit you made compared to what you spent. If you spent $100 and earned $150, ROI = 50%." },
+      { front: "What does 'reach' mean in plain English?", back: "How many DIFFERENT people saw your post. If your best friend looks three times, she still counts as one. Reach is 'how wide did it go.'" },
+      { front: "Which is stronger: a like, a comment, or a share?", back: "A share is strongest -- the person wanted their friends to see it too. A comment is next (real effort to type). A like is weakest -- one fast tap. Shares matter most, likes least." },
+      { front: "What's a 'save' and why does it matter?", back: "A save = the person bookmarked your post to come back later. Common for recipes, study tips, shopping lists. Saves are a quiet sign that the post was USEFUL." },
+      { front: "Is 10,000 followers always better than 500?", back: "Not really. 10,000 silent or fake followers are worth less than 500 real ones who like, comment, and share. Follower count alone is a weak number -- look at engagement too." },
+      { front: "How often should I check my page's numbers?", back: "About once a week is enough. Every 5 minutes is stressful and useless. Compare this week to last week to spot trends, not one bad day." },
+      { front: "Post A got 300 likes, 3 comments. Post B got 150 likes, 80 comments, 40 saves. Which is better?", back: "Post B. Fewer likes but real conversation (80 comments) and many saves (40) -- people kept the recipe. Depth beats easy taps." },
     ],
 
     // Topic 5: Social Advertising
     5: [
-      { front: "What is the difference between organic content and paid advertising?", back: "Organic: free posts seen by existing followers (only 2-5% reach). Paid: you pay to show content to targeted audiences beyond followers." },
-      { front: "Name 4 common social media ad formats.", back: "Image ads, Video ads, Carousel ads (swipeable), and Story ads (full-screen vertical, 24-hour)." },
-      { front: "What is A/B Testing (Split Testing)?", back: "Running two versions of the same ad with ONE difference to see which performs better. Keep the winner, drop the loser." },
-      { front: "What is Retargeting in social advertising?", back: "Showing ads to people who already visited your website -- e.g., someone who added to cart but didn't buy." },
-      { front: "What do CPC and CPM stand for?", back: "CPC = Cost Per Click (pay when someone clicks). CPM = Cost Per Thousand Impressions (pay per 1,000 views)." },
+      { front: "What is a social media ad, in simple words?", back: "A normal-looking post that a shop PAID the app to show to people who don't follow them yet. You can tell it's an ad by the small 'Sponsored' label under the shop's name." },
+      { front: "Free post vs paid post -- what's the difference?", back: "Free: only your followers and some friends-of-friends see it (small reach). Paid: the shop pays the app to push the post to many more people, including total strangers the shop chose." },
+      { front: "How does a shop pick who sees its ad?", back: "Three simple filters: age, city, and interests. Example: 'people aged 16-25 in Tashkent who like food.' The app already knows all this from your taps." },
+      { front: "How does a daily budget protect a small shop?", back: "The shop sets a daily cap (say 20,000 som). Once it's spent, the app stops showing the ad until tomorrow. No surprise bills at the end of the month." },
+      { front: "Does a paid ad fix a bad product?", back: "No. If the photo is blurry and the cafe is dirty, paying more money just means more people see the bad cafe. Fix the product first, then advertise." },
+      { front: "Give 3 places you see social ads every day.", back: "1) Instagram 'Sponsored' posts between friends' posts. 2) TikTok ad clips on your For You page. 3) YouTube 'Skip Ad' 5-15 seconds before your video." },
     ],
 
     // Topic 6: Facebook Marketing
     6: [
-      { front: "What is a Facebook Business Page?", back: "Your brand's official Facebook presence -- like a free website inside Facebook. Post updates, collect reviews, chat via Messenger." },
-      { front: "What is Facebook Ads Manager?", back: "The command centre for all paid ads on BOTH Facebook and Instagram (Meta owns both). Set budgets, audiences, and track performance." },
-      { front: "What is a Boosted Post on Facebook?", back: "Taking any regular post and paying to show it to more people. Simplest form of Facebook advertising -- pick audience, budget, duration." },
-      { front: "What is the Facebook Pixel?", back: "A tiny code added to your website that tracks what visitors do after clicking a Facebook ad. It helps Facebook find more people likely to convert." },
+      { front: "Who mostly uses Facebook in Uzbekistan?", back: "Adults over 30 -- parents, aunties, teachers, small-business owners. Teens mostly skip Facebook and live on Instagram and TikTok instead. Knowing this picks the right app for the customer." },
+      { front: "What is a Facebook 'Page'?", back: "A free public profile for a business -- shop name, address, hours, photos, phone. Customers can follow it without becoming 'friends.' Different from a personal profile." },
+      { front: "What does it mean to 'boost a post' on Facebook?", back: "Take a good post (like a photo of the new menu) and pay Facebook a small amount so MORE adults see it. The easiest first ad anyone can run." },
+      { front: "Why can one tool post to both Facebook and Instagram at once?", back: "Because Meta owns both apps. Meta's 'Business Suite' lets you write one post and send it to both Facebook and Instagram together -- two apps, one click." },
+      { front: "How can a home-baker use a Facebook group to get customers?", back: "Join local groups like 'Tashkent food lovers' or 'Chilanzar mums.' Share a useful post (photo + price) and real local adults see it -- for free, no ad money needed." },
+      { front: "Should a home bread-baker use Facebook or Instagram?", back: "Facebook -- her customers are adult neighbours, and adults in Uzbekistan mostly use Facebook. A teen cafe near a school would be the opposite -- Instagram fits better." },
+      { front: "What's a simple first-week Facebook plan for a small shop?", back: "Create a free Page (name, phone, address, photos, hours), join 2 local groups, and post one helpful post. Don't spend on ads yet -- grow the free Page first." },
     ],
 
     // Topic 7: X (formerly Twitter) Marketing
     7: [
-      { front: "What is a hashtag and what does it do?", back: "A word prefixed with # that categorizes content (e.g., #Marketing). Makes posts discoverable by people searching that topic." },
-      { front: "What is an X Thread (formerly a Twitter Thread)?", back: "A chain of connected posts telling a longer story. Threads get strong engagement because each post acts as a hook." },
-      { front: "Name 3 types of X paid ads.", back: "Promoted Posts (wider reach), Promoted Accounts (gain followers), Promoted Trends (top of trending topics)." },
-      { front: "What is 'newsjacking' on X?", back: "Brands jumping on currently trending topics for massive visibility -- riding the wave of what's already hot." },
+      { front: "What is X (the app formerly called Twitter)?", back: "A social app mainly for very short posts -- usually under 280 letters. Like a public SMS board: anyone can post, anyone can reply. Big in the USA, UK, India, Japan." },
+      { front: "Is X popular in Uzbekistan?", back: "No -- X is blocked in Uzbekistan. Most Uzbek users get short news updates on Telegram channels instead (@gazeta_uz, @uzinfocom, football teams, singers)." },
+      { front: "What's a retweet (or repost)?", back: "Sharing someone else's post with your own followers. Like forwarding a message in Telegram -- the original writer gets more reach, and your followers see the post." },
+      { front: "What does a hashtag do?", back: "A word with # in front, like #Tashkent or #IFP105. Anyone who clicks it sees every post using the same hashtag -- it groups posts into one topic page." },
+      { front: "Why should an Uzbek student still learn the basics of X?", back: "You may travel or study abroad where X works. Breaking world news (sports, elections, earthquakes) often hits X first. Knowing tweet / retweet / hashtag is useful when you go." },
+      { front: "Should a Tashkent bookshop open an X account or a Telegram channel?", back: "Telegram channel. X is blocked in Uzbekistan, so local customers can't easily see X posts. Telegram is where the audience is, and it does the same 'short updates' job." },
+      { front: "Why do big Western companies reply fast to X complaints?", back: "Because X complaints are PUBLIC -- everyone watching. Silence looks bad, so companies answer quickly. That's why many US/UK brands handle customer service on X first." },
     ],
   },
 
-  // ━━━ Module 4: HTML ━━━
+  // ━━━ Module 4: HTML & Web Development ━━━
   4: {
     // Topic 1: World Wide Web
     1: [
-      { front: "Is the WWW the same as the Internet?", back: "No. The Internet is the network of cables/connections. WWW is one service running on it -- a collection of web pages. Email is another service." },
-      { front: "What is a URL?", back: "Uniform Resource Locator -- the web address of a page (e.g., https://www.google.com)." },
-      { front: "What is HTTP/HTTPS?", back: "Rules (protocols) for sending web pages. HTTPS is the secure version. Seen at the start of URLs." },
-      { front: "What is a Web Browser?", back: "An application that loads and displays web pages. Examples: Chrome, Firefox, Edge." },
-      { front: "What is a Web Server?", back: "A computer that stores websites and sends them to browsers when requested. Google's servers store google.com." },
+      { front: "Is the web the same as the internet?", back: "No. The internet is the network (cables, Wi-Fi, phone signal). The web is ONE service running on it -- the pages you visit in a browser. Email and WhatsApp also use the internet but are not the web." },
+      { front: "What is a URL, in simple words?", back: "A web address. Example: https://yandex.uz/news. It has a protocol (https://), a domain (yandex.uz), and sometimes a path (/news)." },
+      { front: "What does the 's' in HTTPS mean and why should you care?", back: "Secure. HTTPS scrambles your data on the way, so a stranger on the cafe Wi-Fi can't read your password. Never type a password on an http:// page with no 's'." },
+      { front: "What does the .uz ending on a domain tell you?", back: "The site is registered in Uzbekistan. Other endings: .com (global business), .ru (Russia), .edu (education), .org (non-profit)." },
+      { front: "What is a web browser? Name three.", back: "An app that loads and shows web pages. Chrome, Firefox, Edge, Safari are the big four. Type a URL in the bar, the browser fetches the page from the server." },
+      { front: "What is a web server?", back: "A powerful computer somewhere in the world that stores a website and sends the pages to your browser whenever you ask for them." },
     ],
 
     // Topic 2: HTML & Basic Tags
     2: [
-      { front: "What does HTML stand for?", back: "HyperText Markup Language -- the language used to build the structure of web pages." },
-      { front: "What is the basic skeleton structure of every HTML page?", back: "<!DOCTYPE html> at top, then <html> wrapping <head> (metadata) and <body> (visible content)." },
-      { front: "What does the <title> tag do?", back: "Sets the title shown on the browser tab. It goes inside the <head> section." },
-      { front: "What goes inside the <body> tag?", back: "Everything visible on the web page -- headings, paragraphs, images, tables, links, etc." },
-      { front: "What tags are used for headings in HTML?", back: "<h1> through <h6>. h1 is the largest/most important, h6 is the smallest." },
+      { front: "What does HTML stand for?", back: "HyperText Markup Language. Hypertext = text with links. Markup = adding tags around the content. It's the language every web page is built with." },
+      { front: "What is the basic shape of every HTML page?", back: "<!DOCTYPE html> on line 1, then <html> wrapping <head> (settings, <title>) and <body> (visible content: headings, paragraphs, images, links)." },
+      { front: "What goes in <head> vs <body>?", back: "<head> = info about the page (browser tab title, settings) -- NOT shown on the page. <body> = everything a visitor actually sees." },
+      { front: "How do you set the text on the browser tab?", back: "Put <title>My Page</title> inside <head>. It's NOT the heading on the page -- that's <h1>. They can be different text." },
+      { front: "What are <h1> to <h6>?", back: "Heading tags. <h1> is the biggest (usually the main page title), <h6> is the smallest. Use <h1> once per page for the main title." },
+      { front: "How do you save an HTML file so the browser reads it?", back: "Save the file with a .html ending (for example me.html), not .txt. Double-click it and it opens in Chrome. .txt just shows the tags as plain text." },
     ],
 
     // Topic 3: HTML Elements
     3: [
-      { front: "What is the difference between an HTML tag and an HTML element?", back: "A tag is just <p> or </p>. An element is the complete package: opening tag + content + closing tag, e.g., <p>Hello</p>." },
-      { front: "What is a self-closing tag? Give 3 examples.", back: "Tags with no content or closing tag: <br> (line break), <hr> (horizontal line), <img> (image)." },
-      { front: "What are the 3 parts of an HTML element?", back: "Opening tag (e.g., <h1>), Content (e.g., Hello!), and Closing tag (e.g., </h1>). Note the / in the closing tag." },
-      { front: "What does the closing tag always include that the opening tag doesn't?", back: "A forward slash: /. Example: <p> is opening, </p> is closing." },
+      { front: "What is the difference between a tag and an element?", back: "A tag is one piece: <p> or </p>. An element is the whole thing: <p>Hello</p> -- opening tag + content + closing tag together." },
+      { front: "What is a self-closing tag? Give three.", back: "A tag with no content and no closing tag. Examples: <br> (line break), <hr> (horizontal line), <img> (image). All info goes in attributes." },
+      { front: "Why does the closing tag have a / in it?", back: "The slash tells the browser 'this element ends here.' Without </h1>, the browser keeps the heading open and every word after becomes a giant heading." },
+      { front: "What does <br> do?", back: "Adds a line break inside a paragraph -- the next text goes on a new line. Self-closing, no </br> needed. Example: My address<br>in Tashkent." },
+      { front: "What does <hr> do?", back: "Draws a horizontal line across the page -- good for splitting sections. Self-closing, no </hr> needed." },
+      { front: "Should you write </img> for an image?", back: "No. <img> is self-closing -- all its info goes in attributes (src, alt, width) inside the one tag. Adding </img> isn't standard HTML." },
     ],
 
     // Topic 4: HTML Attributes
     4: [
-      { front: "What are HTML attributes?", back: "Extra information inside the opening tag as name=\"value\" pairs. They customize how an element behaves or appears." },
-      { front: "What does the 'src' attribute do in an <img> tag?", back: "Specifies the path or URL to the image file that should be displayed." },
-      { front: "What does the 'href' attribute do in an <a> tag?", back: "Specifies the URL of the link destination -- where the user goes when they click." },
-      { front: "What does the 'alt' attribute do on an image?", back: "Provides alternative text shown if the image fails to load. Also used for accessibility (screen readers)." },
-      { front: "Where do attributes go -- opening tag or closing tag?", back: "Always in the OPENING tag only, never the closing tag. Values must be in quotes." },
+      { front: "What is an HTML attribute?", back: "Extra info inside the opening tag, written as name=\"value\". Examples: <img src=\"cat.jpg\" width=\"200\" alt=\"a cat\">." },
+      { front: "What does src do in an <img> tag?", back: "Source -- tells the browser which image file to show. Example: src=\"photo.jpg\" (same folder) or src=\"https://site.uz/logo.png\"." },
+      { front: "What does href do in an <a> tag?", back: "Hypertext reference -- the URL where the link goes. Example: <a href=\"https://yandex.uz\">Go to Yandex</a>." },
+      { front: "Why should every <img> have an alt attribute?", back: "alt is the backup text. It shows up if the image fails to load, and it's read aloud by screen readers for blind users. Small attribute, big accessibility win." },
+      { front: "Where do attributes live -- opening or closing tag?", back: "Always in the OPENING tag. Never the closing tag. Values go in quotes: width=\"200\", not width=200." },
+      { front: "Your photo shows a broken-image icon. What are the top reasons?", back: "Wrong src (bad filename), photo in a different folder, or the photo file isn't actually there. Check the src and the folder first." },
     ],
 
     // Topic 5: HTML Comments
     5: [
-      { front: "What is the syntax for an HTML comment?", back: "<!-- comment text -->. Starts with <!-- and ends with -->." },
-      { front: "Do HTML comments appear on the webpage?", back: "No. The browser completely ignores them. They are only visible in the source code." },
-      { front: "Name 3 reasons to use HTML comments.", back: "1) Explain your code. 2) Temporarily hide parts of code. 3) Leave notes for future edits." },
-      { front: "Why are comments valuable in exams?", back: "Adding comments above each section (<!-- table -->, <!-- list -->) shows the examiner you understand the structure and earns extra marks." },
+      { front: "What is the HTML comment syntax?", back: "<!-- your note here -->. Starts with <!-- and ends with -->. The browser ignores everything between." },
+      { front: "Do comments show up on the page?", back: "No. The browser skips them when it paints the page. But they ARE in the file -- anyone can see them with right-click > View Page Source." },
+      { front: "Name three reasons to use comments.", back: "1) Explain what your code does. 2) Label sections (<!-- Menu table -->). 3) Hide broken code temporarily without deleting it." },
+      { front: "Can you put a password inside a comment to hide it?", back: "No! Never. Anyone can view the page source and read every comment. Comments are invisible on the PAGE, not in the FILE." },
+      { front: "Why do teachers love seeing comments in exam HTML?", back: "Labels like <!-- Table -->, <!-- List -->, <!-- Link --> above each section show you understand your structure. Free clarity marks for almost no effort." },
+      { front: "How can a comment help when debugging?", back: "Wrap broken code in <!-- ... --> to turn it off without deleting it. Fix the rest of the page, then take the comment markers off to bring the code back." },
     ],
 
     // Topic 6: HTML Formatting
     6: [
-      { front: "What tags make text bold, italic, and underlined in HTML?", back: "<b> for bold, <i> for italic, <u> for underline." },
-      { front: "What is the difference between <b> and <strong>?", back: "Both display bold text, but <strong> adds semantic meaning (importance). Browsers and screen readers treat <strong> as important content." },
-      { front: "How do you combine bold and italic in HTML?", back: "Nest the tags: <b><i>Bold and Italic</i></b>. Close in reverse order -- last opened = first closed." },
-      { front: "What does the <mark> tag do?", back: "Highlights text with a yellow background, like a highlighter pen. Used for key terms." },
+      { front: "What tags make text bold, italic, and underlined?", back: "<b>bold</b>, <i>italic</i>, <u>underline</u>. Wrap the words you want styled. Close each one properly." },
+      { front: "What does the <mark> tag do?", back: "Puts a yellow background behind the text, like a highlighter pen. Example: <mark>Friday</mark>. Great for key words and important dates." },
+      { front: "What's the difference between <b> and <strong>?", back: "Both make text look bold. <strong> also adds a hint of 'this is important' for screen readers. For a simple page, <b> is fine." },
+      { front: "How do you combine bold AND italic on the same words?", back: "Nest the tags: <b><i>text</i></b>. Open both, close in reverse order (last opened = first closed)." },
+      { front: "Why should you avoid <u> on normal text?", back: "On the web, underlined text usually means a link. If you underline a normal word, users will try to click it. Use <b> or <mark> for emphasis instead." },
+      { front: "What does <small> do?", back: "Makes text smaller than normal. Good for fine print like disclaimers, phone numbers in a footer, or copyright notes." },
     ],
 
     // Topic 7: HTML Tables
     7: [
-      { front: "What are the 4 key tags for creating an HTML table?", back: "<table> (wraps table), <tr> (table row), <th> (header cell, bold), <td> (data cell)." },
-      { front: "What is the correct nesting order for table tags?", back: "<table> contains <tr>, and <tr> contains <th> or <td>. Never put <td> directly inside <table>." },
-      { front: "What does the border attribute do on a table?", back: "<table border=\"1\"> adds visible lines around cells. Without it, the table data exists but the grid is invisible." },
-      { front: "What does <th> stand for and how is it different from <td>?", back: "<th> = Table Header (bold, centered). <td> = Table Data (regular cell). Use <th> for column headers." },
-      { front: "What does <tr> stand for?", back: "Table Row -- creates one horizontal row in the table." },
+      { front: "What are the four key tags for an HTML table?", back: "<table> (outer wrapper), <tr> (table row), <th> (header cell, bold), <td> (data cell). Rule: table > tr > th/td." },
+      { front: "What's the correct nesting order for tables?", back: "<table> contains <tr>, and each <tr> contains <th> or <td>. Never put <td> straight inside <table> -- it must be inside a <tr>." },
+      { front: "Why do most tables have border=\"1\" on the <table> tag?", back: "Without a border, the table grid is invisible. Data is there but no lines. <table border=\"1\"> adds visible lines around every cell." },
+      { front: "What's the difference between <th> and <td>?", back: "<th> = table header (bold and centred by default) -- use for column titles like Dish, Price, Day. <td> = regular data cell for the actual numbers and words." },
+      { front: "What does <tr> stand for?", back: "Table Row -- one horizontal row of the table. One <tr> can hold many cells (<th> or <td>). Always inside <table>." },
+      { front: "When should you NOT use a table?", back: "For page layout (header + menu + content). Tables are for DATA with real rows and columns (menus, schedules, prices). CSS handles layout better." },
     ],
 
     // Topic 8: HTML Lists
     8: [
-      { front: "What is the difference between <ol> and <ul>?", back: "<ol> = Ordered List (numbered 1, 2, 3). <ul> = Unordered List (bullet points). Use <ol> when sequence matters." },
-      { front: "What tag is used for each item in a list?", back: "<li> (List Item). It is the same for both ordered and unordered lists." },
-      { front: "What determines whether a list shows numbers or bullets?", back: "The outer wrapper: <ol> gives numbers, <ul> gives bullets. The <li> tag is identical in both." },
-      { front: "Memory trick: How to remember ol vs ul?", back: "Ordered = One, two, three (numbered). Unordered = Unhappy with any order (just bullets)." },
+      { front: "What's the difference between <ol> and <ul>?", back: "<ol> = Ordered List (numbered 1, 2, 3) -- use when order matters, like cooking steps. <ul> = Unordered List (bullets) -- use for any-order lists like shopping." },
+      { front: "What tag is used for each list item?", back: "<li> = List Item. The same tag works inside both <ol> and <ul>. Only the outer wrapper (<ol> or <ul>) decides numbers vs bullets." },
+      { front: "Memory trick: how to remember <ol> vs <ul>?", back: "Ordered = One, two, three (numbers). Unordered = Unhappy with any order (just bullets). Pick the one that matches what your list means." },
+      { front: "Can you put a list inside another list?", back: "Yes. Put a new <ul> or <ol> inside an <li>. That's how you make outlines and sub-points. Browsers indent nested lists automatically." },
+      { front: "If you swap <ol> for <ul>, what changes?", back: "Only the marker -- numbers become bullets. The <li> items themselves stay exactly the same. That's why <li> is one tag for both list types." },
+      { front: "Why is <ul> wrong for cooking steps?", back: "Steps have a strict order -- step 1 must come before step 2. <ul> gives bullets, which hides the order. Use <ol> so the numbers 1, 2, 3 show the sequence." },
     ],
 
     // Topic 9: Hyperlinks
     9: [
-      { front: "What tag creates a hyperlink in HTML?", back: "The anchor tag: <a href=\"URL\">Link Text</a>." },
-      { front: "What does the href attribute specify?", back: "The URL destination -- where the user goes when they click the link." },
-      { front: "How do you make a link open in a new tab?", back: "Add target=\"_blank\" to the anchor tag: <a href=\"url\" target=\"_blank\">Text</a>." },
-      { front: "What happens if you don't use target=\"_blank\"?", back: "The link opens in the SAME tab, replacing the current page." },
+      { front: "What tag creates a hyperlink?", back: "The anchor tag: <a href=\"URL\">visible text</a>. Example: <a href=\"https://yandex.uz\">Search Yandex</a>." },
+      { front: "What does the href attribute do?", back: "Holds the URL -- where the link goes when clicked. Without href, the <a> looks like a link but goes nowhere." },
+      { front: "How do you make a link open in a new tab?", back: "Add target=\"_blank\" to the anchor tag: <a href=\"url\" target=\"_blank\">Text</a>. Underscore-blank, no space. Great for external links." },
+      { front: "What happens without target=\"_blank\"?", back: "The link opens in the SAME tab, replacing your current page. Good for internal links (menu, about, contact) where the user is still on your site." },
+      { front: "What's the difference between a relative and absolute link?", back: "Relative: href=\"about.html\" -- a file in the same folder. Absolute: href=\"https://amity.edu\" -- a full URL to another site. Use relative for your own pages." },
+      { front: "Why is 'click here' a bad link text?", back: "It tells the user nothing about where the link goes. Better: 'Read our menu' or 'Visit Amity' -- descriptive text helps users AND search engines understand your page." },
     ],
 
     // Topic 10: Images & Image Links
     10: [
-      { front: "What tag displays an image in HTML?", back: "<img src=\"file.jpg\" alt=\"description\" width=\"200\">. It is a self-closing tag (no </img>)." },
-      { front: "How do you create a clickable image link?", back: "Wrap <img> inside <a>: <a href=\"url\"><img src=\"pic.jpg\" alt=\"text\"></a>. The anchor tag is always the outer wrapper." },
-      { front: "What are the 3 essential attributes of the <img> tag?", back: "src (image path), alt (fallback text / accessibility), and width (size in pixels)." },
-      { front: "Why is the 'alt' attribute important?", back: "It provides text if the image fails to load AND helps screen readers describe the image for visually impaired users." },
+      { front: "What tag displays an image?", back: "<img src=\"file.jpg\" alt=\"description\" width=\"200\">. Self-closing -- no </img>. All info goes in attributes: src, alt, width." },
+      { front: "How do you make an image clickable?", back: "Wrap it inside an <a>: <a href=\"url\"><img src=\"pic.jpg\" alt=\"text\"></a>. The anchor is always on the OUTSIDE, the image on the inside." },
+      { front: "What are the three essential attributes of <img>?", back: "src (which file), alt (backup text for accessibility + fallback), and width (size in pixels). Height is optional -- the browser keeps the shape." },
+      { front: "Why is alt important, even if the image loads fine?", back: "Screen readers read alt aloud for blind users. Search engines use it to understand what's in the image. And if the image ever fails to load, the alt text shows up." },
+      { front: "Is <img> self-closing?", back: "Yes. No </img> needed. All the info fits inside the one tag using attributes. Same for <br> and <hr>." },
+      { front: "What's the rule for picking a good width?", back: "Set a width that matches how big you want the image on the page (like width=\"300\" for a photo in an article). This also stops the page from jumping while images load." },
     ],
 
     // Topic 11: Build a Full HTML Page
     11: [
-      { front: "What 7 elements must a complete exam HTML page include?", back: "1) Proper structure (html, head, title, body). 2) Heading. 3) Formatted paragraph. 4) Table. 5) List. 6) Hyperlink. 7) Comment." },
-      { front: "What are the most common HTML exam mistakes?", back: "Forgetting <!DOCTYPE html>, not closing tags, putting <td> directly in <table> without <tr>, missing border on tables, missing alt on images." },
-      { front: "Why should you use comments in exam HTML code?", back: "Label each section (<!-- table -->, <!-- list -->) to show the examiner you understand the structure -- earns extra marks for clarity." },
-      { front: "What must always appear at the very top of an HTML document?", back: "<!DOCTYPE html> -- tells the browser this is an HTML document." },
+      { front: "What 7 things should a complete exam HTML page have?", back: "1) Skeleton (<!DOCTYPE html>, html, head with title, body). 2) Heading. 3) Formatted paragraph (with <b> or <i>). 4) Table. 5) List. 6) Hyperlink. 7) At least one comment." },
+      { front: "What must appear on line 1 of every HTML page?", back: "<!DOCTYPE html>. This tells the browser to use modern HTML5 rules. Skipping it can trigger 'quirks mode' and break layouts." },
+      { front: "Name five common beginner HTML mistakes.", back: "1) Missing <!DOCTYPE html>. 2) Forgetting closing tags (</h1>, </p>). 3) <td> without a <tr> around it. 4) Table with no border=\"1\". 5) Missing alt on images." },
+      { front: "What's the correct order of the main sections?", back: "<!DOCTYPE html> first, then <html> wrapping <head> (with <title>) BEFORE <body>. Head before body, always." },
+      { front: "How should you use comments in an exam answer?", back: "Label each section: <!-- Heading -->, <!-- Subjects table -->, <!-- Hobbies list -->, <!-- Link -->. Shows the examiner you planned your page -- easy marks." },
+      { front: "If you're building an 'About Me' page, which tag does each part need?", back: "<h1> for name, <p> with <b> or <i> for intro, <img> for photo, <table> for subjects and grades, <ul> or <ol> for hobbies, <a href=\"...\"> for a link. One tag per role." },
+      { front: "A classmate says 'as long as it renders, the teacher will give full marks.' Is that true?", back: "No. Teachers grade on structure, correct tag choice, proper nesting, and comments that show understanding. 'Renders' is the minimum, not the target." },
     ],
   },
 

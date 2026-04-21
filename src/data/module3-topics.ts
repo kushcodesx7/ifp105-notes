@@ -1,91 +1,65 @@
 import type { Topic } from "./module1-topics";
 
 export const topics: Topic[] = [
-  // ─── Topic 1 ─── KEEP AS-IS
+  // ─── Topic 1 ───
   {
     id: 1,
     title: "Introduction to Social Media",
     time: "~5 mins",
     badges: [{ text: "Foundation", type: "star" }],
-    hook: `Before social media, if you wanted to share a photo with 500 people, you'd print 500 copies and mail them. Now you tap "Post" and it's done in 2 seconds. <strong>Social media didn't just change the internet — it changed how humans communicate, shop, learn, and even think.</strong>`,
+    hook: `You open your phone and scroll Instagram, TikTok, or Telegram for hours every week. <strong>That is social media \u2014 apps where normal people post, watch, chat, and share, all at the same time.</strong>`,
     content: [
       {
         type: "text",
-        html: `Social media refers to <mark>websites and apps that let users create, share, and interact with content and each other</mark>. It's not just scrolling memes — it's a revolution in how information moves around the planet.`,
+        html: `<strong>Social media</strong> is any app or website where <mark>users make their own posts and can reply to each other</mark>. TV only talks at you \u2014 you watch, you cannot answer. Social media lets anyone with a phone post a photo, leave a comment, or send a message. That is the big change.`,
       },
       {
         type: "image",
         src: "/images/m3/social-media.webp",
-        description: "Social media ecosystem: person at centre connected to Facebook, Instagram, Twitter/X, YouTube, TikTok, LinkedIn — arrows showing two-way communication",
+        description: "A person in the middle with arrows going to Instagram, TikTok, Telegram, YouTube, Facebook, and X \u2014 two-way arrows showing comments and messages going back",
+      },
+      {
+        type: "analogy",
+        label: "\ud83d\udcfa Old TV vs a group chat",
+        html: `Old TV is like a teacher who just talks \u2014 nobody can reply. <strong>Social media is like a big group chat</strong>: everyone can post, reply, share photos, and react with emojis. Sometimes the whole school joins, sometimes only your best friends.`,
+      },
+      {
+        type: "text",
+        html: `<strong>You already do these every day \u2014 this IS social media:</strong>`,
       },
       {
         type: "cards",
-        columns: 3,
+        columns: 4,
         items: [
           {
-            icon: "\ud83d\udde3\ufe0f",
-            title: "User-Generated Content",
-            description: "Unlike TV or newspapers, YOU create the content. Posts, stories, videos, reviews — the audience IS the creator. That's the revolution.",
-            tag: "You are the media",
+            icon: "\ud83d\udcf8",
+            title: "Posting a Story",
+            description: "You snap a photo of your lunch at a Tashkent cafe and add it to your Instagram Story for 24 hours. Friends tap the emoji reply \u2014 that is two-way social media.",
+            tag: "Instagram Story",
           },
           {
-            icon: "\ud83c\udf0d",
-            title: "Global Reach, Instant Speed",
-            description: "A tweet can reach millions in minutes. A TikTok can go viral overnight. No printing press, no TV station needed — just Wi-Fi.",
-            tag: "Zero gatekeepers",
+            icon: "\ud83c\udfb5",
+            title: "Scrolling TikTok",
+            description: "You watch 20 short videos in a row. You like one, share one with a classmate, and follow the creator. Every tap teaches TikTok what to show you next.",
+            tag: "TikTok For You",
           },
           {
-            icon: "\ud83d\udd01",
-            title: "Two-Way Communication",
-            description: "TV talks AT you. Social media talks WITH you. Comments, replies, shares, duets — it's a conversation, not a broadcast.",
-            tag: "Interactive by design",
+            icon: "\ud83d\udcac",
+            title: "Replying in Telegram",
+            description: "Your class group on Telegram has 40 students. You send a question about homework, three friends reply, and someone drops a voice note. That is social media too.",
+            tag: "Telegram group",
+          },
+          {
+            icon: "\ud83d\udc4d",
+            title: "Commenting on YouTube",
+            description: "You watch an Uzbek singer's new clip and leave a comment. Other fans reply. The creator hearts your comment. The video is a post, the comments are the conversation.",
+            tag: "YouTube comments",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>How social media changed communication forever:</strong>`,
-      },
-      {
-        type: "table",
-        headers: ["Before Social Media", "After Social Media"],
-        rows: [
-          { cells: ["News took hours/days to spread", "News spreads in seconds via shares and retweets"] },
-          { cells: ["Brands spoke AT customers (ads, billboards)", "Brands have conversations WITH customers (comments, DMs)"] },
-          { cells: ["Only celebrities had audiences", "Anyone with a phone can build a following"] },
-          { cells: ["Feedback was slow (letters, surveys)", "Feedback is instant (likes, comments, reviews)"] },
-          { cells: ["Marketing required huge budgets", "A viral post costs $0 and reaches millions"] },
-        ],
-      },
-      {
-        type: "callout",
-        variant: "blue",
-        html: `<strong>Key stat:</strong> There are over 4.9 billion social media users worldwide — that's more than 60% of the entire planet. If social media were a country, it would be the biggest one ever.`,
-      },
-      {
-        type: "callout",
-        variant: "amber",
-        html: `<strong>Remember:</strong> Social media is not just "fun apps." For businesses, it's a marketing channel, customer service desk, brand builder, and sales platform — all in one. That's why companies hire entire teams just for social media.`,
-      },
-    ],
-  },
-
-  // ─── Topic 2 ─── KEEP AS-IS
-  {
-    id: 2,
-    title: "Types of Social Media Platforms",
-    time: "~6 mins",
-    badges: [],
-    hook: `Not all social media is the same. Instagram is nothing like LinkedIn. TikTok is nothing like Twitter. Each platform has a <strong>different audience, different content style, and different marketing strategy.</strong> Using the wrong platform for your message is like wearing a swimsuit to a job interview — technically clothing, but completely wrong.`,
-    content: [
-      {
-        type: "text",
-        html: `Social media platforms fall into <mark>distinct categories</mark> based on what they're designed for. Smart marketers match the platform to the goal.`,
-      },
-      {
-        type: "image",
-        src: "/images/m3/platforms.webp",
-        description: "6 platform categories in a grid: Social Networking (Facebook, LinkedIn) \u00b7 Media Sharing (Instagram, YouTube, TikTok) \u00b7 Microblogging (Twitter/X) \u00b7 Messaging (WhatsApp, Telegram) \u00b7 Discussion Forums (Reddit) \u00b7 Professional (LinkedIn)",
+        html: `<strong>Why do people and small shops care about social media?</strong>`,
       },
       {
         type: "cards",
@@ -93,90 +67,180 @@ export const topics: Topic[] = [
         items: [
           {
             icon: "\ud83d\udc65",
-            title: "Facebook",
-            description: "The biggest social network. 3 billion users. Groups, Pages, Marketplace, Events. Best for community building and reaching older demographics (25-55+).",
-            tag: "Social Networking",
-            tagColor: "blue",
+            title: "Everyone is already there",
+            description: "Most young people in Tashkent check Instagram, TikTok, or Telegram many times a day. If your cafe is not on one of them, new customers can't find you.",
+            tag: "That is where attention lives",
           },
+          {
+            icon: "\ud83d\udcb0",
+            title: "It is almost free",
+            description: "A Chorsu samsa shop can post a fresh photo every morning for zero som. Before social media, a newspaper ad cost a lot of money that small shops did not have.",
+            tag: "Cheap for small shops",
+          },
+          {
+            icon: "\ud83d\udde3\ufe0f",
+            title: "Customers talk back",
+            description: "People leave comments like \"tasty!\" or \"too salty.\" The shop hears real feedback the same day \u2014 and can fix problems fast.",
+            tag: "Instant feedback",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Good things about social media:</strong> \u2705 You can find friends in other cities and countries \u00b7 \u2705 You can learn new things for free (cooking, languages, how to fix your phone) \u00b7 \u2705 Small shops in Tashkent can reach customers with just a phone \u00b7 \u2705 News travels in minutes, not days.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f Not everything you see is true \u2014 people can lie online \u00b7 \u26a0\ufe0f Apps are designed to keep you scrolling \u2014 two hours can feel like ten minutes \u00b7 \u26a0\ufe0f What you post stays on the internet, even if you delete it.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think it through:</strong> Pick the last three apps you opened on your phone today. Which of them let you POST something (not just watch)? Which let other people REPLY to you? Those are the social media apps.`,
+      },
+    ],
+  },
+
+  // ─── Topic 2 ───
+  {
+    id: 2,
+    title: "Types of Social Media Platforms",
+    time: "~6 mins",
+    badges: [],
+    hook: `Instagram, TikTok, YouTube, Telegram, LinkedIn \u2014 they all have posts and followers, but they feel totally different. <strong>Each app is built for a different kind of content and a different kind of person.</strong>`,
+    content: [
+      {
+        type: "text",
+        html: `Not every social media app is the same. Some are for <mark>photos</mark>, some for <mark>short video</mark>, some for <mark>long video</mark>, some for <mark>group chat</mark>, and some for <mark>jobs</mark>. You already use several of them without thinking about the difference.`,
+      },
+      {
+        type: "image",
+        src: "/images/m3/platforms.webp",
+        description: "Grid showing logos of Instagram, TikTok, YouTube, Telegram, Facebook, LinkedIn \u2014 each with a one-word label for what it is best at",
+      },
+      {
+        type: "analogy",
+        label: "\ud83c\udfeb Different classrooms for different subjects",
+        html: `At school you have a maths room, an art room, a gym, and a music room. Each room is set up for one job \u2014 you do not learn football in the music room. <strong>Social media apps are the same.</strong> Instagram is the art room (photos). TikTok is the dance studio (short video). LinkedIn is the career office (jobs). You pick the right room for the right task.`,
+      },
+      {
+        type: "text",
+        html: `<strong>The apps you know \u2014 what each one is really for:</strong>`,
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
           {
             icon: "\ud83d\udcf8",
             title: "Instagram",
-            description: "Visual-first platform. Photos, Reels, Stories. Huge with 18-34 age group. Perfect for brands with strong visuals — fashion, food, travel, fitness.",
-            tag: "Media Sharing",
+            description: "Photos, Reels (short videos), Stories that disappear after a day. Popular for food, fashion, travel, and pretty Tashkent cafe shots. Age: mostly teens and young adults.",
+            tag: "Photos \u00b7 Reels \u00b7 Stories",
             tagColor: "purple",
           },
           {
-            icon: "\ud83d\udc26",
-            title: "Twitter / X",
-            description: "Real-time microblogging. 280-character posts. Breaking news, trending topics, public conversations. Fast-paced and opinion-driven.",
-            tag: "Microblogging",
+            icon: "\ud83c\udfb5",
+            title: "TikTok",
+            description: "Short vertical videos (15\u201360 seconds). The \"For You\" page shows videos even from people you don't follow, if the app thinks you'll like them.",
+            tag: "Short video \u00b7 For You",
+            tagColor: "pink",
+          },
+          {
+            icon: "\ud83c\udfa5",
+            title: "YouTube",
+            description: "Longer videos, from 5-minute tutorials to 2-hour shows. Good for learning \u2014 maths tricks, guitar lessons, English speaking. Also has YouTube Shorts (like TikTok).",
+            tag: "Long video \u00b7 Learning",
+            tagColor: "red",
+          },
+          {
+            icon: "\ud83d\udcac",
+            title: "Telegram",
+            description: "The #1 app in Uzbekistan for group chat and news channels. @uzinfocom and most Tashkent news sites post here. Private chats, big groups, file sharing.",
+            tag: "Chat \u00b7 Channels \u00b7 Groups",
+            tagColor: "blue",
+          },
+          {
+            icon: "\ud83d\udc65",
+            title: "Facebook",
+            description: "Mostly used by parents and older adults in Uzbekistan. Good for family updates, local event pages, and small Marketplace buying/selling.",
+            tag: "Older users \u00b7 Groups",
             tagColor: "blue",
           },
           {
             icon: "\ud83d\udcbc",
             title: "LinkedIn",
-            description: "Professional networking. Resumes, job posts, industry articles. B2B marketing goldmine. If Facebook is the party, LinkedIn is the conference.",
-            tag: "Professional",
-            tagColor: "blue",
-          },
-          {
-            icon: "\ud83c\udfa5",
-            title: "YouTube",
-            description: "World's second-largest search engine. Long-form and short-form video. Tutorials, vlogs, ads. People search YouTube like they search Google.",
-            tag: "Video Platform",
-            tagColor: "red",
-          },
-          {
-            icon: "\ud83c\udfb5",
-            title: "TikTok",
-            description: "Short-form vertical video. Viral trends, challenges, sounds. Dominated by Gen Z. Fastest-growing platform in history. Algorithm-driven discovery.",
-            tag: "Short Video",
-            tagColor: "pink",
+            description: "A professional app \u2014 like an online CV. Used to find internships and first jobs after university. No party photos, no memes.",
+            tag: "Jobs \u00b7 CV \u00b7 Professional",
           },
         ],
       },
       {
-        type: "table",
-        headers: ["Platform", "Best For", "Content Type", "Key Audience"],
-        rows: [
-          { cells: ["Facebook", "Community, groups, events", "Text, photos, video, links", "25\u201355+ years"] },
-          { cells: ["Instagram", "Visual branding, influencers", "Photos, Reels, Stories", "18\u201334 years"] },
-          { cells: ["Twitter/X", "News, trends, conversations", "Short text, threads, polls", "18\u201349 years"] },
-          { cells: ["LinkedIn", "B2B, professional networking", "Articles, job posts, updates", "25\u201354 professionals"] },
-          { cells: ["YouTube", "Tutorials, entertainment, ads", "Long & short video", "All ages"] },
-          { cells: ["TikTok", "Viral content, Gen Z reach", "Short vertical video", "16\u201330 years"] },
+        type: "text",
+        html: `<strong>How does an app decide what you see?</strong> Every app has an <mark>algorithm</mark> \u2014 a set of rules that picks which posts to show. The rules roughly say: \"Show the user more of what they already like, watch, and share.\" That is why your TikTok \"For You\" page feels so personal after a few days.`,
+      },
+      {
+        type: "cards",
+        columns: 2,
+        items: [
+          {
+            icon: "\ud83d\udc41\ufe0f",
+            title: "What the app watches",
+            description: "Videos you finish, posts you like, accounts you follow, hashtags you tap, how long you stop on one video. Every action teaches it your taste.",
+            tag: "Your quiet signals",
+          },
+          {
+            icon: "\ud83c\udfaf",
+            title: "What the app shows back",
+            description: "More of the same type. Watch three football videos in a row and your feed fills with football. Watch cooking videos and cooking takes over.",
+            tag: "More of what you watched",
+          },
         ],
       },
       {
         type: "callout",
-        variant: "purple",
-        html: `<strong>Pro tip:</strong> You don't need to be on EVERY platform. A law firm posting dance videos on TikTok? Awkward. A fashion brand ignoring Instagram? Criminal. <mark>Match the platform to your audience and content style.</mark>`,
+        variant: "blue",
+        html: `<strong>Quick match (Tashkent examples):</strong> \u2705 Photo of your cafe's new dessert \u2192 Instagram \u00b7 \u2705 Funny 20-second dance with friends \u2192 TikTok \u00b7 \u2705 15-minute \"How I study for IELTS\" \u2192 YouTube \u00b7 \u2705 News for your class \u2192 Telegram channel \u00b7 \u2705 Your CV and internship search \u2192 LinkedIn.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f The same post does NOT work everywhere \u2014 a LinkedIn post on TikTok looks boring, a TikTok dance on LinkedIn looks unprofessional \u00b7 \u26a0\ufe0f The algorithm can trap you in one topic (only football, only drama) \u2014 like new things on purpose to widen your feed.`,
       },
       {
         type: "callout",
         variant: "purple",
-        html: `<strong>\ud83e\udd14 Think Deeper:</strong> LinkedIn is for professionals and TikTok is for entertainment. But a lawyer goes viral on TikTok giving legal advice. Does the \u201cpurpose\u201d of a platform still matter, or is it all about where your audience is?`,
+        html: `<strong>\ud83e\udd14 Think it through:</strong> Imagine your family opens a small bakery near your school. Which TWO apps would you use to tell the neighbourhood about it, and why those two and not the others?`,
       },
     ],
   },
 
-  // ─── Topic 3 ─── REWRITTEN: Modern Tools & Automation
+  // ─── Topic 3 ───
   {
     id: 3,
-    title: "Social Media Tools & Automation",
+    title: "Social Media Management Tools",
     time: "~6 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `Imagine running 5 social media accounts by hand — writing captions at midnight, replying to DMs at 6 AM, designing graphics between classes. <strong>Nobody does that anymore.</strong> Today's creators and marketers use a toolkit of smart apps that handle scheduling, design, chatbots, and even writing — so you focus on strategy, not busywork.`,
+    hook: `Big shops post on Instagram, TikTok, Telegram, and Facebook \u2014 every day, at the right times, with nice pictures. <strong>Nobody sits on the phone 24/7 to do that. They use helper apps.</strong>`,
     content: [
       {
-        type: "analogy",
-        label: "\ud83c\udfad The Film Crew Analogy",
-        html: `Making a movie alone is impossible. You need a director, camera operator, editor, and sound engineer. Social media is the same: <strong>Later is your scheduler</strong> (the assistant director who plans every scene), <strong>Canva is your set designer</strong> (makes everything look amazing), <strong>ChatGPT is your scriptwriter</strong> (creates content fast), <strong>ManyChat is your front-desk receptionist</strong> (handles customer messages automatically), and <strong>Notion is your production planner</strong> (keeps everything organized). One person with these five tools = an entire marketing department.`,
+        type: "text",
+        html: `A <strong>social media management tool</strong> is an app that helps people post and reply faster. Instead of opening Instagram, then TikTok, then Telegram one by one, you <mark>write everything in one place and the tool posts it for you</mark>. Big shops use them, but so can a student with one Instagram page.`,
       },
       {
         type: "image",
         src: "/images/m3/management-tools.webp",
-        description: "Single dashboard connected to Facebook, Instagram, Twitter, LinkedIn, TikTok — showing scheduling calendar, analytics charts, and message inbox",
+        description: "One dashboard on a laptop connected by arrows to Instagram, TikTok, Telegram, and Facebook \u2014 showing a calendar of future posts",
+      },
+      {
+        type: "analogy",
+        label: "\ud83c\udf73 A kitchen helper who does the boring jobs",
+        html: `Imagine a small cafe with only one cook. If the cook also washes dishes, serves tables, and takes orders, the food is slow. <strong>A helper who chops vegetables and washes plates in the background</strong> frees the cook to do the interesting work \u2014 cooking. Management tools do the same for social media: they handle the boring jobs so you focus on the creative ones.`,
+      },
+      {
+        type: "text",
+        html: `<strong>Three main things these tools do:</strong>`,
       },
       {
         type: "cards",
@@ -184,112 +248,91 @@ export const topics: Topic[] = [
         items: [
           {
             icon: "\ud83d\udcc5",
-            title: "Later",
-            description: "Visual scheduling tool. Drag and drop posts onto a calendar, preview how your Instagram grid will look, and auto-publish at the best times. Free plan available.",
-            tag: "Scheduling & planning",
-            tagColor: "green",
+            title: "Schedule posts",
+            description: "Write 7 posts on Sunday, pick the time for each, and the tool posts them through the week automatically \u2014 even at 9 p.m. when you are doing homework.",
+            tag: "Post while you sleep",
           },
           {
-            icon: "\ud83c\udfa8",
-            title: "Canva",
-            description: "Design tool anyone can use. Thousands of templates for Instagram posts, stories, YouTube thumbnails, TikTok covers. No Photoshop skills needed — just drag, edit, export.",
-            tag: "Design made easy",
-            tagColor: "purple",
-          },
-          {
-            icon: "\ud83e\udd16",
-            title: "ChatGPT",
-            description: "AI writing assistant. Generate captions, brainstorm content ideas, rewrite text for different platforms, create hashtag lists. Like having a copywriter on call 24/7.",
-            tag: "AI content creation",
-            tagColor: "blue",
-          },
-          {
-            icon: "\ud83d\udcac",
-            title: "ManyChat",
-            description: "Chatbot builder for Instagram and Facebook. Auto-replies to DMs, answers FAQs, sends links when someone comments a keyword. Works while you sleep.",
-            tag: "Chatbot automation",
-            tagColor: "amber",
-          },
-          {
-            icon: "\ud83d\uddd2\ufe0f",
-            title: "Notion",
-            description: "All-in-one planner. Build content calendars, store caption ideas, track posting schedules, and collaborate with your team. Your social media HQ.",
-            tag: "Planning & organization",
+            icon: "\ud83d\udce8",
+            title: "See all messages in one place",
+            description: "Instead of jumping between 3 apps, you see every DM, comment, and reply in one inbox. Reply to customers faster, don't miss any question.",
+            tag: "One inbox for all apps",
           },
           {
             icon: "\ud83d\udcca",
-            title: "Built-in Analytics",
-            description: "Every platform (Instagram Insights, YouTube Studio, TikTok Analytics) gives you free data: what posts worked, when your audience is online, follower demographics.",
-            tag: "Free from every platform",
-            tagColor: "green",
+            title: "Show simple numbers",
+            description: "Which post got the most likes? When are your followers online? The tool draws a chart so you don't have to guess.",
+            tag: "Simple charts",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>The 4 pillars every social media toolkit must cover:</strong>`,
+        html: `<strong>Popular tools you might hear about:</strong>`,
       },
       {
-        type: "steps",
+        type: "cards",
+        columns: 2,
         items: [
           {
-            title: "Scheduling \ud83d\udcc5",
-            description: "Write posts in advance and set them to publish at the perfect time. Later, Buffer, and Meta Business Suite all do this. No more posting at 3 AM because your audience is in a different time zone.",
+            icon: "\ud83d\udcc6",
+            title: "Buffer, Later, Metricool",
+            description: "All three can schedule your Instagram, TikTok, and Facebook posts in advance. They have free plans that are enough for a student or a one-person shop.",
+            tag: "Scheduling helpers",
+            tagColor: "blue",
           },
           {
-            title: "Content Creation \ud83c\udfa8",
-            description: "Design graphics in Canva, write captions with ChatGPT, edit videos with CapCut. The creation process is faster than ever because AI and templates handle the heavy lifting.",
-          },
-          {
-            title: "Automation \ud83e\udd16",
-            description: "ManyChat auto-replies to DMs on Instagram. Zapier connects your tools so a new blog post automatically becomes a tweet. Automation handles repetitive tasks on autopilot.",
-          },
-          {
-            title: "Analytics \ud83d\udcca",
-            description: "Track which posts perform best, when your audience is online, and how your followers grow. Use built-in analytics from each platform — they're free and surprisingly powerful.",
+            icon: "\ud83c\udfa8",
+            title: "Canva",
+            description: "Not a scheduler \u2014 it is a design helper. Pick a ready template, drop your photo in, change the words. You get a good-looking post in 5 minutes, no design class needed.",
+            tag: "Design templates",
+            tagColor: "purple",
           },
         ],
       },
       {
-        type: "table",
-        headers: ["Tool", "What It Does", "Best For", "Cost"],
-        rows: [
-          { cells: ["Later", "Schedule posts, visual planner", "Instagram & TikTok scheduling", "Free / $25+/mo"] },
-          { cells: ["Canva", "Design graphics & videos", "Posts, stories, thumbnails", "Free / $13/mo"] },
-          { cells: ["ChatGPT", "Write captions, brainstorm ideas", "Content creation, repurposing", "Free / $20/mo"] },
-          { cells: ["ManyChat", "Automated DM replies, chatbots", "Instagram & Facebook automation", "Free / $15+/mo"] },
-          { cells: ["Notion", "Content calendar, idea database", "Planning & team collaboration", "Free / $10/mo"] },
-        ],
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Real Tashkent example:</strong> A student runs a small thrift-clothing Instagram page. On Sunday evening she designs 5 posts in Canva, writes the captions, and uses Buffer's free plan to schedule one post per weekday at 7 p.m. The whole week is done in 90 minutes. She uses the saved time for school.`,
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>Why does this matter?</strong> Employers don't just want someone who "knows social media." They want someone who can use tools like Later, Canva, and ChatGPT to run campaigns efficiently. <mark>Knowing these tools is what separates a social media user from a social media professional.</mark>`,
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f Scheduling does not mean \"ignore your followers\" \u2014 you still have to reply to comments and DMs \u00b7 \u26a0\ufe0f Free plans have limits (usually 10\u201330 posts a month) \u2014 enough for small pages, not enough for big shops \u00b7 \u26a0\ufe0f Not every tool supports every app \u2014 check before you sign up.`,
       },
       {
         type: "callout",
-        variant: "dark",
-        html: `<strong>Real-world example:</strong> A solo entrepreneur in Tashkent uses Canva to design posts, ChatGPT to write captions in English and Russian, Later to schedule a week of content in 30 minutes, and ManyChat to auto-reply to every "Price?" DM on Instagram. Total time: 2 hours per week. Result: looks like a team of 5.`,
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think it through:</strong> You help your older cousin run an Instagram page for her Tashkent nail salon. She posts whenever she remembers \u2014 sometimes three times in one day, sometimes nothing for two weeks. Which ONE thing would change if she used a scheduling tool?`,
       },
     ],
   },
 
-  // ─── Topic 4 ─── KEEP AS-IS
+  // ─── Topic 4 ───
   {
     id: 4,
     title: "Social Media Measurement & Reporting",
     time: "~6 mins",
     badges: [{ text: "High yield", type: "star" }],
-    hook: `You posted a beautiful graphic on Instagram. It got 200 likes. Is that good? Bad? Did it actually bring customers? <strong>Without measurement, social media is just guessing.</strong> Metrics turn "I think it worked" into "I know it worked — here's the proof."`,
+    hook: `You post a photo and get 200 likes. Is that good or bad? <strong>Without numbers, you are only guessing.</strong> Every app gives you free numbers \u2014 you just have to know which ones matter.`,
     content: [
       {
         type: "text",
-        html: `Social media metrics are the <mark>numbers that tell you whether your content is actually working</mark>. Every platform has a built-in analytics dashboard. The trick is knowing which numbers actually matter.`,
+        html: `Every social media app has a <strong>free tool</strong> that shows you <mark>how your posts are doing</mark>. On Instagram it is called \"Insights,\" on TikTok \"Analytics,\" on YouTube \"Studio.\" They all answer the same questions: How many people saw my post? How many liked it? When are my followers online?`,
       },
       {
         type: "image",
         src: "/images/m3/analytics.webp",
-        description: "Analytics dashboard showing: Reach, Impressions, Engagement Rate, CTR, Conversions — each with sample numbers and trend arrows",
+        description: "Phone screen showing Instagram Insights: \"Reached 1,240 people, 180 likes, 24 comments, 12 shares\" with a small chart",
+      },
+      {
+        type: "analogy",
+        label: "\ud83c\udfc0 Like a school report card",
+        html: `At the end of the term you get a report with your marks in each subject. You can see where you did well and where to try harder next time. <strong>Social media numbers are the same \u2014 a report card for your posts.</strong> You learn which posts your friends loved, which they scrolled past, and what to do next time.`,
+      },
+      {
+        type: "text",
+        html: `<strong>The main numbers you'll see \u2014 in plain English:</strong>`,
       },
       {
         type: "cards",
@@ -298,392 +341,423 @@ export const topics: Topic[] = [
           {
             icon: "\ud83d\udc41\ufe0f",
             title: "Reach",
-            description: "How many UNIQUE people saw your post. If 1,000 different people see it, reach = 1,000. Think of it as how wide your megaphone blasts.",
-            tag: "Unique viewers",
-          },
-          {
-            icon: "\ud83d\udd01",
-            title: "Impressions",
-            description: "Total number of times your post was displayed — including the SAME person seeing it multiple times. Always equal to or higher than reach.",
-            tag: "Total views (with repeats)",
+            description: "How many DIFFERENT people saw your post. If 500 people saw it, reach is 500 \u2014 even if your best friend looked three times, she still counts once.",
+            tag: "How many people saw it",
           },
           {
             icon: "\u2764\ufe0f",
-            title: "Engagement",
-            description: "Likes + Comments + Shares + Saves + Clicks. It measures how many people INTERACTED with your post, not just scrolled past it.",
-            tag: "Likes + Comments + Shares",
+            title: "Likes",
+            description: "How many people tapped the heart. Easy to collect, but also the weakest sign \u2014 people tap fast without reading.",
+            tag: "Taps on the heart",
           },
-        ],
-      },
-      {
-        type: "cards",
-        columns: 3,
-        items: [
           {
-            icon: "\ud83d\udcf2",
-            title: "Engagement Rate",
-            description: "Engagement \u00f7 Reach \u00d7 100. If 50 people engaged out of 1,000 who saw it, that's 5%. Industry average is 1-3%. Over 5% = crushing it.",
-            tag: "The quality metric",
+            icon: "\ud83d\udcac",
+            title: "Comments",
+            description: "People wrote you something. Worth more than a like \u2014 comments take real effort, so each one means the post actually made someone stop and think.",
+            tag: "Real effort",
+          },
+          {
+            icon: "\u2197\ufe0f",
+            title: "Shares",
+            description: "People sent your post to friends or reposted it. The strongest sign \u2014 it means the post was so good someone wanted their friends to see it too.",
+            tag: "Friends telling friends",
             tagColor: "green",
           },
           {
-            icon: "\ud83d\udd17",
-            title: "CTR (Click-Through Rate)",
-            description: "Clicks on your link \u00f7 Impressions \u00d7 100. Measures how many people were interested enough to actually CLICK. Higher = better content.",
-            tag: "Clicks \u00f7 Impressions",
+            icon: "\ud83d\udd16",
+            title: "Saves",
+            description: "People bookmarked your post to come back later. Common for recipes, study tips, and shopping lists. Saves are a secret sign of \"this was useful.\"",
+            tag: "Bookmark for later",
             tagColor: "blue",
           },
           {
-            icon: "\ud83d\udcb0",
-            title: "ROI (Return on Investment)",
-            description: "Revenue earned \u00f7 Amount spent \u00d7 100. The ultimate business metric. Did you make more money than you spent? That's the only question the boss cares about.",
-            tag: "Revenue \u00f7 Cost",
-            tagColor: "amber",
+            icon: "\ud83d\udc65",
+            title: "Follower growth",
+            description: "How many new followers you got this week minus how many left. Slow and steady is healthy \u2014 giant jumps usually mean one post went viral by luck.",
+            tag: "New followers over time",
           },
         ],
       },
       {
-        type: "callout",
-        variant: "red",
-        html: `<strong>\u274c Common mistake:</strong> "We got 10,000 impressions!" sounds amazing. But if nobody clicked, commented, or bought anything — those are just empty eyeballs. <mark>Vanity metrics (likes, impressions) look good but don't pay bills. Action metrics (CTR, conversions, ROI) actually matter.</mark>`,
-      },
-      {
-        type: "table",
-        headers: ["Metric", "What It Measures", "Formula", "Why It Matters"],
-        rows: [
-          { cells: ["Reach", "Unique people who saw your post", "\u2014", "How far your content spreads"] },
-          { cells: ["Impressions", "Total times post was displayed", "\u2014", "Visibility including repeats"] },
-          { cells: ["Engagement Rate", "% of viewers who interacted", "(Engagements \u00f7 Reach) \u00d7 100", "Content quality indicator"] },
-          { cells: ["CTR", "% who clicked your link", "(Clicks \u00f7 Impressions) \u00d7 100", "Measures interest in your offer"] },
-          { cells: ["ROI", "Profit from social media spend", "(Revenue \u00f7 Cost) \u00d7 100", "Bottom-line business impact"] },
-        ],
+        type: "text",
+        html: `<strong>What do the numbers actually tell you?</strong> You compare this week to last week. If reach is going up \u2014 more people are finding you. If comments go up \u2014 your posts are starting a real conversation. If saves go up \u2014 people find your posts useful enough to keep.`,
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Analytics dashboards:</strong> Every platform has one. Facebook Insights, Instagram Insights, Twitter Analytics, LinkedIn Analytics. Third-party tools (Hootsuite, Sprout Social, Google Analytics) pull all of these into a single report. Professionals review these weekly or monthly.`,
+        html: `<strong>A small example:</strong> A Tashkent student's baking Instagram has 1,000 followers. Post A got 300 likes, 3 comments. Post B got 150 likes, 80 comments and 40 saves. Which is the better post? Post B \u2014 fewer likes but many saves means real people are keeping the recipe.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f Follower count alone is a weak number \u2014 10,000 fake or silent followers are worth less than 500 real friends \u00b7 \u26a0\ufe0f Don't check numbers every 5 minutes \u2014 once a week is enough \u00b7 \u26a0\ufe0f One bad week does not mean your page is broken \u2014 look at the whole month.`,
       },
       {
         type: "callout",
         variant: "purple",
-        html: `<strong>\ud83e\udd14 Think Deeper:</strong> A post gets 100,000 impressions but only 3 clicks. The reach looks huge \u2014 is this a success or a failure? How would you diagnose what went wrong and fix it for the next post?`,
+        html: `<strong>\ud83e\udd14 Think it through:</strong> Your friend's Instagram page has 5,000 followers, but every post gets only 20 likes and zero comments. Your page has 300 followers and every post gets 60 likes and 10 comments. Whose page is healthier, and why?`,
       },
     ],
   },
 
-  // ─── Topic 5 ─── SIMPLIFIED: Social Advertising
+  // ─── Topic 5 ───
   {
     id: 5,
-    title: "Social Advertising (Organic vs Paid)",
+    title: "Social Advertising",
     time: "~5 mins",
     badges: [{ text: "Exam favourite", type: "star" }],
-    hook: `You post a great photo on Instagram. 50 of your followers see it. But you want 50,000 people to see it — including people who've never heard of you. <strong>That's paid advertising.</strong> You pay the platform to show your content to exactly the right people. Think of it as the difference between handing out flyers on campus vs putting your ad on a digital billboard that only shows to people who'd actually care.`,
+    hook: `You scroll Instagram and see a post from a shop you've never followed. Why is it there? <strong>Someone paid the app to show it to you.</strong> That is social advertising \u2014 shops paying to reach new people.`,
     content: [
+      {
+        type: "text",
+        html: `A <strong>social media ad</strong> is just a normal post \u2014 except the shop <mark>paid the app to show it to people who don't follow them yet</mark>. You can tell it is an ad because it has a small \"Sponsored\" label under the name. Apps like Instagram, TikTok, and Facebook earn most of their money from these ads.`,
+      },
+      {
+        type: "image",
+        src: "/images/m3/advertising.webp",
+        description: "Two phone screens side-by-side: one showing a normal friend's post, one showing a post with \"Sponsored\" label \u2014 both look similar",
+      },
+      {
+        type: "analogy",
+        label: "\ud83d\udccc Flyer on the classroom board vs a flyer only YOU get",
+        html: `Imagine a school flyer pinned on the classroom board \u2014 every student walks past it, even ones who don't care. <strong>A social media ad is smarter</strong>: the shop says \"only show this flyer to 17-year-olds in Tashkent who like basketball.\" You get it, the girl next to you does not. The app knows enough to pick the right people.`,
+      },
+      {
+        type: "text",
+        html: `<strong>Free post vs paid post \u2014 what's the difference?</strong>`,
+      },
       {
         type: "cards",
         columns: 2,
         items: [
           {
             icon: "\ud83c\udf31",
-            title: "Organic Content",
-            description: "Free posts seen by your existing followers. Limited reach — platforms show organic posts to only 2-5% of your followers. They want you to pay!",
-            tag: "Free but tiny reach",
+            title: "Free post (\"organic\")",
+            description: "You post normally. Only your followers \u2014 and maybe a few friends-of-friends \u2014 see it. No money spent, but reach is small, especially for new pages.",
+            tag: "Free \u00b7 small reach",
             tagColor: "green",
           },
           {
             icon: "\ud83d\udcb5",
-            title: "Paid Advertising",
-            description: "You pay to show your content to specific people. Choose who sees it by age, location, interests, and behaviour. Much wider reach, scales with your budget.",
-            tag: "Costs money, massive reach",
+            title: "Paid post (ad)",
+            description: "The shop pays the app. Now the post is shown to many more people, even people who never heard of the shop. The shop picks who sees it.",
+            tag: "Costs money \u00b7 big reach",
             tagColor: "blue",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Ads you see every day (you just don't always notice):</strong>`,
+        html: `<strong>How does the shop choose who sees the ad?</strong> When the shop pays, it picks simple filters: <mark>age, city, interests.</mark>`,
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\ud83c\udf82",
+            title: "Age",
+            description: "\"Only show this to people aged 16 to 25.\" A cafe with student prices does not want to pay to reach 60-year-olds.",
+            tag: "Pick an age range",
+          },
+          {
+            icon: "\ud83d\udccd",
+            title: "City",
+            description: "\"Only show this to people in Tashkent.\" A Chorsu bakery does not need to pay to reach someone in London \u2014 they can't come buy samsa anyway.",
+            tag: "Pick a place",
+          },
+          {
+            icon: "\ud83c\udfae",
+            title: "Interests",
+            description: "\"Only show this to people who like football / K-pop / makeup.\" The app already knows what you tap, so it can match.",
+            tag: "Pick a hobby",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>You see these ads every single day \u2014 now you'll spot them:</strong>`,
       },
       {
         type: "cards",
         columns: 4,
         items: [
           {
-            icon: "\ud83d\udcf1",
-            title: "Instagram Feed Ads",
-            description: "Posts that say \"Sponsored\" at the top. They look like normal posts but they're paid. That clothing brand you keep seeing? They paid to reach you.",
+            icon: "\ud83d\udcf8",
+            title: "Instagram \"Sponsored\"",
+            description: "A clothing shop's post in your feed, with a small \"Sponsored\" label under the name. Looks like a normal post, but the shop paid to reach you.",
           },
           {
             icon: "\ud83c\udfb5",
-            title: "TikTok Promoted",
-            description: "Videos marked \"Sponsored\" in your For You page. Brands pay TikTok to push their content to your feed based on your interests.",
+            title: "TikTok ad clips",
+            description: "Short videos with \"Sponsored\" or \"Ad\" on your For You page. Often for games, phone apps, or online shops like Uzum.",
           },
           {
-            icon: "\ud83c\udfa5",
-            title: "YouTube Pre-roll",
-            description: "The \"Skip Ad\" videos before your YouTube video plays. Companies pay per view. Those 5 seconds? They cost money.",
+            icon: "\u25b6\ufe0f",
+            title: "YouTube \"Skip Ad\"",
+            description: "The 5\u201315 seconds before your video starts. Companies pay YouTube every time one is watched. That's why you can skip most of them.",
           },
           {
-            icon: "\ud83d\udcf1",
-            title: "Story Ads",
-            description: "Full-screen vertical ads between your friends' Stories on Instagram and Facebook. Immersive and hard to ignore.",
+            icon: "\ud83d\udcac",
+            title: "Story ads",
+            description: "A big full-screen ad between your friends' Stories on Instagram. Hard to ignore \u2014 that's why shops like them.",
           },
-        ],
-      },
-      {
-        type: "analogy",
-        label: "\ud83c\udfaf The Fishing Analogy",
-        html: `Organic posts = fishing with a small net in your own pond. You'll catch a few fish you already know. <strong>Paid ads = choosing exactly which ocean to fish in, what type of fish to target, and using sonar to find them.</strong> You pick the age, location, interests, and behaviour of who sees your ad. That's why even small businesses spend on ads — precision beats luck.`,
-      },
-      {
-        type: "table",
-        headers: ["Targeting Type", "What It Does", "Real Example"],
-        rows: [
-          { cells: ["Demographics", "Target by age, gender, location", "Women aged 18-25 in Tashkent"] },
-          { cells: ["Interests", "Target by hobbies and interests", "People who follow fitness accounts"] },
-          { cells: ["Behaviour", "Target by actions and purchase habits", "People who recently shopped online"] },
-          { cells: ["Lookalike Audiences", "Find new people similar to your best customers", "People who behave like your top 100 buyers"] },
-          { cells: ["Retargeting", "Show ads to people who already visited your site", "Someone who added to cart but didn't buy"] },
-        ],
-      },
-      {
-        type: "callout",
-        variant: "amber",
-        html: `<strong>A/B Testing:</strong> Run two versions of the same ad with ONE difference (different image, different headline). See which performs better. Keep the winner, drop the loser. Never guess — test everything. This is how professionals optimize every dollar.`,
-      },
-      {
-        type: "callout",
-        variant: "dark",
-        html: `<strong>Budget basics:</strong> You can start with as little as $1/day. You set a daily or total budget, and the platform stops showing ads when the budget runs out. No surprise bills. <mark>CPC (Cost Per Click)</mark> — pay only when someone clicks. <mark>CPM (Cost Per Thousand Impressions)</mark> — pay per 1,000 views. Most students' first ad campaign costs less than a coffee.`,
-      },
-      {
-        type: "callout",
-        variant: "purple",
-        html: `<strong>\ud83e\udd14 Think Deeper:</strong> You have $100 to spend on ads. Would you rather reach 10,000 random people or 500 people who already visited your website? Why might a smaller, targeted audience give you a better return on investment?`,
-      },
-    ],
-  },
-
-  // ─── Topic 6 ─── NEW: LinkedIn
-  {
-    id: 6,
-    title: "LinkedIn \u2014 Build Your Professional Profile",
-    time: "~6 mins",
-    badges: [{ text: "High yield", type: "star" }],
-    hook: `Instagram shows who you are on the weekend. LinkedIn shows who you are at work. Right now, recruiters are searching LinkedIn for candidates — and if your profile is empty or doesn't exist, <strong>you're invisible to the job market.</strong> Building a strong LinkedIn profile today is like planting a tree: the best time was yesterday, the second-best time is right now.`,
-    content: [
-      {
-        type: "analogy",
-        label: "\ud83c\udfe2 The Digital CV Analogy",
-        html: `Think of LinkedIn as your <strong>living, breathing CV</strong> that works for you 24/7. A paper CV sits in a drawer until you send it. A LinkedIn profile is out there being found by recruiters, clients, and collaborators while you sleep. It's also a <strong>networking event that never ends</strong> — instead of awkward handshakes at a conference, you connect with professionals from your phone.`,
-      },
-      {
-        type: "text",
-        html: `<strong>Why LinkedIn matters (especially for students):</strong>`,
-      },
-      {
-        type: "cards",
-        columns: 3,
-        items: [
-          {
-            icon: "\ud83d\udcbc",
-            title: "Jobs & Internships",
-            description: "Over 90% of recruiters use LinkedIn to find candidates. Many jobs are filled through LinkedIn connections before they're even posted publicly.",
-            tag: "Your #1 career tool",
-            tagColor: "blue",
-          },
-          {
-            icon: "\ud83e\udd1d",
-            title: "Professional Networking",
-            description: "Connect with alumni, professors, industry leaders, and potential mentors. One connection can open doors that no CV ever could.",
-            tag: "Who you know matters",
-            tagColor: "green",
-          },
-          {
-            icon: "\ud83c\udf1f",
-            title: "Credibility & Visibility",
-            description: "Share your projects, certifications, and achievements. When someone Googles your name, your LinkedIn profile often appears first.",
-            tag: "Your digital first impression",
-            tagColor: "purple",
-          },
-        ],
-      },
-      {
-        type: "text",
-        html: `<strong>Build a profile that gets noticed — step by step:</strong>`,
-      },
-      {
-        type: "steps",
-        items: [
-          {
-            title: "Professional Photo \ud83d\udcf8",
-            description: "Use a clear headshot with good lighting and a plain background. No sunglasses, no group photos, no party selfies. You want to look approachable and professional. First impressions are made in 1/10th of a second.",
-          },
-          {
-            title: "Headline (not just your job title) \ud83d\udcdd",
-            description: "Your headline appears everywhere — in search results, connection requests, comments. Don't just write \"Student.\" Write what you DO: \"Marketing Student | Content Creator | Fluent in 3 Languages.\" Make people curious enough to click.",
-          },
-          {
-            title: "Summary / About Section \ud83d\udcd6",
-            description: "2-3 short paragraphs about who you are, what you're passionate about, and what you're looking for. Write in first person (\"I\" not \"He/She\"). Be human, not robotic. End with a call to action: \"Feel free to connect!\"",
-          },
-          {
-            title: "Skills & Endorsements \u2b50",
-            description: "Add at least 5 relevant skills (Social Media Marketing, Microsoft Excel, Content Writing, etc.). Connections can endorse you, which adds credibility. It's like getting a mini-recommendation with one click.",
-          },
-          {
-            title: "Experience & Projects \ud83d\udee0\ufe0f",
-            description: "Even if you haven't had a formal job — add volunteer work, freelance projects, university clubs, or class projects. Describe what you DID and what RESULT it had. Action verbs: managed, created, led, increased, organized.",
-          },
-        ],
-      },
-      {
-        type: "text",
-        html: `<strong>How LinkedIn differs from other platforms:</strong>`,
-      },
-      {
-        type: "table",
-        headers: ["Feature", "Instagram", "LinkedIn"],
-        rows: [
-          { cells: ["Tone", "Casual, fun, personal", "Professional, insightful, career-focused"] },
-          { cells: ["Content", "Photos, Reels, Stories", "Articles, achievements, industry insights"] },
-          { cells: ["Connections", "Friends, influencers", "Colleagues, recruiters, mentors"] },
-          { cells: ["Goal", "Entertainment, brand awareness", "Career growth, networking, B2B"] },
-          { cells: ["Profile", "Bio + grid aesthetic", "Full professional CV with skills & endorsements"] },
         ],
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Posting on LinkedIn:</strong> You don't need to post every day. Share once or twice a week: a lesson you learned, a project you completed, an article you found interesting with your opinion on it. Posts that tell a personal story + professional lesson get the most engagement. <mark>LinkedIn rewards people who share knowledge, not people who brag.</mark>`,
+        html: `<strong>How much does it cost?</strong> Ads can start very small \u2014 even 10,000\u201330,000 som a day for a Tashkent shop. The shop sets a daily budget, and once the budget is used up the app stops showing the ad. No surprise bills at the end of the month.`,
       },
       {
         type: "callout",
         variant: "amber",
-        html: `<strong>Do this today:</strong> Create a LinkedIn profile (or update your existing one). Add a professional photo, write a headline that's more than just "Student," and connect with 10 classmates. That's it. Takes 20 minutes, and you've just started building your professional network.`,
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f A paid ad doesn't make a bad product good \u2014 if the photo is ugly or the cafe is dirty, paying more money won't fix it \u00b7 \u26a0\ufe0f Some ads online are scams (\"free iPhone!\") \u2014 if it sounds too good to be true, it usually is \u00b7 \u26a0\ufe0f You are the target. Don't feel bad if you've bought something from an ad \u2014 they are designed to work.`,
       },
       {
         type: "callout",
         variant: "purple",
-        html: `<strong>\ud83e\udd14 Think Deeper:</strong> Two students graduate with identical grades. One has a strong LinkedIn profile with 500+ connections. The other has none. How might their job search experiences differ, and why?`,
+        html: `<strong>\ud83e\udd14 Think it through:</strong> Next time you open Instagram or TikTok, count how many \"Sponsored\" posts you see in the first 20 posts. Why do you think the app showed YOU that specific product and not something random?`,
       },
     ],
   },
 
-  // ─── Topic 7 ─── NEW: Personal Branding
+  // ─── Topic 6 ───
   {
-    id: 7,
-    title: "Personal Branding on Social Media",
+    id: 6,
+    title: "Facebook Marketing",
     time: "~6 mins",
-    badges: [{ text: "Hot topic", type: "hot" }],
-    hook: `Coca-Cola is a brand. Nike is a brand. But here's the thing — <strong>YOU are also a brand.</strong> Every time someone sees your social media, they form an opinion about you in seconds. Are you the "creative video person"? The "always-helpful tech guy"? Or just another account posting random stuff? Personal branding is deciding what people think of when they hear your name — before someone else decides for you.`,
+    badges: [{ text: "High yield", type: "star" }],
+    hook: `Most Uzbek teenagers don't spend much time on Facebook \u2014 but <strong>your parents, aunties, and neighbours do.</strong> That is why many Tashkent shops still keep a Facebook page.`,
     content: [
       {
+        type: "text",
+        html: `<strong>Facebook</strong> is one of the oldest big social apps. In Uzbekistan, it is <mark>mostly used by adults over 30</mark> \u2014 parents, teachers, small-business owners. If a shop wants to reach that older crowd, Facebook still matters. For teenagers, Instagram and TikTok are usually more fun.`,
+      },
+      {
+        type: "image",
+        src: "/images/m3/facebook-marketing.webp",
+        description: "Screenshot of a Facebook Page for a Tashkent cafe with a cover photo, \"Like\" button, working hours, and recent posts",
+      },
+      {
         type: "analogy",
-        label: "\ud83c\udf54 The Restaurant Analogy",
-        html: `Imagine two burger shops side by side. Both sell good burgers. But one has a clean logo, consistent colours, a catchy slogan, and great reviews. The other has no sign, messy tables, and a different menu every day. <strong>Which one would you trust?</strong> Personal branding is the same thing — it's not about being fake, it's about being <strong>consistent, recognizable, and trustworthy</strong> so people choose YOU over the 1,000 other profiles doing similar things.`,
+        label: "\ud83c\udfea A free shop sign on a big street",
+        html: `Picture a shop on a quiet street \u2014 nobody walks past. Now imagine the same shop gets a <strong>free sign on a busy main road</strong>: more people see it, and more people walk in. <strong>A Facebook Page works like that.</strong> It is a free \"sign\" inside one of the biggest websites in the world, showing the shop's name, hours, and photos to anyone searching for it.`,
       },
       {
         type: "text",
-        html: `<strong>What is personal branding?</strong> It's <mark>the intentional effort to shape how others perceive you</mark>. Your name, your content, your profile photo, your bio, the topics you talk about — all of this creates an image in people's minds. You can either leave it to chance or take control of it.`,
+        html: `<strong>How a small Tashkent shop actually uses Facebook \u2014 three simple things:</strong>`,
       },
       {
         type: "cards",
         columns: 3,
         items: [
           {
-            icon: "\ud83c\udfaf",
-            title: "Pick Your Niche",
-            description: "You can't be about everything. Choose 2-3 topics you're genuinely interested in: tech + AI, fitness + nutrition, design + creativity. Specialists stand out. Generalists blend in.",
-            tag: "Focus beats everything",
+            icon: "\ud83c\udfea",
+            title: "A Facebook Page",
+            description: "A free page with the shop's name, address, hours, and photos. Different from a personal profile \u2014 a Page can be followed by customers without becoming \"friends.\"",
+            tag: "Like a mini-website",
             tagColor: "blue",
           },
           {
-            icon: "\ud83d\udcf1",
-            title: "Choose Your Platforms",
-            description: "You don't need to be on all platforms. Visual work? Instagram + TikTok. Professional content? LinkedIn. Writing? Twitter/X. Pick 2 and be consistent on both.",
-            tag: "2 platforms > 5 half-done",
-            tagColor: "green",
+            icon: "\ud83d\udce2",
+            title: "Boost a post",
+            description: "Take a good post (like a photo of the new menu) and pay Facebook a small amount so more people see it. Works for parents and aunties who check Facebook daily.",
+            tag: "Pay to reach more",
+            tagColor: "purple",
           },
           {
-            icon: "\ud83d\udcc6",
-            title: "Post Consistently",
-            description: "The algorithm rewards consistency. 3 posts per week beats 20 posts in one day then silence. A content calendar (use Notion or Later) keeps you on track.",
-            tag: "Consistency > perfection",
-            tagColor: "purple",
+            icon: "\ud83d\udc65",
+            title: "Join local groups",
+            description: "Groups like \"Tashkent food lovers\" or \"Chilanzar mums\" have thousands of local people. Sharing a useful post in a group can bring real customers for free.",
+            tag: "Local community",
+            tagColor: "green",
           },
         ],
       },
       {
         type: "text",
-        html: `<strong>Content strategy — what to actually post:</strong>`,
+        html: `<strong>Why Facebook and Instagram feel so connected</strong> \u2014 because they are! Both apps are owned by the same company called <mark>Meta</mark>. That is why when a shop writes one post in Meta's \"Business Suite,\" it can go to BOTH Facebook and Instagram at the same time. Two apps, one tool.`,
       },
       {
         type: "cards",
         columns: 2,
         items: [
           {
-            icon: "\ud83d\udca1",
-            title: "Value Content (70%)",
-            description: "Tips, tutorials, lessons learned, industry insights, how-tos. This is what builds your reputation. If people learn something from your posts, they'll follow you.",
-            tag: "Teach, share, help",
+            icon: "\ud83d\udc65",
+            title: "Who is on Facebook in Uzbekistan?",
+            description: "Mostly adults 30+. Parents sharing family photos, teachers joining school groups, small-business owners posting their shop hours. Teens are here less.",
+            tag: "Adults 30+",
           },
           {
-            icon: "\ud83c\udf1f",
-            title: "Personal Content (20%)",
-            description: "Behind-the-scenes, your journey, wins and failures, opinions. This makes you human and relatable. People follow people, not just information.",
-            tag: "Be real, be human",
-          },
-          {
-            icon: "\ud83d\udce2",
-            title: "Promotional Content (10%)",
-            description: "Your services, portfolio, products, achievements. Keep this small — if every post is 'hire me' or 'buy this,' people will unfollow fast.",
-            tag: "Keep it rare",
-            tagColor: "amber",
-          },
-          {
-            icon: "\u2764\ufe0f",
-            title: "Engagement",
-            description: "Reply to every comment. Comment on others' posts. Join conversations. Social media is SOCIAL. The algorithm pushes content from people who actually engage.",
-            tag: "Talk, don't just broadcast",
-            tagColor: "blue",
+            icon: "\ud83d\udcf8",
+            title: "Who is on Instagram?",
+            description: "Mostly 16\u201335. Students, young workers, influencers. A Tashkent cafe aiming at teens should put its best photos on Instagram, not Facebook.",
+            tag: "Teens and young adults",
           },
         ],
       },
       {
-        type: "callout",
-        variant: "red",
-        html: `<strong>\u274c Common personal branding mistakes:</strong><br/>
-\u2022 Posting party photos on a professional account — keep personal and professional separate<br/>
-\u2022 Complaining publicly about jobs, professors, or colleagues — the internet never forgets<br/>
-\u2022 Inconsistent presence — posting 10 times one week, then disappearing for 2 months<br/>
-\u2022 Copying someone else's style instead of finding your own voice<br/>
-\u2022 Having an empty or outdated profile — if someone searches your name, what will they find?`,
+        type: "text",
+        html: `<strong>You already see Facebook marketing \u2014 without noticing:</strong>`,
       },
       {
-        type: "table",
-        headers: ["Branding Element", "Good Example", "Bad Example"],
-        rows: [
-          { cells: ["Profile Photo", "Clean headshot, good lighting, friendly", "Blurry group photo, sunglasses, cropped from party pic"] },
-          { cells: ["Bio", "\"UX Designer | Helping startups look professional\"", "\"Living my best life\""] },
-          { cells: ["Content", "Regular posts about your field + genuine personality", "Random reposts with no original thought"] },
-          { cells: ["Engagement", "Replying to comments, adding value in conversations", "Never responding, or only posting links"] },
-          { cells: ["Consistency", "Same name, photo, and style across platforms", "Different persona on every platform"] },
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\ud83c\udf70",
+            title: "Your neighbour's cake page",
+            description: "Many home cooks in Tashkent run a Facebook Page showing daily cakes. Neighbours message to order. No shop needed \u2014 just a phone, a photo, and a Page.",
+            tag: "Home business",
+          },
+          {
+            icon: "\ud83d\udd27",
+            title: "Local repair services",
+            description: "Phone repair, plumbing, tutoring \u2014 small adult services. The adult customers already use Facebook, so that is where the page lives.",
+            tag: "Adult services",
+          },
+          {
+            icon: "\ud83c\udf93",
+            title: "School and university pages",
+            description: "Amity Tashkent has a Facebook Page with event photos, important notices, and graduation albums. Parents follow it more than teens do.",
+            tag: "Schools \u00b7 official",
+          },
         ],
       },
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>Success story:</strong> A 20-year-old design student starts posting UI design tips on LinkedIn twice a week. After 6 months: 5,000 followers, 3 freelance clients, and an internship offer from a company that found her through her posts. <mark>She didn't have years of experience — she had a consistent personal brand.</mark>`,
+        html: `<strong>Easy start:</strong> If your family opens a small business, creating a free Facebook Page takes 10 minutes: name, address, a cover photo, hours, and phone number. That alone helps older customers find and trust the shop.`,
       },
       {
         type: "callout",
-        variant: "dark",
-        html: `<strong>Start now, not later:</strong> You don't need to be an expert to start building your brand. Document your learning journey — "Today I learned about..." posts perform incredibly well. The best personal brands are built by people who start before they feel ready.`,
+        variant: "amber",
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f A Page is not the same as your personal profile \u2014 don't mix your family photos with shop posts \u00b7 \u26a0\ufe0f Boosting a post is easy, but don't spend too much on the first try \u2014 start very small \u00b7 \u26a0\ufe0f Reply to every comment and message fast \u2014 a silent Page looks abandoned.`,
       },
       {
         type: "callout",
         variant: "purple",
-        html: `<strong>\ud83e\udd14 Think Deeper:</strong> If you had to build a personal brand from zero today, what 3 steps would you take in the first week? Consider which platform to start on, what niche to focus on, and how to create your first piece of content.`,
+        html: `<strong>\ud83e\udd14 Think it through:</strong> Imagine your mother sells homemade bread. Would a Facebook Page help her more than an Instagram page \u2014 or the other way around? Hint: think about WHO her customers are.`,
+      },
+    ],
+  },
+
+  // ─── Topic 7 ───
+  {
+    id: 7,
+    title: "X (formerly Twitter) Marketing",
+    time: "~6 mins",
+    badges: [],
+    hook: `X (the app that used to be called Twitter) is where people around the world post very short messages \u2014 news, jokes, football scores. <strong>In Uzbekistan, X is blocked, so most people don't use it \u2014 they use Telegram channels instead.</strong>`,
+    content: [
+      {
+        type: "text",
+        html: `<strong>X</strong> (old name: <strong>Twitter</strong>) is a social app for <mark>very short posts</mark> \u2014 usually under 280 letters. Think of it like a public SMS that everyone can see and reply to. It is big in the USA, UK, India, and Japan. In Uzbekistan, <mark>X is blocked</mark>, so it is hard to use. Most Uzbeks get the same kind of short updates on <strong>Telegram channels</strong> instead. You should still understand X \u2014 if you travel or work in another country, you will see it.`,
+      },
+      {
+        type: "image",
+        src: "/images/m3/twitter-marketing.webp",
+        description: "A phone screen showing short X posts: a news headline, a football score, a short joke \u2014 each with likes, replies, and reposts",
+      },
+      {
+        type: "analogy",
+        label: "\ud83d\udcec A public postcard board",
+        html: `Imagine a big public board in the city centre where anyone can pin a postcard. <strong>X works like that.</strong> Your postcard is tiny (only 280 letters), everyone can read it, and anyone can reply with their own postcard. Famous people, news channels, football teams, and normal users all pin cards on the same board.`,
+      },
+      {
+        type: "text",
+        html: `<strong>The words you'll hear \u2014 in plain English:</strong>`,
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\u270f\ufe0f",
+            title: "Tweet / Post",
+            description: "One short message on X \u2014 up to 280 letters. Can include a photo, video, or link. Old name was \"tweet,\" new name is just \"post.\"",
+            tag: "The basic message",
+          },
+          {
+            icon: "\ud83d\udd01",
+            title: "Retweet / Repost",
+            description: "Sharing someone else's post with your followers. Like forwarding a message in Telegram \u2014 the original writer gets more reach.",
+            tag: "Share to your followers",
+          },
+          {
+            icon: "#\ufe0f\u20e3",
+            title: "Hashtag",
+            description: "A word with # in front, like #IFP105 or #Tashkent. Anyone clicking the hashtag sees every post using it. Helps people find posts on a topic.",
+            tag: "Clickable topic tag",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>But wait \u2014 X is blocked in Uzbekistan. What do people use instead?</strong>`,
+      },
+      {
+        type: "cards",
+        columns: 2,
+        items: [
+          {
+            icon: "\ud83d\udce3",
+            title: "Telegram channels",
+            description: "The Uzbek version of \"follow a news account.\" @uzinfocom, @gazeta_uz, football teams, and singers all run Telegram channels \u2014 short updates you read in a few seconds.",
+            tag: "Uzbek short news",
+            tagColor: "blue",
+          },
+          {
+            icon: "\ud83c\udf10",
+            title: "X (if you travel)",
+            description: "You'll see X mentioned when world news breaks (sports, elections, earthquakes). Good to recognise, even if you can't open it from Tashkent without a VPN.",
+            tag: "Useful abroad",
+          },
+        ],
+      },
+      {
+        type: "text",
+        html: `<strong>How do shops and people use X in countries where it works?</strong>`,
+      },
+      {
+        type: "cards",
+        columns: 3,
+        items: [
+          {
+            icon: "\ud83d\udcf0",
+            title: "Breaking news",
+            description: "News channels post the headline the minute it happens. Many journalists check X first, then Google. It is often faster than TV.",
+            tag: "News faster than TV",
+          },
+          {
+            icon: "\u26bd",
+            title: "Live sports",
+            description: "Every goal, every red card \u2014 fans post their reaction in seconds. During a match, X feels like one huge stadium chat. Football teams have millions of followers.",
+            tag: "Sports fan chat",
+          },
+          {
+            icon: "\ud83d\udee0\ufe0f",
+            title: "Customer help",
+            description: "Many big companies in the USA/UK reply to complaints on X faster than on their own website \u2014 because the complaints are public, so the company cannot ignore them.",
+            tag: "Public customer service",
+          },
+        ],
+      },
+      {
+        type: "callout",
+        variant: "blue",
+        html: `<strong>Uzbek comparison:</strong> For Uzbek students, a Telegram channel with 100,000 followers serves the same job as a big X account in the USA \u2014 fast, short updates that you can share to friends in one tap. The idea is the same; the app is different.`,
+      },
+      {
+        type: "callout",
+        variant: "amber",
+        html: `<strong>Watch out:</strong> \u26a0\ufe0f Short posts can be misleading \u2014 280 letters is not enough for the full story, so always read the full article before sharing \u00b7 \u26a0\ufe0f Old screenshots are often reused as \"breaking news\" \u2014 check the date \u00b7 \u26a0\ufe0f Since X is blocked in Uzbekistan, most useful local news still lives on Telegram.`,
+      },
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>\ud83e\udd14 Think it through:</strong> A Tashkent bookshop wants to share a short \"Book of the Week\" message every Monday. Should they open an X account or a Telegram channel? Think about where their real local customers are.`,
       },
     ],
   },
