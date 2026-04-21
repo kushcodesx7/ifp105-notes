@@ -368,16 +368,16 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
       { front: "Name 3 tools commonly used for Data Analytics.", back: "Excel + SQL + Python is the classic starter trio. Beyond that: Tableau (dashboards), Power BI (Microsoft BI), Google Sheets, R (statistics). Every analyst job posting in 2026 asks for at least SQL + one of Excel/Python." },
     ],
 
-    // Topic 4: Cloud Computing
+    // Topic 4: Cloud Computing (simple, school-level)
     4: [
-      { front: "What is Cloud Computing?", back: "Using remote servers on the internet to store, manage, and process data instead of your personal computer." },
-      { front: "What does IaaS stand for and what do you get?", back: "Infrastructure as a Service -- you rent raw hardware (servers, storage) and build everything yourself on top. Example: AWS EC2." },
-      { front: "What does PaaS stand for and who uses it?", back: "Platform as a Service -- a ready-made platform for developers to build and deploy apps without managing servers. Example: Heroku, Google App Engine." },
-      { front: "SaaS stands for what? Give 3 examples.", back: "Software as a Service -- finished software used over the internet, nothing to install. Examples: Gmail, Google Docs, Netflix." },
-      { front: "What are the 3 cloud deployment models?", back: "Public (shared, cheap -- AWS), Private (dedicated, secure -- banks), Hybrid (mix of both -- most large companies)." },
-      { front: "Name 3 benefits of cloud computing.", back: "No upfront hardware cost, access from anywhere, automatic backups. You pay only for what you use." },
-      { front: "Name 2 risks of cloud computing.", back: "Needs internet (no connection = no access). Data privacy concerns (your files sit on someone else's servers)." },
-      { front: "You edit a Google Doc on your phone and it updates on your laptop. Which cloud model?", back: "SaaS (Software as a Service). Google Docs runs on Google's servers; you just use the finished product from any device." },
+      { front: "What is Cloud Computing, in simple words?", back: "Saving your files and running apps on big computers on the internet, not only on your own phone or laptop. The 'cloud' is just someone else's powerful computer in a data centre." },
+      { front: "Name 3 cloud apps you already use every day.", back: "Google Drive / Google Photos (save files + photos). Gmail + Google Docs (work in the browser). YouTube / Netflix / Spotify (stream videos and music). None of these live on your device." },
+      { front: "Why can you open your Google Photos from your phone AND your laptop?", back: "The photos are saved on Google's cloud servers on the internet, not only on one device. Any device that signs in with your account sees the same photos." },
+      { front: "What is the main difference between cloud storage and saving only on your laptop?", back: "Laptop-only files live on ONE device -- if it breaks or is lost, the file is gone. Cloud files live on the internet -- you can open them from any device, and they survive even if your laptop dies." },
+      { front: "Name 3 benefits of saving to the cloud.", back: "1) Open your files from any device. 2) Automatic backup -- if your phone breaks, your photos are still safe. 3) Share and work together on one file at the same time (like Google Docs)." },
+      { front: "What is the biggest limitation of the cloud?", back: "You need the internet to reach your files. No Wi-Fi or mobile data = no access. Always keep an offline copy of anything critical (like your final project before submission)." },
+      { front: "Your laptop breaks the night before a project is due. How would the cloud have saved you?", back: "If the project was saved to Google Drive / OneDrive, you just sign in from any other computer (cousin, friend, library) and keep working from exactly where you stopped." },
+      { front: "How do you keep your cloud account safe?", back: "Use a strong password (long, not reused) and turn on 2-step sign-in (a code to your phone). Your files sit on someone else's computer, so the account is the lock on the door." },
     ],
 
     // Topic 5: Blockchain
