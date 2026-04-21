@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return Response.json(
       {
         error:
-          "This endpoint wipes student progress. Send body {confirm:'RESET ALL PROGRESS', moduleNumber?, topicId?} to proceed.",
+          "This endpoint wipes student progress. Send body {confirm:'RESET ALL PROGRESS', moduleNumber?, topicId?, batchId?, section?} to proceed.",
       },
       { status: 400 }
     );
@@ -72,17 +72,54 @@ export async function POST(req: NextRequest) {
   }
   const topicId = topicIdRaw;
 
+  // Optional cohort scope — batch and/or section. Teacher use case:
+  // "reset Module 3 progress for just Section 2." We resolve the
+  // affected student emails FIRST, then narrow the progress query
+  // by those emails. Absent = no cohort filter (every student).
+  const batchId =
+    typeof body.batchId === "string" && body.batchId.trim()
+      ? body.batchId.trim()
+      : null;
+  const section =
+    typeof body.section === "string" && body.section.trim()
+      ? body.section.trim()
+      : null;
+
+  let cohortEmails: string[] | null = null;
+  if (batchId || section) {
+    let studentQuery = supabase.from("students").select("email");
+    if (batchId) studentQuery = studentQuery.eq("batch_id", batchId);
+    if (section) studentQuery = studentQuery.eq("section", section);
+    const { data: cohort, error: cohortErr } = await studentQuery;
+    if (cohortErr) {
+      return Response.json({ error: cohortErr.message }, { status: 500 });
+    }
+    cohortEmails = (cohort ?? [])
+      .map((r) => (r as { email: string | null }).email)
+      .filter((e): e is string => !!e);
+    if (cohortEmails.length === 0) {
+      return Response.json(
+        {
+          error: `No students found for batch=${batchId ?? "any"}, section=${section ?? "any"}. Nothing to wipe.`,
+        },
+        { status: 404 }
+      );
+    }
+  }
+
   // Build the scoped select/delete query. `.neq("student_email", "")`
   // matches every real row; adding `.eq("module_number", ...)` narrows
   // to a single module; adding `.eq("topic_id", ...)` narrows further
-  // to one specific topic within that module.
+  // to one specific topic within that module; adding `.in(email, ...)`
+  // narrows to a specific cohort (batch/section).
   const scopedSelect = (() => {
     let q = supabase
       .from("student_progress")
       .select(
         "student_email, course_id, module_number, topic_id, completed, mcq_score, mcq_total, challenge_attempted, bloom_stats, confidence_stats, updated_at"
-      )
-      .neq("student_email", "");
+      );
+    if (cohortEmails) q = q.in("student_email", cohortEmails);
+    else q = q.neq("student_email", "");
     if (moduleNumber != null) q = q.eq("module_number", moduleNumber);
     if (topicId != null) q = q.eq("topic_id", topicId);
     return q;
@@ -101,7 +138,9 @@ export async function POST(req: NextRequest) {
   // Perform the delete. Same scope as the snapshot query so we can't
   // accidentally delete more than we backed up.
   const deleteQuery = (() => {
-    let q = supabase.from("student_progress").delete().neq("student_email", "");
+    let q = supabase.from("student_progress").delete();
+    if (cohortEmails) q = q.in("student_email", cohortEmails);
+    else q = q.neq("student_email", "");
     if (moduleNumber != null) q = q.eq("module_number", moduleNumber);
     if (topicId != null) q = q.eq("topic_id", topicId);
     return q;
@@ -123,18 +162,38 @@ export async function POST(req: NextRequest) {
   // "something was reset" signal — it's safe to overly-wipe
   // localStorage since the server truth takes over immediately.
   const nowIso = new Date().toISOString();
-  const scope =
+  // Module/topic scope goes first; cohort is a suffix so the string
+  // reads naturally ("module_3_section_2" > "section_2_module_3").
+  const moduleTopicScope =
     topicId != null
       ? `module_${moduleNumber}_topic_${topicId}`
       : moduleNumber != null
         ? `module_${moduleNumber}`
         : "all_modules";
+  const cohortSuffix =
+    batchId && section
+      ? `_batch_${batchId}_section_${section}`
+      : batchId
+        ? `_batch_${batchId}`
+        : section
+          ? `_section_${section}`
+          : "";
+  const scope = `${moduleTopicScope}${cohortSuffix}`;
+
+  const cohortLabel =
+    batchId && section
+      ? ` (batch ${batchId}, section ${section})`
+      : batchId
+        ? ` (batch ${batchId})`
+        : section
+          ? ` (section ${section})`
+          : "";
   const reason =
     topicId != null
-      ? `module-${moduleNumber}-topic-${topicId} reset`
+      ? `module-${moduleNumber}-topic-${topicId} reset${cohortLabel}`
       : moduleNumber != null
-        ? `module-${moduleNumber} reset`
-        : "all-modules reset";
+        ? `module-${moduleNumber} reset${cohortLabel}`
+        : `all-modules reset${cohortLabel}`;
 
   const actionId = await logAdminAction({
     actorEmail: actorFromAuth(admin),
@@ -146,6 +205,9 @@ export async function POST(req: NextRequest) {
       scope,
       moduleNumber,
       topicId,
+      batchId,
+      section,
+      cohortSize: cohortEmails?.length ?? null,
       reason,
       // Snapshot for restore. Each entry is the student_progress row
       // verbatim; restore endpoint upserts them back using the natural
@@ -161,5 +223,8 @@ export async function POST(req: NextRequest) {
     epoch: nowIso,
     actionId,
     scope,
+    batchId,
+    section,
+    cohortSize: cohortEmails?.length ?? null,
   });
 }

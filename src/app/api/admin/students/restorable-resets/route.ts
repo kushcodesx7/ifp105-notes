@@ -51,6 +51,9 @@ export async function GET(req: NextRequest) {
       deletedRows?: number;
       moduleNumber?: number | null;
       topicId?: number | null;
+      batchId?: string | null;
+      section?: string | null;
+      cohortSize?: number | null;
       scope?: string;
       snapshot?: unknown[];
     } | null;
@@ -71,6 +74,13 @@ export async function GET(req: NextRequest) {
       // on module-wide and all-modules resets so the UI shows the
       // right label variant.
       topicId: r.details?.topicId ?? null,
+      // batchId / section only present on cohort-scoped resets.
+      // Undo bin uses them to render "Module 3 · Section 2 reset"
+      // so the teacher can tell cohort-scoped wipes apart from
+      // class-wide ones at a glance.
+      batchId: r.details?.batchId ?? null,
+      section: r.details?.section ?? null,
+      cohortSize: r.details?.cohortSize ?? null,
       deletedRows: r.details?.deletedRows ?? 0,
       scope: r.details?.scope ?? "unknown",
       snapshotSize: Array.isArray(r.details?.snapshot)

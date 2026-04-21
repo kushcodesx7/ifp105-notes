@@ -236,6 +236,21 @@ export async function GET(req: NextRequest) {
       return { name, rolls, registered, pct };
     });
 
+  // ─── Batches list ───────────────────────────────────────────────
+  // Distinct batch_id values across registered students + roll_list.
+  // Used by admin Tools (cohort-scoped reset dropdown) so the teacher
+  // can restrict a wipe to e.g. "2026 intake, Section 2" without
+  // needing to remember batch IDs.
+  const batchSet = new Set<string>();
+  for (const s of registeredStudents) {
+    if (s.batch_id) batchSet.add(s.batch_id);
+  }
+  for (const r of rollsRes.data || []) {
+    const b = (r as { batch_id?: string | null }).batch_id;
+    if (b) batchSet.add(b);
+  }
+  const batches = Array.from(batchSet).sort();
+
   // ─── Pending registration: signed-in without a students row ─────
   const pendingEmails: Set<string> = new Set();
   for (const s of allSessionsRes.data || []) {
@@ -283,6 +298,7 @@ export async function GET(req: NextRequest) {
       needsAttention,
       topPerformers,
       sectionHealth,
+      batches,
       pendingRegistration: pendingRegistration.slice(0, 100),
       weakModules,
     },

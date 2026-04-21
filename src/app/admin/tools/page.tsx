@@ -702,9 +702,20 @@ interface RestorableReset {
   actorEmail: string;
   moduleNumber: number | null;
   topicId: number | null;
+  batchId: string | null;
+  section: string | null;
+  cohortSize: number | null;
   deletedRows: number;
   scope: string;
   snapshotSize: number;
+}
+
+// Minimal shape we consume from /api/admin/summary for populating
+// the cohort dropdowns. The summary payload has lots more — we only
+// need the lists of batches + sections here.
+interface CohortLists {
+  sectionHealth?: { name: string }[];
+  batches?: string[];
 }
 
 // Topic counts per module, used to build the per-topic dropdown.
@@ -728,14 +739,38 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   // changes to avoid pointing at a topic that doesn't exist in
   // the newly-selected module.
   const [topicScope, setTopicScope] = useState<number | null>(null);
+  // Optional cohort scope — batch and/or section. Null = no cohort
+  // filter (every student matches). Use case: "reset Module 3 for
+  // just Section 2" during a class where only that section was
+  // practicing and the teacher wants a clean slate.
+  const [batchScope, setBatchScope] = useState<string | null>(null);
+  const [sectionScope, setSectionScope] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<{
     deletedRows: number;
     epoch: string;
     actionId: number;
     scope: string;
+    cohortSize: number | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pull the list of batches + sections from /api/admin/summary so
+  // the cohort dropdowns match the same values every other admin
+  // surface uses. Lazy-loaded: only fires once the card opens.
+  const { data: cohortLists } = useAdminFetch<CohortLists>(
+    "/api/admin/summary",
+    { idToken },
+    { enabled: open, refreshInterval: 0 }
+  );
+  const sectionOptions = useMemo(
+    () => (cohortLists?.sectionHealth ?? []).map((s) => s.name),
+    [cohortLists]
+  );
+  const batchOptions = useMemo(
+    () => cohortLists?.batches ?? [],
+    [cohortLists]
+  );
 
   // Preview: how many rows the CURRENT scope would delete if we
   // pulled the trigger right now. Refetched whenever moduleScope /
@@ -768,11 +803,18 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    const body: { moduleNumber?: number; topicId?: number } = {};
+    const body: {
+      moduleNumber?: number;
+      topicId?: number;
+      batchId?: string;
+      section?: string;
+    } = {};
     if (moduleScope !== "all") {
       body.moduleNumber = parseInt(moduleScope, 10);
       if (topicScope != null) body.topicId = topicScope;
     }
+    if (batchScope) body.batchId = batchScope;
+    if (sectionScope) body.section = sectionScope;
     setPreviewLoading(true);
     fetch("/api/admin/students/preview-reset", {
       method: "POST",
@@ -793,7 +835,7 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
     return () => {
       alive = false;
     };
-  }, [open, moduleScope, topicScope, fetchHeaders]);
+  }, [open, moduleScope, topicScope, batchScope, sectionScope, fetchHeaders]);
 
   // Load the restorable list once the card opens, and refresh after
   // every reset/restore so the UI stays in sync without a page reload.
@@ -828,6 +870,8 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
         confirm: string;
         moduleNumber?: number;
         topicId?: number;
+        batchId?: string;
+        section?: string;
       } = {
         confirm: ARM_PHRASE,
       };
@@ -838,6 +882,8 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
         // the server would reject it anyway — but we'd rather not send.
         if (topicScope != null) body.topicId = topicScope;
       }
+      if (batchScope) body.batchId = batchScope;
+      if (sectionScope) body.section = sectionScope;
 
       const res = await fetch("/api/admin/students/reset-all-progress", {
         method: "POST",
@@ -853,6 +899,7 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
           epoch: json.epoch,
           actionId: json.actionId,
           scope: json.scope,
+          cohortSize: json.cohortSize ?? null,
         });
         setPhrase("");
         // Refresh the restore list so the just-created row shows up
@@ -1072,12 +1119,109 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                       </div>
                     )}
 
+                    {/* Cohort (batch + section) narrowing. Teacher use
+                        case: "reset Module 3 progress for just
+                        Section 2" without touching other sections.
+                        Both are optional and combine — choosing just
+                        a section wipes that section across all
+                        batches; choosing both narrows further. Hidden
+                        when neither batches nor sections have loaded
+                        (fresh install) so the card still works. */}
+                    {(batchOptions.length > 0 || sectionOptions.length > 0) && (
+                      <div className="mt-3 p-2.5 rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="text-[11px] text-zinc-400 font-semibold mb-1.5">
+                          Cohort (optional) — narrow to a specific batch / section
+                        </div>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {batchOptions.length > 0 && (
+                            <label className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-zinc-500">Batch:</span>
+                              <select
+                                value={batchScope ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setBatchScope(v === "" ? null : v);
+                                }}
+                                className="text-[11px] font-semibold px-2 py-1.5 rounded-lg text-zinc-200 focus:outline-none"
+                                style={{
+                                  background: "rgba(255,255,255,0.04)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                }}
+                              >
+                                <option value="">All batches</option>
+                                {batchOptions.map((b) => (
+                                  <option key={b} value={b}>
+                                    {b}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          {sectionOptions.length > 0 && (
+                            <label className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-zinc-500">Section:</span>
+                              <select
+                                value={sectionScope ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setSectionScope(v === "" ? null : v);
+                                }}
+                                className="text-[11px] font-semibold px-2 py-1.5 rounded-lg text-zinc-200 focus:outline-none"
+                                style={{
+                                  background: "rgba(255,255,255,0.04)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                }}
+                              >
+                                <option value="">All sections</option>
+                                {sectionOptions.map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          {(batchScope || sectionScope) && (
+                            <button
+                              onClick={() => {
+                                setBatchScope(null);
+                                setSectionScope(null);
+                              }}
+                              className="text-[10px] text-zinc-500 hover:text-zinc-300 underline underline-offset-2"
+                            >
+                              Clear cohort
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="text-[11px] text-zinc-500 mt-1.5">
-                      {moduleScope === "all"
-                        ? "Wipes every module for every student."
-                        : topicScope != null
-                          ? `Wipes only Module ${moduleScope} Topic ${topicScope} for every student. Other topics + modules untouched.`
-                          : `Wipes only Module ${moduleScope} for every student. Other modules untouched.`}
+                      {(() => {
+                        const modPart =
+                          moduleScope === "all"
+                            ? "every module"
+                            : topicScope != null
+                              ? `Module ${moduleScope} Topic ${topicScope}`
+                              : `Module ${moduleScope}`;
+                        const cohortPart =
+                          batchScope && sectionScope
+                            ? ` for students in batch ${batchScope}, ${sectionScope}`
+                            : batchScope
+                              ? ` for students in batch ${batchScope}`
+                              : sectionScope
+                                ? ` for students in ${sectionScope}`
+                                : " for every student";
+                        const tail =
+                          batchScope || sectionScope
+                            ? ". Other cohorts untouched."
+                            : moduleScope === "all"
+                              ? "."
+                              : topicScope != null
+                                ? ". Other topics + modules untouched."
+                                : ". Other modules untouched.";
+                        return `Wipes ${modPart}${cohortPart}${tail}`;
+                      })()}
                     </div>
                   </div>
 
@@ -1162,11 +1306,25 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                     {running
                       ? "Wiping…"
                       : armed
-                        ? moduleScope === "all"
-                          ? "🧹  Wipe every student's progress (all modules)"
-                          : topicScope != null
-                            ? `🧹  Wipe Module ${moduleScope} · Topic ${topicScope} for every student`
-                            : `🧹  Wipe Module ${moduleScope} for every student`
+                        ? (() => {
+                            const modPart =
+                              moduleScope === "all"
+                                ? "all modules"
+                                : topicScope != null
+                                  ? `Module ${moduleScope} · Topic ${topicScope}`
+                                  : `Module ${moduleScope}`;
+                            const cohortPart =
+                              batchScope && sectionScope
+                                ? ` · ${batchScope} / ${sectionScope}`
+                                : batchScope
+                                  ? ` · batch ${batchScope}`
+                                  : sectionScope
+                                    ? ` · ${sectionScope}`
+                                    : "";
+                            const target =
+                              batchScope || sectionScope ? "cohort" : "every student";
+                            return `🧹  Wipe ${modPart} for ${target}${cohortPart}`;
+                          })()
                         : "Type the phrase above to enable"}
                   </button>
 
@@ -1191,7 +1349,14 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                       }}
                     >
                       ✅ Done. Deleted <strong>{result.deletedRows}</strong>{" "}
-                      rows (scope: <code>{result.scope}</code>, reset id{" "}
+                      rows{" "}
+                      {result.cohortSize != null && (
+                        <>
+                          across <strong>{result.cohortSize}</strong>{" "}
+                          student{result.cohortSize === 1 ? "" : "s"}{" "}
+                        </>
+                      )}
+                      (scope: <code>{result.scope}</code>, reset id{" "}
                       <strong>#{result.actionId}</strong>). Students will
                       see 0% on next page load; local caches auto-clear.
                       You can still undo this from the bin below.
@@ -1252,9 +1417,21 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                                   ? `Module ${r.moduleNumber} · Topic ${r.topicId} reset`
                                   : r.moduleNumber != null
                                     ? `Module ${r.moduleNumber} reset`
-                                    : "All-modules reset"}{" "}
+                                    : "All-modules reset"}
+                                {(r.batchId || r.section) && (
+                                  <span className="text-indigo-300 font-semibold">
+                                    {" · "}
+                                    {r.batchId && r.section
+                                      ? `${r.batchId} / ${r.section}`
+                                      : r.batchId
+                                        ? `batch ${r.batchId}`
+                                        : r.section}
+                                  </span>
+                                )}{" "}
                                 <span className="text-zinc-500 font-normal">
                                   · {r.deletedRows} rows
+                                  {r.cohortSize != null &&
+                                    ` across ${r.cohortSize} student${r.cohortSize === 1 ? "" : "s"}`}
                                 </span>
                               </div>
                               <div className="text-[10px] text-zinc-500">
