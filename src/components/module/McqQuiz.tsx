@@ -659,17 +659,23 @@ export default function McqQuiz({
       const next = currentQ + 1;
       setTimeout(() => setCurrentQ(next), 50);
     } else if (allAnswered || answered.filter((a) => a !== null).length === total) {
-      // All questions answered — show results AND mark completed +
-      // flip to review. Previously only setShowResult(true) was
-      // called; if `completed` hadn't been set yet (which can
-      // happen after admin-delete realignment landed a fully-
-      // answered state without going through handlePick), the
-      // result panel's `showResult && completed` guard would fail
-      // and the card collapsed to just the header. Force all
-      // three signals here so the transition is self-healing.
+      // All questions answered — show the Bloom's results screen.
+      //
+      // Set completed + showResult BUT keep viewMode === "quiz" so
+      // the `showResult && completed && viewMode === "quiz"` branch
+      // in the render tree fires (score count-up, Bloom's bars,
+      // confidence calibration stats). The student then clicks
+      // "Review Answers" on that screen to flip viewMode to "review"
+      // and see the per-question breakdown.
+      //
+      // Teacher report Apr 21: "previously it used to show me
+      // Bloom's lines; now it shows me review answers directly."
+      // Cause: an earlier fix added `setViewMode("review")` here,
+      // which skipped the Bloom's screen entirely. Removed —
+      // completed+showResult is enough; viewMode stays quiz until
+      // the student explicitly asks to review.
       setCompleted(true);
       setShowResult(true);
-      setViewMode("review");
 
       // Shape the Bloom + calibration payloads for the /api/progress save.
       // These are the same numbers shown on the results screen, just packaged
