@@ -113,11 +113,23 @@ export async function GET(req: NextRequest) {
     "";
 
   // Exclude hidden sections (Test Section etc.) from the counts by
-  // default. Admins / students-in-hidden-sections see them so the
-  // home widget matches /connect for the SAME caller — previously
-  // those two diverged (home 47 vs /connect 49).
+  // default. Admins / students-in-hidden-sections see them in the
+  // REGISTERED count so the home widget matches /connect for the SAME
+  // caller — previously those two diverged (home 47 vs /connect 49).
   const allStudents = (studentsRes.data || []).filter(
     (s) => includeHidden || !isHiddenSection(s.section)
+  );
+
+  // For the TOP LEARNERS widget specifically, ALWAYS hide hidden
+  // sections — even when the caller is an admin. The admin's own test
+  // account shouldn't be paraded in the public leaderboard just
+  // because the admin is the one viewing. Teacher report Apr 21:
+  // "my name is showing, my ID is test ID — don't make the test ID
+  // visible." Roster counts can still see hidden (see allStudents
+  // above) because they're numeric and don't expose identity; a card
+  // with photo/name/section does.
+  const publicStudents = (studentsRes.data || []).filter(
+    (s) => !isHiddenSection(s.section)
   );
 
   // Count weekly completions per email
@@ -128,8 +140,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Rank + take top 3 BEFORE fetching all-time progress so we only query
-  // all-time data for those 3 emails.
-  const rankedTop = allStudents
+  // all-time data for those 3 emails. Ranks over the publicStudents
+  // set (test accounts excluded) regardless of who's looking.
+  const rankedTop = publicStudents
     .filter((s) => s.email && (weeklyDone[s.email] || 0) > 0)
     .sort((a, b) => {
       const aDone = a.email ? weeklyDone[a.email] || 0 : 0;

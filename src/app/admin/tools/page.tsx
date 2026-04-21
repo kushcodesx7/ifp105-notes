@@ -1489,39 +1489,40 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   );
 }
 
-// ─── Backfill LinkedIn photos card ────────────────────────────
+// ─── Profile-photo diagnostic card ────────────────────────────
 //
-// One-click tool that walks every student who:
-//   · has a linkedin_url saved on their row, AND
-//   · does NOT yet have a photo_url
-// and fetches their LinkedIn og:image, re-hosts it on our Supabase
-// storage, and writes the resulting URL to the student's row. All
-// students who voluntarily shared a LinkedIn URL get a profile photo
-// without needing to upload one manually.
+// Previously this was a "fetch from LinkedIn" one-click backfill. It
+// didn't work: LinkedIn blocks server-side OG scraping from Vercel IPs
+// almost 100% of the time, so every attempted fetch failed.
 //
-// Safety model:
-//   · Non-destructive. Only writes photo_url where it was null/empty.
-//     Never overwrites a student's own uploaded photo.
-//   · Preview (dry run) first: shows who would be touched and how many.
-//   · Rate-limited (server-side) so clicking twice in a row doesn't
-//     hammer LinkedIn.
+// New behaviour (Apr 2026): the card is DIAGNOSTIC. It shows how many
+// students have / don't have a profile photo, and who's still missing
+// one, so the teacher knows who to nudge. The photo auto-fill happens
+// passively whenever a student signs in with Google and opens the
+// profile page — /api/students/sync-google-photo quietly saves their
+// Google profile picture.
+//
+// For students who won't sign in with Google (password-session users),
+// the teacher can see their entry in the candidates list and ask them
+// to upload a photo manually.
 function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
   const [open, setOpen] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [preview, setPreview] = useState<{
-    candidates: {
+  const [loading, setLoading] = useState(false);
+  const [report, setReport] = useState<{
+    totalStudents: number;
+    withPhoto: number;
+    withoutPhoto: number;
+    withLinkedInAnyUrl: number;
+    withLinkedInValid: number;
+    withLinkedInInvalid: number;
+    candidatesNoPhoto: {
       email: string;
       name: string | null;
       section: string | null;
       batchId: string | null;
+      linkedinUrl: string | null;
+      linkedinUrlValid: boolean;
     }[];
-  } | null>(null);
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<{
-    scanned: number;
-    updated: number;
-    failed: number;
-    skipped: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -1531,35 +1532,9 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
     return h;
   }, [idToken]);
 
-  async function runPreview() {
-    setPreviewLoading(true);
+  async function runReport() {
+    setLoading(true);
     setError(null);
-    try {
-      const res = await fetch(
-        "/api/admin/students/backfill-linkedin-photos",
-        {
-          method: "POST",
-          headers: fetchHeaders,
-          body: JSON.stringify({ dryRun: true }),
-        }
-      );
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error || `HTTP ${res.status}`);
-      } else {
-        setPreview({ candidates: json.candidates || [] });
-      }
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setPreviewLoading(false);
-    }
-  }
-
-  async function runBackfill() {
-    setRunning(true);
-    setError(null);
-    setResult(null);
     try {
       const res = await fetch(
         "/api/admin/students/backfill-linkedin-photos",
@@ -1573,20 +1548,26 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
       if (!res.ok) {
         setError(json.error || `HTTP ${res.status}`);
       } else {
-        setResult({
-          scanned: json.scanned,
-          updated: json.updated,
-          failed: json.failed,
-          skipped: json.skipped,
+        setReport({
+          totalStudents: json.totalStudents,
+          withPhoto: json.withPhoto,
+          withoutPhoto: json.withoutPhoto,
+          withLinkedInAnyUrl: json.withLinkedInAnyUrl,
+          withLinkedInValid: json.withLinkedInValid,
+          withLinkedInInvalid: json.withLinkedInInvalid,
+          candidatesNoPhoto: json.candidatesNoPhoto || [],
         });
-        setPreview(null);
       }
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setRunning(false);
+      setLoading(false);
     }
   }
+
+  const coveragePct = report && report.totalStudents > 0
+    ? Math.round((report.withPhoto / report.totalStudents) * 100)
+    : null;
 
   return (
     <div
@@ -1608,14 +1589,16 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div>
               <div className="text-sm font-bold mb-0.5 text-blue-300">
-                Pull LinkedIn photos
+                Profile photo coverage
               </div>
               <p className="text-[12px] text-zinc-500 leading-relaxed">
-                Finds every student who saved a LinkedIn URL but
-                doesn&apos;t have a profile photo yet, then fetches the
-                photo from LinkedIn and hosts it on our storage.
-                Non-destructive — only fills empty photos, never
-                overwrites an uploaded one.
+                Students get a photo automatically when they sign in
+                with Google and open{" "}
+                <code className="text-zinc-400">/profile/edit</code> —
+                their Google profile picture fills in the empty{" "}
+                <code className="text-zinc-400">photo_url</code>. Open
+                this card to see who still hasn&apos;t signed in and who
+                to nudge.
               </p>
             </div>
             <button
@@ -1623,9 +1606,7 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
                 const next = !open;
                 setOpen(next);
                 setError(null);
-                setResult(null);
-                setPreview(null);
-                if (next) runPreview();
+                if (next && !report) runReport();
               }}
               className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
               style={{
@@ -1653,98 +1634,11 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
                   className="mt-4 pt-4 space-y-3"
                   style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
                 >
-                  {/* Candidate preview */}
-                  <div
-                    className="rounded-lg px-3 py-2 text-[12px]"
-                    style={{
-                      background:
-                        preview && preview.candidates.length > 0
-                          ? "rgba(59,130,246,0.06)"
-                          : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${
-                        preview && preview.candidates.length > 0
-                          ? "rgba(59,130,246,0.22)"
-                          : "rgba(255,255,255,0.06)"
-                      }`,
-                    }}
-                  >
-                    {previewLoading ? (
-                      <span className="text-zinc-500">
-                        Counting candidates…
-                      </span>
-                    ) : preview == null ? (
-                      <span className="text-zinc-500">
-                        Couldn&apos;t preview. Try again.
-                      </span>
-                    ) : preview.candidates.length === 0 ? (
-                      <span className="text-emerald-300">
-                        ✓ Nothing to backfill — every student who shared a
-                        LinkedIn URL already has a photo.
-                      </span>
-                    ) : (
-                      <span className="text-blue-300">
-                        Ready to fetch photos for{" "}
-                        <strong>{preview.candidates.length}</strong>{" "}
-                        student{preview.candidates.length === 1 ? "" : "s"}.
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Preview list (collapsed) */}
-                  {preview && preview.candidates.length > 0 && (
-                    <details
-                      className="text-[11px] text-zinc-400 rounded-lg p-2"
-                      style={{ background: "rgba(255,255,255,0.02)" }}
-                    >
-                      <summary className="cursor-pointer text-zinc-300 hover:text-white">
-                        View candidate list
-                      </summary>
-                      <ul className="mt-2 space-y-0.5 pl-4 max-h-48 overflow-y-auto">
-                        {preview.candidates.slice(0, 50).map((c) => (
-                          <li key={c.email}>
-                            {c.name || c.email}
-                            {c.section && (
-                              <span className="text-zinc-600">
-                                {" "}
-                                · {c.section}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                        {preview.candidates.length > 50 && (
-                          <li className="text-zinc-600">
-                            …and {preview.candidates.length - 50} more
-                          </li>
-                        )}
-                      </ul>
-                    </details>
+                  {loading && !report && (
+                    <div className="text-[12px] text-zinc-500">
+                      Counting photos…
+                    </div>
                   )}
-
-                  <button
-                    onClick={runBackfill}
-                    disabled={
-                      running ||
-                      !preview ||
-                      preview.candidates.length === 0
-                    }
-                    className="w-full py-2.5 text-sm font-bold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                    style={{
-                      background:
-                        preview && preview.candidates.length > 0
-                          ? "linear-gradient(135deg, #3B82F6, #2563EB)"
-                          : "rgba(255,255,255,0.04)",
-                      boxShadow:
-                        preview && preview.candidates.length > 0
-                          ? "0 2px 12px rgba(59,130,246,0.3)"
-                          : "none",
-                    }}
-                  >
-                    {running
-                      ? "Pulling photos… (this can take a minute)"
-                      : preview && preview.candidates.length > 0
-                        ? `📷 Fetch ${preview.candidates.length} LinkedIn photo${preview.candidates.length === 1 ? "" : "s"}`
-                        : "Nothing to backfill"}
-                  </button>
 
                   {error && (
                     <div
@@ -1758,28 +1652,181 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
                     </div>
                   )}
 
-                  {result && (
-                    <div
-                      className="p-3 rounded-lg text-[12px] text-emerald-300"
-                      style={{
-                        background: "rgba(34,197,94,0.08)",
-                        border: "1px solid rgba(34,197,94,0.22)",
-                      }}
-                    >
-                      ✅ Done. Updated{" "}
-                      <strong>{result.updated}</strong> · failed{" "}
-                      <strong>{result.failed}</strong> · skipped{" "}
-                      <strong>{result.skipped}</strong> out of{" "}
-                      <strong>{result.scanned}</strong> candidates.
-                      {result.failed > 0 &&
-                        " Failures usually mean the student's LinkedIn is private or LinkedIn briefly blocked us — safe to run again in a few minutes."}
-                    </div>
+                  {report && (
+                    <>
+                      {/* Coverage bar */}
+                      <div
+                        className="rounded-lg p-3"
+                        style={{
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.06)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] text-zinc-400 font-semibold">
+                            Photo coverage
+                          </span>
+                          <span className="text-[12px] font-bold text-white tabular-nums">
+                            {report.withPhoto}/{report.totalStudents}
+                            {coveragePct != null && (
+                              <span className="text-zinc-500 font-normal">
+                                {" "}
+                                ({coveragePct}%)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-[width] duration-500"
+                            style={{
+                              width: `${coveragePct ?? 0}%`,
+                              background:
+                                "linear-gradient(90deg, #3B82F6, #60A5FA)",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Secondary stats */}
+                      <div className="grid grid-cols-3 gap-2 text-[11px]">
+                        <StatChip
+                          label="Missing photo"
+                          value={report.withoutPhoto}
+                          tone="warn"
+                        />
+                        <StatChip
+                          label="LinkedIn URL set"
+                          value={report.withLinkedInValid}
+                          tone="info"
+                        />
+                        <StatChip
+                          label="Bad LinkedIn URL"
+                          value={report.withLinkedInInvalid}
+                          tone={
+                            report.withLinkedInInvalid > 0 ? "warn" : "muted"
+                          }
+                        />
+                      </div>
+
+                      {/* Candidate list */}
+                      {report.candidatesNoPhoto.length === 0 ? (
+                        <div
+                          className="p-3 rounded-lg text-[12px] text-emerald-300"
+                          style={{
+                            background: "rgba(34,197,94,0.08)",
+                            border: "1px solid rgba(34,197,94,0.22)",
+                          }}
+                        >
+                          ✓ Every student has a profile photo.
+                        </div>
+                      ) : (
+                        <details
+                          className="text-[11px] text-zinc-400 rounded-lg p-2"
+                          style={{ background: "rgba(255,255,255,0.02)" }}
+                          open
+                        >
+                          <summary className="cursor-pointer text-zinc-300 hover:text-white font-semibold">
+                            {report.candidatesNoPhoto.length} student
+                            {report.candidatesNoPhoto.length === 1 ? "" : "s"}{" "}
+                            still missing a photo — nudge them to open{" "}
+                            <code>/profile/edit</code>
+                          </summary>
+                          <ul className="mt-2 space-y-0.5 pl-3 max-h-64 overflow-y-auto">
+                            {report.candidatesNoPhoto.map((c) => (
+                              <li
+                                key={c.email}
+                                className="flex items-center gap-2 py-0.5"
+                              >
+                                <span className="flex-1 truncate">
+                                  {c.name || c.email}
+                                </span>
+                                {c.section && (
+                                  <span className="text-zinc-600 text-[10px] shrink-0">
+                                    {c.section}
+                                  </span>
+                                )}
+                                {c.linkedinUrl ? (
+                                  <span
+                                    className="text-[10px] shrink-0"
+                                    style={{
+                                      color: c.linkedinUrlValid
+                                        ? "#60A5FA"
+                                        : "#FBBF24",
+                                    }}
+                                    title={c.linkedinUrl}
+                                  >
+                                    {c.linkedinUrlValid
+                                      ? "🔗 LinkedIn"
+                                      : "⚠ bad URL"}
+                                  </span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-[11px] text-zinc-500 leading-relaxed flex-1 min-w-[200px]">
+                          💡 Tip: students who sign in with Google get
+                          their photo auto-filled the moment they open
+                          the profile page. Password-session users need
+                          to upload one manually.
+                        </p>
+                        <button
+                          onClick={runReport}
+                          disabled={loading}
+                          className="text-[11px] font-semibold px-3 py-1.5 rounded-full disabled:opacity-50"
+                          style={{
+                            background: "rgba(59,130,246,0.12)",
+                            color: "#93C5FD",
+                            border: "1px solid rgba(59,130,246,0.2)",
+                          }}
+                        >
+                          {loading ? "Refreshing…" : "↻ Refresh"}
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StatChip({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "info" | "warn" | "muted";
+}) {
+  const palette =
+    tone === "info"
+      ? { bg: "rgba(59,130,246,0.08)", fg: "#93C5FD", border: "rgba(59,130,246,0.22)" }
+      : tone === "warn"
+        ? { bg: "rgba(245,158,11,0.08)", fg: "#FCD34D", border: "rgba(245,158,11,0.22)" }
+        : { bg: "rgba(255,255,255,0.03)", fg: "#A1A1AA", border: "rgba(255,255,255,0.06)" };
+  return (
+    <div
+      className="rounded-lg p-2.5"
+      style={{
+        background: palette.bg,
+        border: `1px solid ${palette.border}`,
+      }}
+    >
+      <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wide mb-0.5">
+        {label}
+      </div>
+      <div className="text-lg font-bold tabular-nums" style={{ color: palette.fg }}>
+        {value}
       </div>
     </div>
   );

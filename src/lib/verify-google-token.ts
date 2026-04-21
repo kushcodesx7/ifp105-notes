@@ -110,7 +110,10 @@ export async function verifyGoogleIdToken(
 export async function requireSelf(
   req: Request,
   claimedEmail: string | undefined | null
-): Promise<{ ok: true; email: string } | { ok: false; response: Response }> {
+): Promise<
+  | { ok: true; email: string; user: VerifiedUser }
+  | { ok: false; response: Response }
+> {
   const idToken = req.headers.get("x-id-token");
   const verified = await verifyGoogleIdToken(idToken);
   if (!verified) {
@@ -135,7 +138,12 @@ export async function requireSelf(
       ),
     };
   }
-  return { ok: true, email: verified.email };
+  // Return the full verified user alongside the email — callers that
+  // need the `picture` claim (/api/students/profile auto-fills the
+  // photo_url from the Google profile picture) can read it without a
+  // second verify. Old call sites that just destructure `email` keep
+  // working.
+  return { ok: true, email: verified.email, user: verified };
 }
 
 /**

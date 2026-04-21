@@ -100,6 +100,20 @@ export default function EditProfilePage() {
     if (!user?.email) return;
     try {
       const token = getIdToken() || "";
+
+      // Passive Google photo sync: if the student is signed in with
+      // Google and doesn't have a photo yet, the server quietly saves
+      // the JWT's `picture` claim (stable lh3.googleusercontent URL) to
+      // their students row. Runs BEFORE we load the profile so the
+      // loaded state already reflects the new photo. Fails silently —
+      // non-Google sign-ins (password session) just skip this.
+      if (token) {
+        fetch("/api/students/sync-google-photo", {
+          method: "POST",
+          headers: { "x-id-token": token },
+        }).catch(() => {});
+      }
+
       // /api/connect returns the student's row (with bio, skills,
       // linkedinUrl, photoUrl) — same data the /connect page already
       // uses, so there's zero chance of drift between what the
@@ -241,16 +255,17 @@ export default function EditProfilePage() {
       if (!res.ok) {
         showToast("error", data.error || "Couldn't save. Try again.");
       } else {
-        // If the server auto-fetched a LinkedIn photo, reflect it
-        // immediately in the form.
-        if (data.linkedInPhotoFetched && data.photoUrl) {
+        // If the server auto-filled the Google profile photo, reflect
+        // it in the form so the student sees the change without a
+        // reload.
+        if (data.googlePhotoFilled && data.photoUrl) {
           updateField("photoUrl", data.photoUrl);
         }
         setSaved(true);
         showToast(
           "success",
-          data.linkedInPhotoFetched
-            ? "Saved! We also pulled your LinkedIn photo."
+          data.googlePhotoFilled
+            ? "Saved! We also filled in your Google profile photo."
             : "Profile saved!"
         );
       }

@@ -3,11 +3,7 @@ import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
 import { requireSelf } from "@/lib/verify-google-token";
-import {
-  fetchLinkedInMeta,
-  fetchImageBytes,
-  isLinkedInUrl,
-} from "@/lib/linkedin-fetch";
+import { isLinkedInUrl } from "@/lib/linkedin-fetch";
 
 // POST /api/students/profile
 //
@@ -16,19 +12,23 @@ import {
 // Updates the caller's OWN student row on the `students` table. Every
 // field is optional — only the fields the client sends get updated.
 //
-// Auth: requires a valid Google ID token (x-id-token header) where the
-// verified email matches the `email` in the body. Nobody can edit
-// another student's profile. Pre-launch audit gate.
+// Auth: requires a valid Google ID token (x-id-token header) OR a
+// password-session JWT where the email matches the `email` in the body.
+// Nobody can edit another student's profile. Pre-launch audit gate.
 //
-// LinkedIn auto-fetch (Apr 2026):
-// When the client sends `linkedinUrl` AND doesn't send a `photoUrl`,
-// the server fetches the LinkedIn profile page server-side, parses
-// its og:image tag, downloads the image bytes, uploads them to our
-// Supabase storage (so we're not pinned to LinkedIn's signed/rotating
-// CDN URLs), and stores OUR photo URL on the student's row. If any step
-// fails — the URL isn't LinkedIn, LinkedIn serves a login wall, the
-// image can't be downloaded — we save the profile anyway, just without
-// auto-filling the photo. Students can always upload a photo manually.
+// Photo resolution order (Apr 2026 revision):
+//   1. If the client sent a non-empty `photoUrl` → use that (manual upload).
+//   2. Otherwise, if the request is authenticated with a Google token
+//      that carries a `picture` claim → save the Google profile photo
+//      URL. These URLs (lh3.googleusercontent.com/...) are stable and
+//      public; no download/rehost needed.
+//   3. Otherwise → leave photo_url untouched.
+//
+// LinkedIn auto-fetch was tried here first and removed: LinkedIn blocks
+// server-side OG scraping from cloud IPs, so every fetch from Vercel
+// came back empty. The `linkedin_url` field is still saved (just as a
+// clickable link on the student's card) — we just don't pull the photo
+// from it anymore.
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { email, name, bio, skills, linkedinUrl, photoUrl } = body;
@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Missing email" }, { status: 400 });
   }
 
-  // Verify the caller owns this email
+  // Verify the caller owns this email. The returned `user` has the
+  // decoded Google claims (including `picture` for Google sign-ins).
   const auth = await requireSelf(req, email);
   if (!auth.ok) return auth.response;
 
@@ -112,25 +113,30 @@ export async function POST(req: NextRequest) {
   if (linkedinUrl !== undefined) updates.linkedin_url = linkedinUrl || null;
   if (photoUrl !== undefined) updates.photo_url = photoUrl || null;
 
-  // LinkedIn auto-fetch: if the student provided a LinkedIn URL but
-  // NO photo (either didn't send photoUrl at all, or sent empty), try
-  // to grab their profile photo from LinkedIn's og:image and re-host
-  // it on our Supabase storage. Best-effort — save still succeeds if
-  // LinkedIn blocks us.
-  let linkedInPhotoFetched = false;
-  const wantsAutoFetch =
-    typeof linkedinUrl === "string" &&
-    linkedinUrl !== "" &&
-    isLinkedInUrl(linkedinUrl) &&
-    // Auto-fetch only when the client didn't send a photo themselves.
-    // If they DID send one (e.g. they uploaded via /api/profiles/upload),
-    // respect that choice.
-    (photoUrl === undefined || photoUrl === null || photoUrl === "");
-  if (wantsAutoFetch) {
-    const fetched = await fetchAndStoreLinkedInPhoto(linkedinUrl, email);
-    if (fetched) {
-      updates.photo_url = fetched;
-      linkedInPhotoFetched = true;
+  // Google photo auto-fill: when the client didn't send a photoUrl AND
+  // the caller is authenticated via Google (so we have `picture` on
+  // their verified token), use Google's profile picture URL. These
+  // come from lh3.googleusercontent.com and are stable + public, so we
+  // can store the URL directly without downloading/re-hosting.
+  //
+  // ONLY fire if the student doesn't already have a photo — we read
+  // the current row first to check. Otherwise re-saving the form
+  // would keep re-stamping photo_url back to the Google photo even
+  // if the student had uploaded something custom later.
+  let googlePhotoFilled = false;
+  const sentNoPhoto = photoUrl === undefined || photoUrl === null || photoUrl === "";
+  const googlePicture = auth.user.picture;
+  if (sentNoPhoto && googlePicture) {
+    const { data: existing } = await supabase
+      .from("students")
+      .select("photo_url")
+      .eq("email", email.toLowerCase())
+      .maybeSingle();
+    const existingPhoto = (existing as { photo_url?: string | null } | null)
+      ?.photo_url;
+    if (!existingPhoto) {
+      updates.photo_url = googlePicture;
+      googlePhotoFilled = true;
     }
   }
 
@@ -159,59 +165,7 @@ export async function POST(req: NextRequest) {
 
   return Response.json({
     success: true,
-    linkedInPhotoFetched,
+    googlePhotoFilled,
     photoUrl: typeof updates.photo_url === "string" ? updates.photo_url : null,
   });
-}
-
-// ─── LinkedIn photo re-host helper ───────────────────────────────
-//
-// Pipeline:
-//   1. GET the LinkedIn profile URL → extract og:image.
-//   2. GET the og:image bytes.
-//   3. Upload to Supabase `profile-photos` bucket under a stable
-//      per-student path (so repeat calls replace the same object
-//      and don't leak storage).
-//   4. Return the public URL of our re-hosted copy.
-//
-// Any failure along the way returns null — the caller then saves the
-// profile without the auto-photo.
-async function fetchAndStoreLinkedInPhoto(
-  linkedinUrl: string,
-  email: string
-): Promise<string | null> {
-  const meta = await fetchLinkedInMeta(linkedinUrl);
-  if (!meta?.imageUrl) return null;
-  const img = await fetchImageBytes(meta.imageUrl);
-  if (!img) return null;
-
-  // Stable filename keyed to the student's email + a date stamp.
-  // The date stamp means re-running auto-fetch produces a NEW object
-  // (never silently replaces a customised photo — upsert=false below
-  // enforces this) and the old URLs keep working for a bit if cached
-  // in a page somewhere.
-  const safeEmail = email
-    .toLowerCase()
-    .replace(/[^a-z0-9.@_-]/g, "_")
-    .slice(0, 80);
-  const ext = img.contentType === "image/png" ? "png"
-    : img.contentType === "image/webp" ? "webp"
-    : img.contentType === "image/gif" ? "gif"
-    : "jpg";
-  const filename = `li-${safeEmail}-${Date.now()}.${ext}`;
-
-  const { error: upErr } = await supabase.storage
-    .from("profile-photos")
-    .upload(filename, img.bytes, {
-      contentType: img.contentType,
-      upsert: false,
-    });
-  if (upErr) return null;
-
-  const supabaseBase = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(
-    /\/+$/,
-    ""
-  );
-  if (!supabaseBase) return null;
-  return `${supabaseBase}/storage/v1/object/public/profile-photos/${filename}`;
 }
