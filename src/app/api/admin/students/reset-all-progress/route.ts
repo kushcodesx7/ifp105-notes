@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
@@ -216,6 +217,32 @@ export async function POST(req: NextRequest) {
       restored: false,
     },
   });
+
+  // Bust Next.js route cache for surfaces that compute completion
+  // from student_progress. The CDN `Cache-Control: public, max-age`
+  // on /api/connect/glimpse, /api/connect/activity, etc. are handled
+  // at the Vercel edge — those honour a short max-age (60s) so they
+  // self-heal quickly. These revalidatePath calls cover the Next.js
+  // route cache so a same-browser reload right after the reset
+  // doesn't serve the pre-reset aggregate. Without this teachers saw
+  // "Top Learners This Week" stuck at 100% immediately after wiping
+  // Modules 2-5 (report Apr 21).
+  try {
+    revalidatePath("/");                         // home page (glimpse widget)
+    revalidatePath("/connect");                  // public people page
+    revalidatePath("/admin");                    // admin dashboard
+    revalidatePath("/admin/people");             // admin people list
+    revalidatePath("/admin/tools");              // undo bin refresh
+    revalidatePath("/api/connect/glimpse");      // home widget data
+    revalidatePath("/api/connect/activity");     // activity feed
+    revalidatePath("/api/admin/summary");        // admin dashboard data
+    revalidatePath("/api/admin/people");         // admin people data
+    revalidatePath("/api/progress");             // per-student progress
+  } catch {
+    // revalidatePath throws in some edge contexts — never block the
+    // response on this, the caches will self-expire in under a
+    // minute anyway.
+  }
 
   return Response.json({
     ok: true,

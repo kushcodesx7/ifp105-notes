@@ -232,13 +232,20 @@ export async function GET(req: NextRequest) {
     {
       headers: {
         // Cache scope depends on who's seeing hidden sections.
-        // Public (default): shared cache, 5-min browser + 30-min SWR.
+        // Public (default): shared cache, 60s fresh + 5-min SWR.
+        //   Used to be 5-min fresh + 30-min SWR, but that meant a
+        //   teacher-triggered progress reset took up to 30 minutes
+        //   to visibly drop "top learners" back from their pre-reset
+        //   100% — teacher report Apr 21: "I reset modules 2-5 and
+        //   the home widget still shows students at 100%." 60s fresh
+        //   keeps the DB-hit rate reasonable while making resets
+        //   visible within about a minute.
         // Admin/self-hidden view: private-only, short max-age so
         //   a student request can never hit a CDN-cached response
         //   that includes test accounts.
         "Cache-Control": includeHidden
           ? "private, max-age=15, stale-while-revalidate=60"
-          : "public, max-age=300, stale-while-revalidate=1800",
+          : "public, max-age=60, stale-while-revalidate=300",
       },
     }
   );
