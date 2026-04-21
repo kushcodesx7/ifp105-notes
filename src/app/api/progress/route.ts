@@ -98,23 +98,46 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  // Reset epoch — the timestamp of the most recent global
-  // `reset_progress_all` admin action. Clients store the last value
-  // they've seen in localStorage; when a fresh epoch arrives, they
-  // wipe their local progress before the silent-fail recovery runs.
-  // This prevents students from silently re-uploading pre-wipe
-  // progress after a bulk reset. If the admin_actions query fails
-  // we silently return null — the wipe still works via the server;
-  // only the local re-upload guard is skipped.
+  // Reset epoch — the timestamp of the most recent reset that
+  // affects THIS student. Covers two cases:
+  //   1. Bulk reset (`reset_progress_all`, subject_email IS NULL)
+  //      → affects every student; everyone's clients see the epoch.
+  //   2. Per-student reset (`reset_progress`, subject_email = this
+  //      student) → triggered from the admin drawer "Reset all
+  //      progress" button. Affects ONE student.
+  //
+  // Clients store the last epoch they've seen in localStorage; when
+  // a fresh epoch arrives, they wipe their local progress BEFORE the
+  // silent-fail recovery runs. Prevents the multi-device bug where
+  // Device A has stale localStorage (8 topics completed), admin
+  // resets via Device B, and Device A's next load re-uploads the
+  // 8 topics through silent-fail recovery — silently un-doing the
+  // reset.
+  //
+  // We take MAX(created_at) across both action kinds since any of
+  // them is a signal to wipe THIS student's local state.
   let resetEpoch: string | null = null;
   try {
-    const { data: resetRows } = await supabase
+    const { data: bulkRows } = await supabase
       .from("admin_actions")
       .select("created_at")
       .eq("action", "reset_progress_all")
       .order("created_at", { ascending: false })
       .limit(1);
-    resetEpoch = resetRows?.[0]?.created_at ?? null;
+    const { data: perStudentRows } = await supabase
+      .from("admin_actions")
+      .select("created_at")
+      .eq("action", "reset_progress")
+      .eq("subject_email", email)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const bulkTs = bulkRows?.[0]?.created_at ?? null;
+    const perStudentTs = perStudentRows?.[0]?.created_at ?? null;
+    if (bulkTs && perStudentTs) {
+      resetEpoch = bulkTs > perStudentTs ? bulkTs : perStudentTs;
+    } else {
+      resetEpoch = bulkTs ?? perStudentTs ?? null;
+    }
   } catch {
     // admin_actions table might not exist yet on older deployments —
     // fall through with null. Not critical.
