@@ -103,6 +103,24 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
 
+  // Optional body: { moduleNumber?: 1..5 }
+  //   - omitted / null → re-seed every module (original behaviour)
+  //   - 1..5          → re-seed ONLY that module, leaving the others
+  //                     alone entirely (no upsert, no overwrite).
+  // Added Apr 2026 so a teacher can rewrite ONE module's TS content
+  // (e.g. Module 5 got simplified for school students) and push just
+  // that slice to the DB without clobbering in-admin edits the teacher
+  // has made to the OTHER modules since the last full seed.
+  const body = await req.json().catch(() => ({}));
+  const rawScope = body?.moduleNumber;
+  const moduleScope =
+    typeof rawScope === "number" &&
+    Number.isFinite(rawScope) &&
+    rawScope >= 1 &&
+    rawScope <= 5
+      ? Math.floor(rawScope)
+      : null;
+
   // Seeding is expensive (5 modules × up to 20 topics × up to 10
   // questions = up to ~1000 upserts in one call). Rate-limit by the
   // admin email so a button-mash doesn't stack concurrent runs. One
@@ -143,7 +161,15 @@ export async function POST(req: NextRequest) {
   let questionsUpserted = 0;
   const warnings: string[] = [];
 
-  for (const m of MODULES) {
+  // If a moduleScope was passed, narrow the loop to just that module.
+  // Everything else (topics + questions for the other 4 modules) is
+  // untouched — no upsert fires, so the DB rows stay exactly as the
+  // teacher last left them via the admin editor.
+  const modulesToSeed = moduleScope != null
+    ? MODULES.filter((m) => m.id === moduleScope)
+    : MODULES;
+
+  for (const m of modulesToSeed) {
     // ── 1. Upsert module row ──────────────────────────────────
     const { data: moduleRow, error: modErr } = await supabase
       .from("modules")

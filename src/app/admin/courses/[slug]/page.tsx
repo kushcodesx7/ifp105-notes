@@ -604,10 +604,16 @@ function IctSeedPrompt({
   const [result, setResult] = useState<{
     counts: { modulesUpserted: number; topicsUpserted: number; questionsUpserted: number };
     warnings: string[];
+    scope: string;
   } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Which module to re-seed. "all" = every module (original behaviour);
+  // 1..5 = only that module, others untouched. Added for the Module 5
+  // rewrite (Apr 2026) so a teacher can push one module's TS without
+  // clobbering admin-UI edits in the others.
+  const [scopeChoice, setScopeChoice] = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
 
-  async function runSeed() {
+  async function runSeed(moduleNumber: number | null) {
     setErr(null);
     setSeeding(true);
     try {
@@ -615,8 +621,17 @@ function IctSeedPrompt({
         ok: boolean;
         counts: { modulesUpserted: number; topicsUpserted: number; questionsUpserted: number };
         warnings: string[];
-      }>("/api/admin/seed-ict", "POST", { idToken, password }, {});
-      setResult({ counts: r.counts, warnings: r.warnings });
+      }>(
+        "/api/admin/seed-ict",
+        "POST",
+        { idToken, password },
+        moduleNumber != null ? { moduleNumber } : {}
+      );
+      setResult({
+        counts: r.counts,
+        warnings: r.warnings,
+        scope: moduleNumber != null ? `Module ${moduleNumber} only` : "all modules",
+      });
       onSeeded();
     } catch (e) {
       setErr((e as Error).message);
@@ -658,7 +673,7 @@ function IctSeedPrompt({
       {result ? (
         <div className="space-y-1 text-[12px]">
           <p className="text-emerald-400">
-            ✓ Seeded {result.counts.modulesUpserted} modules ·{" "}
+            ✓ Seeded ({result.scope}): {result.counts.modulesUpserted} modules ·{" "}
             {result.counts.topicsUpserted} topics ·{" "}
             {result.counts.questionsUpserted} questions
           </p>
@@ -679,17 +694,65 @@ function IctSeedPrompt({
           )}
         </div>
       ) : (
-        <button
-          onClick={runSeed}
-          disabled={seeding}
-          className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 active:scale-95 transition-all"
-        >
-          {seeding
-            ? "Seeding (takes ~20s)…"
-            : isEmpty
-              ? "Seed ICT into database"
-              : "♻️ Re-seed from TS source"}
-        </button>
+        <div className="space-y-3">
+          {/* Scope picker — only shown after the initial port, because
+              on an empty DB "all modules" is the only sensible choice. */}
+          {!isEmpty && (
+            <div
+              className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <span className="text-[11px] text-zinc-400 font-semibold">
+                Scope:
+              </span>
+              {(["all", 1, 2, 3, 4, 5] as const).map((opt) => {
+                const label = opt === "all" ? "All modules" : `Module ${opt}`;
+                const active = scopeChoice === opt;
+                return (
+                  <button
+                    key={String(opt)}
+                    onClick={() => setScopeChoice(opt)}
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
+                    style={{
+                      background: active
+                        ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
+                        : "rgba(255,255,255,0.04)",
+                      color: active ? "#fff" : "#A1A1AA",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              {scopeChoice !== "all" && (
+                <span className="text-[11px] text-amber-300 ml-1">
+                  ⚠ Only Module {scopeChoice} will be overwritten. Other
+                  modules stay exactly as they are.
+                </span>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() =>
+              runSeed(typeof scopeChoice === "number" ? scopeChoice : null)
+            }
+            disabled={seeding}
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 active:scale-95 transition-all"
+          >
+            {seeding
+              ? "Seeding…"
+              : isEmpty
+                ? "Seed ICT into database"
+                : scopeChoice === "all"
+                  ? "♻️ Re-seed ALL modules from TS source"
+                  : `♻️ Re-seed ONLY Module ${scopeChoice} from TS source`}
+          </button>
+        </div>
       )}
       {err && <p className="text-[12px] text-red-400 mt-2">{err}</p>}
     </div>
