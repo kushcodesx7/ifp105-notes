@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
+import { MODULE_TOTALS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
@@ -27,7 +28,8 @@ import type { ContentBlock } from "@/types/content";
 //     main server chunk. Each seed call pulls them on demand.
 //   - Sequential module → topic → question ordering. Parallelising
 //     wouldn't buy meaningful wall-time (the whole thing is dominated
-//     by ~336 question upserts) and would make error reporting harder.
+//     by the full-bank question upserts, ~10 per topic × 48 topics)
+//     and would make error reporting harder.
 
 interface TopicRow {
   id: number;
@@ -266,13 +268,49 @@ export async function POST(req: NextRequest) {
       modulesUpserted,
       topicsUpserted,
       questionsUpserted,
+      moduleScope,
       warnings: warnings.length,
     },
   });
 
+  // Bust the CDN + Next.js data caches for the student-facing surfaces
+  // that read from the DB tables we just rewrote. Without this, students
+  // keep seeing the PRE-seed MCQ/flashcard content for up to ~2.5 min
+  // because /api/public/mcq/[N] and /api/public/flashcards/[module]/[topic]
+  // are cached `public, max-age=30, stale-while-revalidate=120`.
+  //
+  // Per-question admin edits already do this for the single touched
+  // question — but the bulk seed didn't, so a teacher re-seeding
+  // Module 5 would re-publish the file correctly yet still see stale
+  // questions in the student view.
+  //
+  // Scope-aware: when we seeded just one module, only invalidate that
+  // module's public routes. When all modules seeded, invalidate the
+  // whole bank.
+  try {
+    for (const m of modulesToSeed) {
+      revalidatePath(`/module/${m.id}`);
+      revalidatePath(`/api/public/mcq/${m.id}`);
+      // Flashcards are per-topic; loop the module's topics.
+      const { topics: tsTopics } = await loadModuleData(m.id);
+      for (const t of tsTopics) {
+        revalidatePath(`/api/public/flashcards/${m.id}/${t.id}`);
+      }
+    }
+    // Also bust the landing page and admin editor surfaces that list
+    // question counts / topic counts.
+    revalidatePath("/");
+    revalidatePath("/admin/courses/ict");
+  } catch {
+    // revalidatePath can throw in some edge contexts — never block the
+    // seed response on it. Caches will self-expire within 2.5 minutes
+    // even without this best-effort invalidation.
+  }
+
   return Response.json({
     ok: true,
     counts: { modulesUpserted, topicsUpserted, questionsUpserted },
+    scope: moduleScope != null ? `module_${moduleScope}` : "all_modules",
     warnings,
   });
 }

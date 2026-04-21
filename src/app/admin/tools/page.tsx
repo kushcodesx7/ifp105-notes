@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Breadcrumbs from "@/components/admin/Breadcrumbs";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
+import { MODULE_TOTALS } from "@/lib/modules";
 import type { AdminActionKind } from "@/lib/admin-audit";
 
 // Phase 3 — real Tools page.
@@ -718,16 +719,13 @@ interface CohortLists {
   batches?: string[];
 }
 
-// Topic counts per module, used to build the per-topic dropdown.
-// Mirrors MODULE_TOTALS from @/lib/modules — inlined here as a plain
-// array so the dropdown can map 1..N without importing the registry.
-const TOPICS_PER_MODULE: Record<number, number> = {
-  1: 11, // Hardware
-  2: 9,  // Office
-  3: 7,  // Social
-  4: 11, // HTML
-  5: 10, // Tech
-};
+// Topic counts per module used to build the per-topic dropdown.
+// Imported from the single registry source (@/lib/modules) so when a
+// module gains or loses a topic, this dropdown adjusts automatically.
+// Previously inlined here — the audit flagged it as a sync-bug risk
+// (two parallel copies of the same data) and we moved it to the
+// registry-backed value.
+const TOPICS_PER_MODULE = MODULE_TOTALS;
 
 function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   const [open, setOpen] = useState(false);
@@ -905,6 +903,21 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
         // Refresh the restore list so the just-created row shows up
         // with a Restore button next to it.
         loadRestorable();
+        // Force-fresh admin aggregates in sibling tabs right now.
+        // /api/admin/summary + /api/admin/people are `Cache-Control:
+        // private, max-age=30` so the admin's own browser will serve
+        // pre-reset KPIs for up to 30s on F5 otherwise. Audit report
+        // flagged this as the main cascade miss after a reset.
+        // `cache: "no-store"` + sending to the admin-aware endpoints
+        // warms the HTTP cache with post-reset data.
+        fetch("/api/admin/summary", {
+          headers: fetchHeaders,
+          cache: "no-store",
+        }).catch(() => {});
+        fetch("/api/admin/people", {
+          headers: fetchHeaders,
+          cache: "no-store",
+        }).catch(() => {});
       }
     } catch (e) {
       setError((e as Error).message);
