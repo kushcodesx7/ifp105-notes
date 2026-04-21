@@ -427,22 +427,23 @@ export default function McqQuiz({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Safety net: if at any point ALL questions are answered AND
-  // the quiz is marked complete, but viewMode/showResult are NOT
-  // in a terminal state — flip them. This catches the half-state
-  // bug where admin-delete realignment marks everything done but
-  // a stale `viewMode === "quiz"` left the card showing only the
-  // header (no result panel, no review screen). Without this guard
-  // the student saw a collapsed card and clicking anywhere did
-  // nothing.
-  useEffect(() => {
-    if (allAnswered && completed && !showResult && viewMode === "quiz") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowResult(true);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setViewMode("review");
-    }
-  }, [allAnswered, completed, showResult, viewMode]);
+  // NOTE: there used to be a general "safety net" useEffect here that
+  // flipped showResult+viewMode whenever (allAnswered && completed &&
+  // !showResult && viewMode==="quiz"). It was intended for the admin-
+  // delete realignment case but ended up firing on the NORMAL path
+  // too: the moment a student picked their final option, setCompleted
+  // (in handlePick) + allAnswered being true tripped the effect and
+  // the quiz jumped straight to the results screen — skipping the
+  // Guessing/Sure confidence rating on the last question AND losing
+  // the reveal step entirely. Teacher report Apr 21: "They click the
+  // last option and the confidence buttons never appear."
+  //
+  // The case it was supposed to rescue (admin-delete realignment
+  // producing a fully-answered state) is already handled in the
+  // realignment effect below, which sets showResult+viewMode itself
+  // when `nowAllAnswered` is true. Returning-to-a-completed-quiz is
+  // handled by the `didRestoreRef` mount effect above. So this safety
+  // net was redundant AND actively harmful. Removed.
 
   // Notify parent about answer count changes (use ref to avoid infinite loop)
   const onAnswerCountChangeRef = useRef(onAnswerCountChange);
