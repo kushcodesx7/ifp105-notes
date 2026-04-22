@@ -111,6 +111,14 @@ export default function ToolsPage() {
             with one click so the real student can re-register. */}
         <UnlinkByRollCard idToken={idToken} />
 
+        {/* Look up a roll or a name across the roll list AND the
+            students (registered) table at once. Read-only — this is
+            the "where is this student" diagnostic, not a destructive
+            action. Use case: class-day "Komron says he can't sign in"
+            — type the name, see the real roll + which section it's
+            in. */}
+        <RollLookupCard idToken={idToken} />
+
         {/* Pull LinkedIn profile photos for every student who saved a
             LinkedIn URL but never uploaded a photo. Non-destructive. */}
         <BackfillLinkedInPhotosCard idToken={idToken} />
@@ -2177,3 +2185,319 @@ function UnlinkByRollCard({ idToken }: { idToken: string | null }) {
   );
 }
 
+
+// ─── Roll lookup card ───────────────────────────────────────────
+//
+// Read-only diagnostic. Calls /api/admin/rolls/lookup which searches
+// BOTH roll_list (the roster) and students (registered accounts) so
+// one search answers "where is this roll/student, if anywhere."
+//
+// Two query modes, one input: if the input looks like a roll number
+// (starts with a letter + digits), sends it as `enrollmentNo`;
+// otherwise as `name` (partial, case-insensitive).
+
+interface LookupRollListMatch {
+  batchId: string;
+  section: string;
+  enrollmentNo: string;
+  name: string | null;
+}
+interface LookupStudentMatch {
+  email: string;
+  name: string | null;
+  batchId: string | null;
+  section: string | null;
+  enrollmentNo: string;
+  addedAt: string | null;
+}
+interface LookupResponse {
+  query: { enrollmentNo: string | null; name: string | null };
+  rollListMatches: LookupRollListMatch[];
+  studentsMatches: LookupStudentMatch[];
+  summary: string;
+}
+
+function looksLikeRoll(s: string): boolean {
+  // Heuristic: amity rolls look like A85456325219 — 1 letter + many digits.
+  // Anything with a digit proportion > 60% is treated as a roll.
+  const trimmed = s.trim();
+  if (trimmed.length < 4) return false;
+  const digits = (trimmed.match(/\d/g) || []).length;
+  return digits / trimmed.length > 0.6;
+}
+
+function RollLookupCard({ idToken }: { idToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<LookupResponse | null>(null);
+
+  const fetchHeaders = useMemo(() => {
+    const h: Record<string, string> = { "content-type": "application/json" };
+    if (idToken) h["x-id-token"] = idToken;
+    return h;
+  }, [idToken]);
+
+  async function run() {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setError("Type a roll number or a name first.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const sp = new URLSearchParams();
+      if (looksLikeRoll(trimmed)) {
+        sp.set("enrollmentNo", trimmed.toUpperCase());
+      } else {
+        sp.set("name", trimmed);
+      }
+      const res = await fetch(`/api/admin/rolls/lookup?${sp.toString()}`, {
+        headers: fetchHeaders,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+      } else {
+        setResult(json as LookupResponse);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function reset() {
+    setResult(null);
+    setError(null);
+    setQuery("");
+  }
+
+  return (
+    <div
+      className="mb-6 rounded-2xl p-5 transition-colors"
+      style={{
+        background: "rgba(99,102,241,0.04)",
+        border: "1px solid rgba(99,102,241,0.22)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+          style={{ background: "rgba(99,102,241,0.14)", color: "#A5B4FC" }}
+          aria-hidden="true"
+        >
+          🔎
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div>
+              <div className="text-sm font-bold mb-0.5 text-indigo-300">
+                Look up a roll or name
+              </div>
+              <p className="text-[12px] text-zinc-500 leading-relaxed">
+                Search by roll number OR by name. Shows where the roll
+                sits in the roster and whether they&apos;ve registered
+                yet. Read-only — not logged.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !open;
+                setOpen(next);
+                if (!next) reset();
+              }}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
+              style={{
+                background: open
+                  ? "rgba(99,102,241,0.16)"
+                  : "rgba(255,255,255,0.06)",
+                color: open ? "#A5B4FC" : "#D4D4D8",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {open ? "Close" : "Open"}
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="mt-4 pt-4 space-y-3"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                >
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        setResult(null);
+                        setError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") run();
+                      }}
+                      placeholder="Roll (A85…) or name (komron)"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      disabled={loading}
+                      className="flex-1 px-3 py-2 text-sm rounded-lg text-white placeholder:text-zinc-600 focus:outline-none"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        fontFamily:
+                          "ui-monospace, SFMono-Regular, Menlo, monospace",
+                      }}
+                    />
+                    <button
+                      onClick={run}
+                      disabled={loading || !query.trim()}
+                      className="shrink-0 text-[12px] font-semibold px-4 py-2 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #6366F1, #4F46E5)",
+                      }}
+                    >
+                      {loading ? "Searching…" : "🔎 Search"}
+                    </button>
+                  </div>
+
+                  <p className="text-[10px] text-zinc-500">
+                    Tip: if input looks numeric it&apos;s treated as a roll,
+                    otherwise as a partial name match.
+                  </p>
+
+                  {error && (
+                    <div
+                      className="p-3 rounded-lg text-[12px] text-red-300"
+                      style={{
+                        background: "rgba(239,68,68,0.08)",
+                        border: "1px solid rgba(239,68,68,0.22)",
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
+
+                  {result && (
+                    <div className="space-y-3">
+                      <div
+                        className="rounded-lg p-3 text-[12px] text-indigo-200"
+                        style={{
+                          background: "rgba(99,102,241,0.06)",
+                          border: "1px solid rgba(99,102,241,0.22)",
+                        }}
+                      >
+                        {result.summary}
+                      </div>
+
+                      {/* Roll list matches */}
+                      <div>
+                        <div className="text-[11px] font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+                          On the roll list ({result.rollListMatches.length})
+                        </div>
+                        {result.rollListMatches.length === 0 ? (
+                          <div className="text-[11px] text-zinc-500 italic p-2">
+                            No matches in roll_list.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {result.rollListMatches.map((r) => (
+                              <div
+                                key={`${r.batchId}-${r.section}-${r.enrollmentNo}`}
+                                className="text-[12px] p-2.5 rounded-lg"
+                                style={{
+                                  background: "rgba(255,255,255,0.03)",
+                                  border: "1px solid rgba(255,255,255,0.06)",
+                                }}
+                              >
+                                <div className="font-semibold text-zinc-100 truncate">
+                                  {r.name || "(no name)"}
+                                </div>
+                                <div
+                                  className="text-zinc-400 text-[11px]"
+                                  style={{
+                                    fontFamily:
+                                      "ui-monospace, SFMono-Regular, Menlo, monospace",
+                                  }}
+                                >
+                                  {r.enrollmentNo}
+                                </div>
+                                <div className="text-zinc-500 text-[11px] mt-0.5">
+                                  {r.section} · {r.batchId}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Students (registered) matches */}
+                      <div>
+                        <div className="text-[11px] font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+                          Registered accounts ({result.studentsMatches.length})
+                        </div>
+                        {result.studentsMatches.length === 0 ? (
+                          <div className="text-[11px] text-zinc-500 italic p-2">
+                            No registered accounts match.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {result.studentsMatches.map((s) => (
+                              <div
+                                key={s.email}
+                                className="text-[12px] p-2.5 rounded-lg"
+                                style={{
+                                  background: "rgba(255,255,255,0.03)",
+                                  border: "1px solid rgba(255,255,255,0.06)",
+                                }}
+                              >
+                                <div className="font-semibold text-zinc-100 truncate">
+                                  {s.name || "(no name)"}
+                                </div>
+                                <div className="text-zinc-400 text-[11px] truncate">
+                                  {s.email}
+                                </div>
+                                <div
+                                  className="text-zinc-400 text-[11px]"
+                                  style={{
+                                    fontFamily:
+                                      "ui-monospace, SFMono-Regular, Menlo, monospace",
+                                  }}
+                                >
+                                  {s.enrollmentNo}
+                                </div>
+                                <div className="text-zinc-500 text-[11px] mt-0.5">
+                                  {s.section || "(no section)"} ·{" "}
+                                  {s.batchId || "(no batch)"}
+                                  {s.addedAt && ` · joined ${s.addedAt}`}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
