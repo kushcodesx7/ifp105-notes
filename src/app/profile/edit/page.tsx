@@ -14,20 +14,28 @@ import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
 // ─── /profile/edit ────────────────────────────────────────────────
 //
 // The ONE profile page for current students. Simple by design:
-//   · Photo       (upload OR auto-fetch from LinkedIn on save)
+//   · Photo       (upload manually OR auto-synced from Google on
+//                  sign-in — on mount we POST /api/students/sync-google-photo
+//                  which reads the JWT's `picture` claim and saves
+//                  lh3.googleusercontent.com/... to photo_url if empty)
 //   · Name        (pre-filled from Google, editable)
 //   · Bio         (single line, 120 char cap — same as /connect modal)
 //   · Interests   (pick up to 3 tags from /lib/skills)
-//   · LinkedIn    (OPTIONAL — if provided, we fetch the profile photo)
+//   · LinkedIn    (OPTIONAL — saved as a clickable link on their card,
+//                  NOT used to fetch a photo; LinkedIn blocks server-
+//                  side OG scraping from Vercel IPs.)
 //
 // Saves to the `students` table via /api/students/profile. Everything
 // here is visible on /connect immediately after save — no separate
 // alumni career table involved.
 //
-// (Historical note: this page USED to be a 16-field alumni career form
-// that required LinkedIn and wrote to a separate `student_profiles`
-// table. That was wrong for 17-year-old first-year ICT students and
-// blocked anyone without LinkedIn from saving. Rewritten Apr 2026.)
+// (History: originally a 16-field alumni career form that REQUIRED
+// LinkedIn and wrote to a separate `student_profiles` table. That
+// blocked 17-year-olds without LinkedIn from saving. First rewrite
+// tried server-side LinkedIn scrape for the profile photo — that
+// failed ~100% of the time because LinkedIn blocks cloud IPs. Second
+// rewrite pivoted to Google profile photo auto-sync, which is what
+// runs today. Apr 2026.)
 
 interface ProfileData {
   name: string;
