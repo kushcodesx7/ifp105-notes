@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { isHiddenSection } from "@/lib/hidden-sections";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/admin/students/update
 // Body: { email, section?, enrollmentNo?, newEmail? }
@@ -24,6 +25,17 @@ import { isHiddenSection } from "@/lib/hidden-sections";
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
+
+  // Edit burst cap: this endpoint mutates identity (email, section,
+  // roll) so rapid-fire calls are almost always scripts. 120/5min is
+  // generous for a teacher doing cleanup during class.
+  const rl = await rateLimit({
+    bucket: "admin:mutate:students-update",
+    id: actorFromAuth(admin),
+    limit: 120,
+    windowSec: 300,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 120);
 
   const body = await req.json();
   const email = (body.email as string | undefined)?.toLowerCase().trim();

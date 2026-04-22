@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { cleanupTopicImages } from "@/lib/storage-cleanup";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/admin/trash/purge
 // Body: { kind: "topic" | "question", id: string }
@@ -18,6 +19,18 @@ import { cleanupTopicImages } from "@/lib/storage-cleanup";
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
+
+  // Irreversible hard-delete — rate-limit defensively even with
+  // admin auth. Purging 100 trash rows in a row would almost
+  // always indicate a loop bug or a compromised token, not a real
+  // workflow.
+  const rl = await rateLimit({
+    bucket: "admin:destructive:purge",
+    id: actorFromAuth(admin),
+    limit: 40,
+    windowSec: 300,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 40);
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") {
