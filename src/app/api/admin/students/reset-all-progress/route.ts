@@ -98,13 +98,24 @@ export async function POST(req: NextRequest) {
     cohortEmails = (cohort ?? [])
       .map((r) => (r as { email: string | null }).email)
       .filter((e): e is string => !!e);
+    // Empty cohort is a legitimate state — a batch or section may exist
+    // on the roster but have zero students registered yet. Previously
+    // this returned 404, which scared the teacher into thinking the
+    // cohort didn't exist. Return 200 with deletedRows=0 instead, so
+    // the UI can show "0 rows wiped" matter-of-factly. Matches the
+    // dry-run preview endpoint's behaviour.
     if (cohortEmails.length === 0) {
-      return Response.json(
-        {
-          error: `No students found for batch=${batchId ?? "any"}, section=${section ?? "any"}. Nothing to wipe.`,
-        },
-        { status: 404 }
-      );
+      return Response.json({
+        ok: true,
+        deletedRows: 0,
+        epoch: new Date().toISOString(),
+        actionId: null,
+        scope: `${batchId ?? "any"}_${section ?? "any"}`,
+        batchId,
+        section,
+        cohortSize: 0,
+        note: `No students registered in batch=${batchId ?? "any"}, section=${section ?? "any"} yet. Nothing to wipe.`,
+      });
     }
   }
 
@@ -233,11 +244,18 @@ export async function POST(req: NextRequest) {
     revalidatePath("/admin");                    // admin dashboard
     revalidatePath("/admin/people");             // admin people list
     revalidatePath("/admin/tools");              // undo bin refresh
+    revalidatePath("/api/connect");              // public people list
     revalidatePath("/api/connect/glimpse");      // home widget data
     revalidatePath("/api/connect/activity");     // activity feed
     revalidatePath("/api/admin/summary");        // admin dashboard data
     revalidatePath("/api/admin/people");         // admin people data
-    revalidatePath("/api/progress");             // per-student progress
+    revalidatePath("/api/progress");             // per-student progress (single module)
+    // Added Apr 2026: the home-page Bloom's profile card + the full
+    // "all modules" hydration endpoint were not being revalidated, so
+    // after a reset the student's home page kept showing the pre-reset
+    // thinking profile until the private cache TTL elapsed.
+    revalidatePath("/api/me/blooms");
+    revalidatePath("/api/progress/mine");
   } catch {
     // revalidatePath throws in some edge contexts — never block the
     // response on this, the caches will self-expire in under a
