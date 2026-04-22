@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { MODULES } from "@/lib/modules";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // Derived from the single registry source. Replaces the previous
 // hard-coded [1,2,3,4,5] check.
@@ -56,6 +57,19 @@ const MAX_TTL_MIN = 240;
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
+
+  // Defense-in-depth: even though only admins can reach this endpoint,
+  // a runaway client (or compromised admin token) shouldn't be able to
+  // spam-broadcast every signed-in student. 30 sends per 5min is well
+  // above any realistic teacher cadence (one broadcast per activity)
+  // but stops accidental loops + scripted abuse cold.
+  const rl = await rateLimit({
+    bucket: "admin:broadcast",
+    id: actorFromAuth(admin) || "unknown",
+    limit: 30,
+    windowSec: 300,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 30);
 
   const body = await req.json().catch(() => ({}));
 

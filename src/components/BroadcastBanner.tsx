@@ -122,6 +122,12 @@ export default function BroadcastBanner() {
 
   // Initial fetch + 15s poll while visible + refetch on tab focus.
   useEffect(() => {
+    // fetchLatest is the synchroniser with an external system (the
+    // poll endpoint). React's set-state-in-effect lint fires because
+    // fetchLatest ultimately calls setBroadcast, but that's the whole
+    // point of this effect — same pattern is used throughout the
+    // codebase for SWR-style synchronisation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLatest();
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") fetchLatest();
@@ -143,6 +149,11 @@ export default function BroadcastBanner() {
     if (!broadcast) return;
     const msUntilExpiry = Date.parse(broadcast.expiresAt) - Date.now();
     if (msUntilExpiry <= 0) {
+      // Already expired at mount: clear the stale broadcast state so
+      // the banner exits its enter animation. The lint warning fires
+      // on the synchronous setState, but the check is guarded by the
+      // expiry math above so there's no render loop.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBroadcast(null);
       return;
     }
