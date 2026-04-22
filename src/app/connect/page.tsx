@@ -184,22 +184,35 @@ export default function IFSConnectPage() {
       );
     }
     // Profile-completeness tier — lower number = higher in list.
-    // Interests (skills) are the strongest signal of someone who actively
-    // cared, so they dominate the ranking.
+    //
+    // Teacher report Apr 2026: "why are we showing 2 profiles with no
+    // LinkedIn in between the ones that have it? If no LinkedIn, show
+    // them AFTER all LinkedIn cards." — the previous ranking put
+    // interests/bio ABOVE LinkedIn, so a bio-only card would appear
+    // before a LinkedIn-only card. Rewrote the tiers so LinkedIn is
+    // the primary sort key; completeness (skills/bio) is the tiebreaker
+    // WITHIN each LinkedIn bucket.
+    //
     //   0: user's own card (always pinned first)
-    //   1: has interests selected (regardless of bio/LinkedIn)
-    //   2: has a bio (but no interests yet)
-    //   3: has LinkedIn (but no interests, no bio)
-    //   4: registered only
+    //   1: LinkedIn + skills        — most "connectable" classmates
+    //   2: LinkedIn + bio
+    //   3: LinkedIn only
+    //   4: no LinkedIn, has skills  — still signals engagement
+    //   5: no LinkedIn, has bio
+    //   6: registered only
     const tier = (s: Student): number => {
       if (user && s.enrollmentNo === user.enrollmentNo) return 0;
       const hasSkills = (s.skills?.length ?? 0) > 0;
       const hasBio = !!(s.bio && s.bio.trim());
       const hasLinkedIn = !!s.linkedinUrl;
-      if (hasSkills) return 1;
-      if (hasBio) return 2;
-      if (hasLinkedIn) return 3;
-      return 4;
+      if (hasLinkedIn) {
+        if (hasSkills) return 1;
+        if (hasBio) return 2;
+        return 3;
+      }
+      if (hasSkills) return 4;
+      if (hasBio) return 5;
+      return 6;
     };
 
     list = [...list].sort((a, b) => {
