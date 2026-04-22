@@ -14,20 +14,28 @@ import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
 // ─── /profile/edit ────────────────────────────────────────────────
 //
 // The ONE profile page for current students. Simple by design:
-//   · Photo       (upload OR auto-fetch from LinkedIn on save)
+//   · Photo       (upload manually OR auto-synced from Google on
+//                  sign-in — on mount we POST /api/students/sync-google-photo
+//                  which reads the JWT's `picture` claim and saves
+//                  lh3.googleusercontent.com/... to photo_url if empty)
 //   · Name        (pre-filled from Google, editable)
 //   · Bio         (single line, 120 char cap — same as /connect modal)
 //   · Interests   (pick up to 3 tags from /lib/skills)
-//   · LinkedIn    (OPTIONAL — if provided, we fetch the profile photo)
+//   · LinkedIn    (OPTIONAL — saved as a clickable link on their card,
+//                  NOT used to fetch a photo; LinkedIn blocks server-
+//                  side OG scraping from Vercel IPs.)
 //
 // Saves to the `students` table via /api/students/profile. Everything
 // here is visible on /connect immediately after save — no separate
 // alumni career table involved.
 //
-// (Historical note: this page USED to be a 16-field alumni career form
-// that required LinkedIn and wrote to a separate `student_profiles`
-// table. That was wrong for 17-year-old first-year ICT students and
-// blocked anyone without LinkedIn from saving. Rewritten Apr 2026.)
+// (History: originally a 16-field alumni career form that REQUIRED
+// LinkedIn and wrote to a separate `student_profiles` table. That
+// blocked 17-year-olds without LinkedIn from saving. First rewrite
+// tried server-side LinkedIn scrape for the profile photo — that
+// failed ~100% of the time because LinkedIn blocks cloud IPs. Second
+// rewrite pivoted to Google profile photo auto-sync, which is what
+// runs today. Apr 2026.)
 
 interface ProfileData {
   name: string;
@@ -104,29 +112,38 @@ export default function EditProfilePage() {
       // Passive Google photo sync: if the student is signed in with
       // Google and doesn't have a photo yet, the server quietly saves
       // the JWT's `picture` claim (stable lh3.googleusercontent URL) to
-      // their students row. Runs BEFORE we load the profile so the
-      // loaded state already reflects the new photo. Fails silently —
-      // non-Google sign-ins (password session) just skip this.
+      // their students row. AWAITED so the subsequent /api/students/check
+      // read picks up the new photo_url in the same page load — without
+      // the await, the GET raced the UPDATE and the student saw no
+      // photo on first visit even though the sync had fired. Fails
+      // silently — non-Google sign-ins (password session) just skip this.
       if (token) {
-        fetch("/api/students/sync-google-photo", {
-          method: "POST",
-          headers: { "x-id-token": token },
-        }).catch(() => {});
+        try {
+          await fetch("/api/students/sync-google-photo", {
+            method: "POST",
+            headers: { "x-id-token": token },
+          });
+        } catch {}
       }
 
-      // /api/connect returns the student's row (with bio, skills,
-      // linkedinUrl, photoUrl) — same data the /connect page already
-      // uses, so there's zero chance of drift between what the
-      // student edits here and what classmates see.
-      const res = await fetch("/api/connect", {
-        headers: token ? { "x-id-token": token } : {},
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const me = (data.students || []).find(
-        (s: { email?: string }) => s.email === user.email
+      // Auth-gated self-lookup: /api/students/check returns the caller's
+      // own row from the `students` table (bio, skills, photo_url,
+      // linkedin_url, name, section, etc.). Replaces the old
+      // /api/connect-based lookup, which intentionally strips `email`
+      // from its responses — so the .find(s=>s.email===user.email) match
+      // always came back undefined and the form rendered empty even for
+      // students who had already saved a bio + skills. Re-saving from
+      // that empty form would wipe their previously-saved content.
+      const res = await fetch(
+        `/api/students/check?email=${encodeURIComponent(user.email)}`,
+        {
+          headers: token ? { "x-id-token": token } : {},
+          cache: "no-store",
+        }
       );
-      if (me) {
+      if (!res.ok) return;
+      const me = await res.json();
+      if (me && me.registered) {
         setProfile({
           name: me.name || user.name || "",
           photoUrl: me.photoUrl || "",

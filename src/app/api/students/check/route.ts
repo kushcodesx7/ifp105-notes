@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabase
     .from("students")
-    .select("enrollment_no, name, batch_id, section, linkedin_url, photo_url")
+    .select(
+      "enrollment_no, name, batch_id, section, linkedin_url, photo_url, bio, skills"
+    )
     .eq("email", email)
     .maybeSingle();
 
@@ -37,5 +39,14 @@ export async function GET(req: NextRequest) {
     section: data.section,
     linkedinUrl: data.linkedin_url,
     photoUrl: data.photo_url,
+    // bio + skills added Apr 2026 so /profile/edit can pre-fill the
+    // full form from a single auth-gated query. Previously the page
+    // read from /api/connect, which intentionally strips `email` from
+    // the response — so the `.find(s => s.email === user.email)` match
+    // always returned undefined and the form rendered empty even for
+    // students who had saved a bio/skills before. Re-saving from the
+    // empty form would wipe their bio/skills.
+    bio: data.bio,
+    skills: Array.isArray(data.skills) ? data.skills : [],
   });
 }

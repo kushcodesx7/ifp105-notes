@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isLinkedInUrl } from "@/lib/linkedin-fetch";
+import { isHiddenSection } from "@/lib/hidden-sections";
 
 // POST /api/admin/students/backfill-linkedin-photos
 //
@@ -62,7 +63,13 @@ export async function POST(req: NextRequest) {
     section: string | null;
     batch_id: string | null;
   };
-  const rows = (data || []) as Row[];
+  // Filter out Test Section + any other hidden section — the teacher's
+  // own test account should never appear in the "students missing a
+  // photo" nudge list. Matches the visibility rule every other admin
+  // aggregate already uses (summary, people, connect, glimpse).
+  const rows = ((data || []) as Row[]).filter(
+    (r) => !isHiddenSection(r.section)
+  );
 
   const hasPhoto = (r: Row) => !!r.photo_url && r.photo_url.trim() !== "";
   const hasLinkedInAny = (r: Row) =>

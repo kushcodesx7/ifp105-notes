@@ -111,17 +111,40 @@ export async function GET(req: NextRequest) {
   // Reset epoch: matches the shape /api/progress (single-module GET)
   // returns, so the same client logic for "wipe local after server
   // reset" works from the home page too.
+  //
+  // Previously used `.or('subject_email.is.null,subject_email.eq.${emailLower}')`
+  // which raw-interpolates the email into the PostgREST filter string.
+  // Emails with commas / parentheses / dots in the local part (rare
+  // but legal per RFC 5322) would corrupt the filter parse tree and
+  // make the epoch query return no row — so the student's local epoch
+  // never advanced after a reset. Mirror the pattern /api/progress
+  // uses: two separate queries, pick the newer created_at in JS.
   const emailLower = email.toLowerCase();
+  const [bulkRes, perStudentRes] = await Promise.all([
+    supabase
+      .from("admin_actions")
+      .select("created_at")
+      .eq("action", "reset_progress_all")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("admin_actions")
+      .select("created_at")
+      .eq("action", "reset_progress")
+      .eq("subject_email", emailLower)
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const bulkEpoch = (bulkRes.data?.[0] as { created_at?: string } | undefined)
+    ?.created_at;
+  const perStudentEpoch = (
+    perStudentRes.data?.[0] as { created_at?: string } | undefined
+  )?.created_at;
   let resetEpoch: string | null = null;
-  const { data: resetRows } = await supabase
-    .from("admin_actions")
-    .select("created_at, action, subject_email")
-    .in("action", ["reset_progress_all", "reset_progress"])
-    .or(`subject_email.is.null,subject_email.eq.${emailLower}`)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (resetRows && resetRows.length > 0) {
-    resetEpoch = (resetRows[0] as { created_at: string }).created_at;
+  if (bulkEpoch && perStudentEpoch) {
+    resetEpoch = bulkEpoch > perStudentEpoch ? bulkEpoch : perStudentEpoch;
+  } else {
+    resetEpoch = bulkEpoch || perStudentEpoch || null;
   }
 
   return Response.json(

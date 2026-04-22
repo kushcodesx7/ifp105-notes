@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
@@ -613,6 +613,90 @@ function IctSeedPrompt({
   // clobbering admin-UI edits in the others.
   const [scopeChoice, setScopeChoice] = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
 
+  // Pre-flight divergence preview. Loaded once on open (for "all
+  // modules"); per-module scope reads from the same cached payload
+  // by filtering client-side. Added Apr 2026 so the admin can see
+  // EXACTLY how many questions would be overwritten before clicking
+  // Re-seed. Modules with divergence gate the button behind a typed
+  // "OVERWRITE N" confirmation.
+  interface ModulePreview {
+    moduleNumber: number;
+    title: string;
+    topics: { total: number; new: number; changed: number; unchanged: number };
+    questions: {
+      total: number;
+      new: number;
+      changed: number;
+      unchanged: number;
+      deleted: number;
+    };
+    hasDivergence: boolean;
+  }
+  const [preview, setPreview] = useState<ModulePreview[] | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewErr, setPreviewErr] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+
+  // Which modules are in the current scope.
+  const scopedPreviews = useMemo(() => {
+    if (!preview) return null;
+    return scopeChoice === "all"
+      ? preview
+      : preview.filter((p) => p.moduleNumber === scopeChoice);
+  }, [preview, scopeChoice]);
+
+  const divergentModules = scopedPreviews?.filter((p) => p.hasDivergence) ?? [];
+  const needsConfirm = divergentModules.length > 0;
+  // Confirm phrase shape: "OVERWRITE ALL" for all-scope with divergence,
+  // or "OVERWRITE MODULE N" for a single-module scope with divergence.
+  const confirmPhrase = needsConfirm
+    ? scopeChoice === "all"
+      ? "OVERWRITE ALL"
+      : `OVERWRITE MODULE ${scopeChoice}`
+    : null;
+  const armed = !needsConfirm || confirmText === confirmPhrase;
+
+  async function loadPreview() {
+    if (isEmpty) return; // no DB state to compare against
+    setPreviewLoading(true);
+    setPreviewErr(null);
+    try {
+      const headers: Record<string, string> = {};
+      if (idToken) headers["x-id-token"] = idToken;
+      const res = await fetch("/api/admin/seed-ict/preview", {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPreviewErr(json.error || `HTTP ${res.status}`);
+      } else {
+        setPreview(json.modules || []);
+      }
+    } catch (e) {
+      setPreviewErr((e as Error).message);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  // Auto-load preview once the card is visible and DB is non-empty.
+  // Intentionally only fires on mount; admin can refresh via the
+  // button if the DB changed while they were looking.
+  useEffect(() => {
+    if (!isEmpty && preview === null && !previewLoading) {
+      loadPreview();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmpty]);
+
+  // Clear the confirmation input when the scope changes so typed
+  // "OVERWRITE MODULE 1" doesn't silently arm a "Module 3" re-seed.
+  useEffect(() => {
+    setConfirmText("");
+  }, [scopeChoice]);
+
   async function runSeed(moduleNumber: number | null) {
     setErr(null);
     setSeeding(true);
@@ -632,6 +716,11 @@ function IctSeedPrompt({
         warnings: r.warnings,
         scope: moduleNumber != null ? `Module ${moduleNumber} only` : "all modules",
       });
+      setConfirmText("");
+      // Re-fetch the preview so the post-seed state is current — after
+      // a successful seed, divergence should be 0 for the scope we
+      // just seeded.
+      loadPreview();
       onSeeded();
     } catch (e) {
       setErr((e as Error).message);
@@ -711,11 +800,25 @@ function IctSeedPrompt({
               {(["all", 1, 2, 3, 4, 5] as const).map((opt) => {
                 const label = opt === "all" ? "All modules" : `Module ${opt}`;
                 const active = scopeChoice === opt;
+                // Per-module divergence dot: red = admin edits would
+                // be overwritten; amber = new content only; green =
+                // no changes; grey = preview not yet loaded.
+                const modPreview =
+                  opt !== "all" && preview
+                    ? preview.find((p) => p.moduleNumber === opt)
+                    : null;
+                const dotColor = modPreview
+                  ? modPreview.hasDivergence
+                    ? "#F87171" // red: would clobber admin edits
+                    : modPreview.questions.new > 0
+                      ? "#FBBF24" // amber: fresh content only
+                      : "#34D399" // green: no changes
+                  : null;
                 return (
                   <button
                     key={String(opt)}
                     onClick={() => setScopeChoice(opt)}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors inline-flex items-center gap-1.5"
                     style={{
                       background: active
                         ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
@@ -724,15 +827,117 @@ function IctSeedPrompt({
                       border: "1px solid rgba(255,255,255,0.08)",
                     }}
                   >
+                    {dotColor && (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: dotColor }}
+                        aria-hidden="true"
+                      />
+                    )}
                     {label}
                   </button>
                 );
               })}
-              {scopeChoice !== "all" && (
-                <span className="text-[11px] text-amber-300 ml-1">
-                  ⚠ Only Module {scopeChoice} will be overwritten. Other
-                  modules stay exactly as they are.
+            </div>
+          )}
+
+          {/* Divergence preview panel. Shows per-module counts of
+              "new / changed / unchanged" questions for the current
+              scope, so the teacher knows exactly what this Re-seed
+              will touch BEFORE they click the button. */}
+          {!isEmpty && (
+            <div
+              className="rounded-lg p-3"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: `1px solid ${
+                  needsConfirm
+                    ? "rgba(248,113,113,0.3)"
+                    : "rgba(255,255,255,0.06)"
+                }`,
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-zinc-400 font-semibold">
+                  Preview — what this Re-seed would do
                 </span>
+                <button
+                  onClick={loadPreview}
+                  disabled={previewLoading}
+                  className="text-[10px] text-indigo-300 hover:text-indigo-200 disabled:opacity-40"
+                >
+                  {previewLoading ? "Refreshing…" : "↻ Refresh"}
+                </button>
+              </div>
+              {previewErr && (
+                <p className="text-[11px] text-red-400">{previewErr}</p>
+              )}
+              {previewLoading && !scopedPreviews && (
+                <p className="text-[11px] text-zinc-500">Comparing TS source against the DB…</p>
+              )}
+              {scopedPreviews && scopedPreviews.length === 0 && (
+                <p className="text-[11px] text-zinc-500">No modules in scope.</p>
+              )}
+              {scopedPreviews && scopedPreviews.length > 0 && (
+                <div className="space-y-1.5">
+                  {scopedPreviews.map((p) => {
+                    const tone = p.hasDivergence
+                      ? "text-red-300"
+                      : p.questions.new > 0
+                        ? "text-amber-300"
+                        : "text-emerald-300";
+                    return (
+                      <div
+                        key={p.moduleNumber}
+                        className="text-[11px] flex items-baseline gap-2 flex-wrap"
+                      >
+                        <span className="font-bold text-zinc-200 w-20 shrink-0">
+                          M{p.moduleNumber}
+                        </span>
+                        <span className="text-zinc-400 truncate flex-1">
+                          {p.title}
+                        </span>
+                        <span className={`${tone} tabular-nums font-semibold`}>
+                          {p.hasDivergence
+                            ? `⚠ ${p.questions.changed} would be overwritten`
+                            : p.questions.new > 0
+                              ? `${p.questions.new} new · ${p.questions.unchanged} unchanged`
+                              : `✓ ${p.questions.unchanged} in sync`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {needsConfirm && scopedPreviews && (
+                <p className="text-[11px] text-red-300 mt-2 leading-relaxed">
+                  ⚠ At least one module in scope has admin-UI edits
+                  that differ from the TS source. Re-seeding would{" "}
+                  <strong>overwrite</strong> those edits. Type{" "}
+                  <code className="px-1 py-0.5 rounded bg-white/[0.06] text-white font-mono">
+                    {confirmPhrase}
+                  </code>{" "}
+                  below to confirm.
+                </p>
+              )}
+              {needsConfirm && (
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder={`Type "${confirmPhrase}" to enable`}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="w-full mt-2 px-3 py-2 text-[12px] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none transition-colors"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: armed
+                      ? "1px solid rgba(239,68,68,0.5)"
+                      : "1px solid rgba(255,255,255,0.08)",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  }}
+                />
               )}
             </div>
           )}
@@ -741,16 +946,18 @@ function IctSeedPrompt({
             onClick={() =>
               runSeed(typeof scopeChoice === "number" ? scopeChoice : null)
             }
-            disabled={seeding}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 active:scale-95 transition-all"
+            disabled={seeding || (!isEmpty && !armed)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-95 transition-all"
           >
             {seeding
               ? "Seeding…"
               : isEmpty
                 ? "Seed ICT into database"
-                : scopeChoice === "all"
-                  ? "♻️ Re-seed ALL modules from TS source"
-                  : `♻️ Re-seed ONLY Module ${scopeChoice} from TS source`}
+                : needsConfirm && !armed
+                  ? `Type "${confirmPhrase}" above to enable`
+                  : scopeChoice === "all"
+                    ? "♻️ Re-seed ALL modules from TS source"
+                    : `♻️ Re-seed ONLY Module ${scopeChoice} from TS source`}
           </button>
         </div>
       )}

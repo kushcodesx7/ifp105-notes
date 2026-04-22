@@ -162,6 +162,10 @@ export async function POST(req: NextRequest) {
   let topicsUpserted = 0;
   let questionsUpserted = 0;
   const warnings: string[] = [];
+  // Collect the seeded module→topic-ids map while we're walking the
+  // upsert tree anyway, so the revalidatePath loop below can reuse it
+  // instead of calling `loadModuleData(m.id)` a second time per module.
+  const seededTopicIds: Record<number, number[]> = {};
 
   // If a moduleScope was passed, narrow the loop to just that module.
   // Everything else (topics + questions for the other 4 modules) is
@@ -204,6 +208,7 @@ export async function POST(req: NextRequest) {
 
     // ── 2. Upsert topics for this module ──────────────────────
     const { topics: tsTopics, mcq: tsMcq } = await loadModuleData(m.id);
+    seededTopicIds[m.id] = tsTopics.map((t) => t.id);
 
     for (const topic of tsTopics) {
       const { data: topicRow, error: topicErr } = await supabase
@@ -291,10 +296,13 @@ export async function POST(req: NextRequest) {
     for (const m of modulesToSeed) {
       revalidatePath(`/module/${m.id}`);
       revalidatePath(`/api/public/mcq/${m.id}`);
-      // Flashcards are per-topic; loop the module's topics.
-      const { topics: tsTopics } = await loadModuleData(m.id);
-      for (const t of tsTopics) {
-        revalidatePath(`/api/public/flashcards/${m.id}/${t.id}`);
+      // Reuse the topic IDs we already collected during the upsert
+      // loop above — previously this did a second `loadModuleData(m.id)`
+      // dynamic import per module (each one a separate chunk fetch),
+      // doubling the seed endpoint's cold-start cost.
+      const topicIds = seededTopicIds[m.id] || [];
+      for (const tid of topicIds) {
+        revalidatePath(`/api/public/flashcards/${m.id}/${tid}`);
       }
     }
     // Also bust the landing page and admin editor surfaces that list
