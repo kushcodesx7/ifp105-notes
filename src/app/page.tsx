@@ -6,28 +6,12 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
 import dynamic from "next/dynamic";
-import { mcqData as _m1 } from "@/data/module1-mcq";
-import { mcqData as _m2 } from "@/data/module2-mcq";
-import { mcqData as _m3 } from "@/data/module3-mcq";
-import { mcqData as _m4 } from "@/data/module4-mcq";
-import { mcqData as _m5 } from "@/data/module5-mcq";
-
-// Live count of MCQs across the whole course. Summed once at module
-// load so the home-page teaser never drifts from reality — previous
-// version hard-coded "540+ questions" which was off by nearly 60%
-// (actual ≈ 336). Recomputes at build time, not at render, so there's
-// no per-render cost.
-const TOTAL_QUESTIONS = [
-  _m1, _m2, _m3, _m4, _m5,
-].reduce(
-  (sum, data) =>
-    sum +
-    Object.values(data).reduce(
-      (modSum, arr) => modSum + (arr?.length ?? 0),
-      0
-    ),
-  0
-);
+// Single source of truth for the whole-course MCQ total lives in
+// src/lib/course-stats.ts — /admin/courses/ict and other places that
+// need the same number import the same constant. Previously this page
+// did its own sum + the admin page hard-coded "370 MCQs" literal.
+import { TOTAL_QUESTIONS } from "@/lib/course-stats";
+import { MODULES } from "@/lib/modules";
 
 // Lazy-load the social / peer-compare widgets — not critical for first paint, no SSR needed
 const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse"), {
@@ -201,13 +185,26 @@ const features = [
   { icon: "unlock" as keyof typeof featureIcons, title: "100% Free", desc: "No ads, no paywalls, no sign-ups. Just open the link and start studying." },
 ];
 
-// Topic titles for continue learning
+// Topic titles for the "Continue where you left off" strip. Pulled
+// from the same TS source the module pages render — dropping the
+// hardcoded literal that used to live here. The literal silently
+// drifted every time a topic was renamed (Module 3 was rewritten
+// once and the home strip kept showing the OLD titles for weeks).
+//
+// One module per import — keeps client bundle scoped to titles only,
+// not full content_json blobs.
+import { topics as _t1 } from "@/data/module1-topics";
+import { topics as _t2 } from "@/data/module2-topics";
+import { topics as _t3 } from "@/data/module3-topics";
+import { topics as _t4 } from "@/data/module4-topics";
+import { topics as _t5 } from "@/data/module5-topics";
+
 const MODULE_TOPICS: Record<number, string[]> = {
-  1: ["Why Did We Even Invent Computers?", "How Computers Grew Up", "How Every Computer Works (IPO)", "The CPU", "Memory (RAM & ROM)", "Input Devices", "Output Devices", "Storage Devices", "Types of Software", "Internet Basics", "Internet Applications"],
-  2: ["Editing vs Word Processing", "MS Word — Text Editing", "MS Word — Images & Tables", "MS Excel — Worksheets", "MS Excel — Formulas", "MS Excel — Data Management", "MS PowerPoint — Basics", "MS PowerPoint — Master Slides", "Putting It Together"],
-  3: ["Introduction to Social Media", "Types of Social Media Platforms", "Social Media Tools & Automation", "Social Media Measurement & Reporting", "Social Advertising (Organic vs Paid)", "LinkedIn — Build Your Professional Profile", "Personal Branding on Social Media"],
-  4: ["World Wide Web", "HTML & Basic Tags", "HTML Elements", "HTML Attributes", "HTML Comments", "HTML Formatting", "HTML Tables", "HTML Lists", "Hyperlinks", "Images & Image Links", "Build a Full Page"],
-  5: ["Artificial Intelligence", "Machine Learning", "Data Analytics", "Cloud Computing", "Blockchain", "Virtual Reality", "Augmented Reality", "Internet of Things", "Generative AI", "Ethical Use of GPTs"],
+  1: _t1.map((t) => t.title),
+  2: _t2.map((t) => t.title),
+  3: _t3.map((t) => t.title),
+  4: _t4.map((t) => t.title),
+  5: _t5.map((t) => t.title),
 };
 
 interface ContinueData {
@@ -221,34 +218,11 @@ interface ContinueData {
   accent: string;
 }
 
-// Quick Challenge questions
-const quizQuestions = [
-  {
-    question: "What does CPU stand for?",
-    options: ["Central Processing Unit", "Computer Personal Unit", "Central Program Utility", "Core Processing Unit"],
-    answer: 0,
-  },
-  {
-    question: "Which HTML tag makes text bold?",
-    options: ["<strong>", "<em>", "<h1>", "<br>"],
-    answer: 0,
-  },
-  {
-    question: "What does AI stand for?",
-    options: ["Automatic Integration", "Artificial Intelligence", "Advanced Interface", "Applied Informatics"],
-    answer: 1,
-  },
-  {
-    question: "RAM is a type of ___?",
-    options: ["Storage", "Memory", "Processor", "Software"],
-    answer: 1,
-  },
-  {
-    question: "Who invented the World Wide Web?",
-    options: ["Steve Jobs", "Bill Gates", "Tim Berners-Lee", "Mark Zuckerberg"],
-    answer: 2,
-  },
-];
+// Quick Challenge questions for the home-page hero — moved out of
+// the UI file into /src/data/quick-challenge.ts so the question bank
+// is grep-able as data and future content audits scan it the same
+// way they scan moduleN-mcq.ts.
+import { QUICK_CHALLENGE as quizQuestions } from "@/data/quick-challenge";
 
 export default function Home() {
   const { user, isLoggedIn, getIdToken } = useAuth();
@@ -666,7 +640,7 @@ export default function Home() {
                       whileHover={!showQuizResult ? { scale: 1.02 } : {}}
                       whileTap={!showQuizResult ? { scale: 0.98 } : {}}
                       onClick={() => handleQuizAnswer(idx)}
-                      className={`text-left px-4 py-3 rounded-xl text-sm font-medium border transition-all ${optStyle}`}
+                      className={`text-left px-4 py-3 min-h-11 rounded-xl text-sm font-medium border transition-all ${optStyle}`}
                     >
                       <span className="text-zinc-500 mr-2">{String.fromCharCode(65 + idx)}.</span>
                       {opt}
@@ -701,7 +675,7 @@ export default function Home() {
                           border: "1px solid rgba(99,102,241,0.2)",
                         }}
                       >
-                        👋 Sign in to track <strong className="text-white">{TOTAL_QUESTIONS}+ questions like this</strong> across all 5 modules, see your Bloom&apos;s thinking profile, and unlock your section&apos;s leaderboard.
+                        👋 Sign in to track <strong className="text-white">{TOTAL_QUESTIONS}+ questions like this</strong> across all {MODULES.length} modules, see your Bloom&apos;s thinking profile, and unlock your section&apos;s leaderboard.
                       </div>
                     )}
                     <div className="flex items-center gap-4 flex-wrap">
@@ -802,7 +776,7 @@ export default function Home() {
               Pick a Module
             </h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
-              5 modules available now. Each is self-contained with theory, analogies, and quizzes.
+              {MODULES.length} modules available now. Each is self-contained with theory, analogies, and quizzes.
             </p>
           </RevealOnScroll>
 

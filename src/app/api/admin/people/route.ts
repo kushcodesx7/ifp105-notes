@@ -2,9 +2,14 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
+import { MODULE_IDS } from "@/lib/course-stats";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import type { BloomLevel } from "@/lib/blooms";
+import {
+  aggregateBloomStats,
+  type BloomAggregateRow,
+} from "@/lib/bloom-stats";
 
 // GET /api/admin/people
 // Powers the /admin/people page. Returns every registered student with
@@ -160,8 +165,10 @@ export async function GET(req: NextRequest) {
     let mcqPctSumAll = 0;
     let mcqCountAll = 0;
 
-    const bloomAgg: Record<string, { correct: number; total: number }> = {};
-    const confAgg = { rated: 0, confidentWrong: 0, humbleRight: 0 };
+    // bloomAgg + confAgg moved into aggregateBloomStats below, one
+    // helper used by both this endpoint AND /api/me/blooms so the
+    // numbers for a student can never diverge between the admin drawer
+    // and the student's own home-page thinking-profile card.
     const dayCounts: Record<string, number> = {};
 
     for (const t of topicRows) {
@@ -195,27 +202,25 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Bloom + confidence aggregates.
-      if (t.bloom_stats) {
-        for (const [lvl, entry] of Object.entries(t.bloom_stats)) {
-          if (!entry) continue;
-          let slot = bloomAgg[lvl];
-          if (!slot) {
-            slot = { correct: 0, total: 0 };
-            bloomAgg[lvl] = slot;
-          }
-          slot.correct += entry.correct || 0;
-          slot.total += entry.total || 0;
-        }
-      }
-      if (t.confidence_stats) {
-        confAgg.rated += t.confidence_stats.rated || 0;
-        confAgg.confidentWrong += t.confidence_stats.confidentWrong || 0;
-        confAgg.humbleRight += t.confidence_stats.humbleRight || 0;
-      }
+      // Bloom + confidence aggregates — extracted to aggregateBloomStats
+      // so /api/me/blooms and /api/admin/people can't drift. See
+      // call outside the loop below.
     }
 
-    const moduleStats: ModuleStat[] = [1, 2, 3, 4, 5].map((mn) => {
+    // One-shot aggregate over topicRows for bloom + calibration. This
+    // replaces the per-row inline loops that previously lived inside
+    // the iteration above. The returned `perLevel` shape exactly
+    // matches what the existing API response promised (bloomStats is
+    // a Record<BloomLevel, {correct, total}>) so no downstream change
+    // is needed in the client.
+    const bloomResult = aggregateBloomStats(
+      topicRows as BloomAggregateRow[]
+    );
+    const bloomAggFromHelper: Record<string, { correct: number; total: number }> =
+      { ...bloomResult.perLevel };
+    const confAggFromHelper = bloomResult.calibration;
+
+    const moduleStats: ModuleStat[] = MODULE_IDS.map((mn) => {
       const total = MODULE_TOTALS[mn] || 0;
       const done = modDone[mn];
       const mcqCount = modMcqCount[mn];
@@ -273,8 +278,8 @@ export async function GET(req: NextRequest) {
       completedCount,
       moduleStats,
       avgMcq,
-      bloomStats: bloomAgg,
-      confidenceStats: confAgg,
+      bloomStats: bloomAggFromHelper,
+      confidenceStats: confAggFromHelper,
       recentActivity,
       hidden: isHiddenSection(s.section),
     };

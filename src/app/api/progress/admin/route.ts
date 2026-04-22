@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
+import { MODULE_IDS } from "@/lib/course-stats";
 import { requireAdmin } from "@/lib/verify-google-token";
 
 // GET — Return all student progress grouped by student.
@@ -139,7 +140,7 @@ export async function GET(req: NextRequest) {
     }
 
     const moduleStats: Record<number, { done: number; total: number; pct: number }> = {};
-    for (const moduleNum of [1, 2, 3, 4, 5]) {
+    for (const moduleNum of MODULE_IDS) {
       const total = MODULE_TOTALS[moduleNum];
       const done = modDone[moduleNum];
       moduleStats[moduleNum] = {

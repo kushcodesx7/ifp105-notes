@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS, TOTAL_TOPICS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
+import { MODULE_IDS } from "@/lib/course-stats";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { compareSections } from "@/lib/sections";
@@ -168,7 +169,7 @@ export async function GET(req: NextRequest) {
     const topicEntries = Object.values(s.topics);
     const completedCount = topicEntries.filter((t) => t.completed).length;
     const moduleStats: Record<number, { done: number; total: number; pct: number }> = {};
-    for (const mn of [1, 2, 3, 4, 5]) {
+    for (const mn of MODULE_IDS) {
       const mt = topicEntries.filter((t) => t.moduleNumber === mn);
       const done = mt.filter((t) => t.completed).length;
       const total = MODULE_TOTALS[mn];
@@ -191,7 +192,7 @@ export async function GET(req: NextRequest) {
     // Module-weighted pct — same formula as every other endpoint so
     // the batch-progress page matches what students see on /connect.
     const modDoneMap: Record<number, number> = {};
-    for (const mn of [1, 2, 3, 4, 5]) modDoneMap[mn] = moduleStats[mn].done;
+    for (const mn of MODULE_IDS) modDoneMap[mn] = moduleStats[mn].done;
     return {
       completedCount,
       totalTopics: TOTAL_TOPICS,
