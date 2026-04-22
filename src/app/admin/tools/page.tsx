@@ -1928,10 +1928,19 @@ function UnlinkByRollCard({ idToken }: { idToken: string | null }) {
     setUnlinking(true);
     setError(null);
     try {
+      // When more than one account claims the same roll (rare —
+      // happens when a roll convention is reused across batches), the
+      // server requires `force: true` to delete all of them at once.
+      // We pass force when the teacher has SEEN the owner list (the
+      // confirm UI shows the full list before the click).
+      const force = lookup.owners.length > 1;
       const res = await fetch("/api/admin/students/unlink-by-roll", {
         method: "POST",
         headers: fetchHeaders,
-        body: JSON.stringify({ enrollmentNo: lookup.enrollmentNo }),
+        body: JSON.stringify({
+          enrollmentNo: lookup.enrollmentNo,
+          ...(force ? { force: true } : {}),
+        }),
       });
       const json = await res.json();
       if (!res.ok) {

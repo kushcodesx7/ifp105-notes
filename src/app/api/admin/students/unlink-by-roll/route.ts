@@ -106,6 +106,25 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Multi-owner safety gate: same enrollment_no across two batches is
+  // possible (rare — happens when a roll convention is reused between
+  // semesters). Without an explicit `force: true`, refuse to delete
+  // multiple rows in one call. Teacher gets a 409 + the owner list +
+  // a nudge to either pass force or pass `batchId` to narrow the
+  // scope to one row.
+  const force = !!body.force;
+  if (rows.length > 1 && !force) {
+    return Response.json(
+      {
+        error: `${rows.length} accounts share this roll number across batches. Pass batchId to narrow to one batch, or pass force:true to unlink all of them in one shot. Owners are listed here.`,
+        needsConfirm: true,
+        enrollmentNo,
+        owners,
+      },
+      { status: 409 }
+    );
+  }
+
   // Actual unlink: delete every matching students row. Same rules as
   // the per-email unlink — progress (student_progress) + sessions
   // stay under the old email. If the real owner later re-registers
