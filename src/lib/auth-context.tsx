@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useMemo,
   useState,
   useCallback,
   useRef,
@@ -259,21 +260,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
+  // Memoise the context value so consumers only re-render when the
+  // pieces they actually depend on change. Previously this was a
+  // fresh object literal on every AuthProvider render — every
+  // descendant calling useAuth() re-rendered on any parent update,
+  // defeating React.memo boundaries on the home-page widgets
+  // (HomeConnectGlimpse, HomeCompareWithClass, HomeBloomsProfile).
+  // The callbacks are all stable (useCallback with empty deps) so the
+  // only real trigger is the `user` state itself.
+  const value = useMemo(
+    () => ({
+      user,
+      login,
+      logout,
+      isLoggedIn: !!user,
+      getIdToken,
+      setIdToken,
+      loginWithPassword,
+    }),
+    [user, login, logout, getIdToken, setIdToken, loginWithPassword]
+  );
+
   return (
     <GoogleOAuthProvider clientId={clientId} locale="en">
-      <AuthContext.Provider
-        value={{
-          user,
-          login,
-          logout,
-          isLoggedIn: !!user,
-          getIdToken,
-          setIdToken,
-          loginWithPassword,
-        }}
-      >
-        {children}
-      </AuthContext.Provider>
+      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
     </GoogleOAuthProvider>
   );
 }

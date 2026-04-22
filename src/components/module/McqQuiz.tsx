@@ -1135,6 +1135,12 @@ export default function McqQuiz({
                   boxShadow: i === currentQ ? '0 0 4px rgba(255,255,255,0.3)' : 'none',
                 }}
                 title={`Question ${i + 1}${revealed ? (a === shuffled[i].ans ? ' ✓' : ' ✗') : picked ? ' (rate confidence)' : ''}`}
+                // title= is tooltip-only; screen readers need an
+                // accessible name. Mirror the same status info so
+                // arrow-key navigation through the dots still tells
+                // the user what they're looking at.
+                aria-label={`Question ${i + 1}${revealed ? (a === shuffled[i].ans ? ', correct' : ', incorrect') : picked ? ', awaiting confidence rating' : ', unanswered'}`}
+                aria-current={i === currentQ ? "step" : undefined}
               />
             );
           })}
@@ -1333,6 +1339,11 @@ export default function McqQuiz({
                           : 'bg-red-500/10 text-red-300 border border-red-500/20'
                       }`}
                       role="alert"
+                      // Assertive live region so VoiceOver / NVDA
+                      // interrupt whatever they were reading to speak
+                      // the feedback — without this the student has
+                      // to arrow back to find the reveal block.
+                      aria-live="assertive"
                     >
                       <strong>{isCorrect ? '✅ Correct!' : '❌ Not quite.'}</strong> {q.why}
                     </div>
