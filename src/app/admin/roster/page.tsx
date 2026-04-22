@@ -110,7 +110,7 @@ export default function RosterPage() {
         <div className="flex items-end justify-between mb-5 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Roster</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               Batches · sections · roll numbers
             </p>
           </div>
@@ -234,7 +234,7 @@ export default function RosterPage() {
                   toast={toast}
                 />
               ) : (
-                <div className="text-[12px] text-zinc-500">
+                <div className="text-[12px] text-zinc-400">
                   Pick a batch from the sidebar.
                 </div>
               )}
@@ -272,7 +272,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
     >
       <div className="text-5xl mb-3">🎓</div>
       <h2 className="text-lg font-bold mb-1">No batches yet</h2>
-      <p className="text-[12px] text-zinc-500 mb-4">
+      <p className="text-[12px] text-zinc-400 mb-4">
         Create your first batch to start enrolling students.
       </p>
       <button

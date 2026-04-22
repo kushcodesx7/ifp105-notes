@@ -153,7 +153,7 @@ export default function ModuleEditPage({
               <h1 className="text-2xl sm:text-3xl font-bold">
                 Module {module_.number}: {module_.title}
               </h1>
-              <p className="text-sm text-zinc-500 mt-1">
+              <p className="text-sm text-zinc-400 mt-1">
                 {module_.subtitle || "Edit topics and MCQs"}
               </p>
             </div>
@@ -172,7 +172,7 @@ export default function ModuleEditPage({
             <div className="mt-8 mb-4 flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <h2 className="text-lg font-bold">Topics</h2>
-                <p className="text-[12px] text-zinc-500">
+                <p className="text-[12px] text-zinc-400">
                   {topics.length} topic{topics.length === 1 ? "" : "s"} ·
                   expand to edit MCQs
                 </p>
@@ -210,7 +210,7 @@ export default function ModuleEditPage({
             </AnimatePresence>
 
             {topics.length === 0 && !creatingTopic && (
-              <div className="text-center py-8 text-sm text-zinc-500">
+              <div className="text-center py-8 text-sm text-zinc-400">
                 No topics yet. Click + New topic to add the first one.
               </div>
             )}

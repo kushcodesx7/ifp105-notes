@@ -291,7 +291,7 @@ export default function IFSConnectPage() {
             <div className="flex items-baseline justify-between mb-2">
               <div>
                 <span className="text-2xl font-bold text-white">{students.length}</span>
-                <span className="text-sm text-zinc-500"> / {totalRolls} registered</span>
+                <span className="text-sm text-zinc-400"> / {totalRolls} registered</span>
               </div>
               <span className="text-xs font-semibold text-indigo-300">
                 {registeredPct}%{" "}

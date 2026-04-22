@@ -101,7 +101,7 @@ export function BlockCommandPalette({
               className="flex items-center gap-3 px-4 py-3"
               style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
             >
-              <span aria-hidden="true" className="text-zinc-500 text-sm">
+              <span aria-hidden="true" className="text-zinc-400 text-sm">
                 ⌘K
               </span>
               <input
@@ -118,7 +118,7 @@ export function BlockCommandPalette({
             </div>
             <div className="max-h-[320px] overflow-y-auto py-1">
               {filtered.length === 0 ? (
-                <p className="text-center py-6 text-[12px] text-zinc-500">
+                <p className="text-center py-6 text-[12px] text-zinc-400">
                   No block types match &quot;{query}&quot;
                 </p>
               ) : (

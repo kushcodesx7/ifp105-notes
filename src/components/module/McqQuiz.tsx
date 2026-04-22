@@ -1404,7 +1404,7 @@ export default function McqQuiz({
                    `/total` stays static — only the "X" in X/Y animates. */}
               <CountUp value={score} />/{total}
             </motion.div>
-            <p className="text-sm text-zinc-500 mb-6">
+            <p className="text-sm text-zinc-400 mb-6">
               {pct === 100 ? 'Perfect score! Outstanding! 🎉' :
                pct >= 80 ? 'Excellent — almost perfect 👏' :
                pct >= 60 ? 'Good effort! Re-read the bits you missed 📖' :

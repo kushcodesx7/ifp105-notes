@@ -474,7 +474,7 @@ export default function Flashcards({
         >
           <div className="text-4xl mb-3">🎉</div>
           <h4 className="text-lg font-bold text-zinc-200 mb-1">All cards reviewed!</h4>
-          <p className="text-sm text-zinc-500 mb-5">You knew all {cards.length} cards.</p>
+          <p className="text-sm text-zinc-400 mb-5">You knew all {cards.length} cards.</p>
           <button onClick={reset}
             className="px-6 py-2.5 rounded-full text-sm font-semibold text-white focus-glow"
             style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>

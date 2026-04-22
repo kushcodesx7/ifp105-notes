@@ -22,7 +22,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-[50vh] flex flex-col items-center justify-center px-6 text-center">
           <div className="text-4xl mb-4">😵</div>
           <h2 className="text-xl font-bold text-zinc-200 mb-2">Something went wrong</h2>
-          <p className="text-sm text-zinc-500 mb-6 max-w-md">
+          <p className="text-sm text-zinc-400 mb-6 max-w-md">
             This page encountered an error. Try refreshing, or go back to the home page.
           </p>
           <Link

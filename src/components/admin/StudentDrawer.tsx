@@ -947,7 +947,7 @@ function ThinkingTab({ student }: { student: AdminStudent }) {
   if (!hasData) {
     return (
       <div
-        className="rounded-xl p-6 text-center text-[12px] text-zinc-500"
+        className="rounded-xl p-6 text-center text-[12px] text-zinc-400"
         style={{
           background: "rgba(255,255,255,0.02)",
           border: "1px dashed rgba(255,255,255,0.08)",

@@ -131,7 +131,7 @@ export default function CoursesPage() {
         <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Courses</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               Every course this deployment serves · create · edit · archive
             </p>
           </div>
@@ -185,7 +185,7 @@ export default function CoursesPage() {
         )}
 
         {!isLoading && courses.length === 0 && !creating && (
-          <div className="text-center py-12 text-sm text-zinc-500">
+          <div className="text-center py-12 text-sm text-zinc-400">
             No courses yet. Click <span className="text-zinc-300">+ New course</span>{" "}
             to create your first one.
           </div>
@@ -270,7 +270,7 @@ function CourseCard({
       </div>
 
       {course.description && (
-        <p className="text-[12px] text-zinc-500 line-clamp-2 mb-3">
+        <p className="text-[12px] text-zinc-400 line-clamp-2 mb-3">
           {course.description}
         </p>
       )}

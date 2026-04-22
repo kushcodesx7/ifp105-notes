@@ -161,7 +161,7 @@ export default function ShortcutTrainer({ shortcuts, title = "Keyboard Shortcut 
               {shortcut.action}
             </h3>
 
-            <p className="text-sm text-zinc-500 mb-4">Press the keyboard shortcut now...</p>
+            <p className="text-sm text-zinc-400 mb-4">Press the keyboard shortcut now...</p>
 
             {/* Key display */}
             <div className="flex items-center justify-center gap-2 mb-6 min-h-[48px]">

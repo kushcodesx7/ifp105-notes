@@ -243,7 +243,7 @@ export default function ActiveNowWidget({ idToken }: Props) {
       )}
 
       {isLoading && !data && (
-        <div className="flex items-center justify-center py-6 text-[12px] text-zinc-500">
+        <div className="flex items-center justify-center py-6 text-[12px] text-zinc-400">
           Loading…
         </div>
       )}
@@ -251,7 +251,7 @@ export default function ActiveNowWidget({ idToken }: Props) {
       {!isLoading && liveItems.length === 0 && (
         <div className="text-center py-6">
           <div className="text-2xl mb-2">💤</div>
-          <p className="text-[12px] text-zinc-500">
+          <p className="text-[12px] text-zinc-400">
             Nobody&apos;s active right now. The widget refreshes every 20s.
           </p>
         </div>
@@ -310,7 +310,7 @@ export default function ActiveNowWidget({ idToken }: Props) {
                   </div>
                   <span
                     aria-hidden="true"
-                    className="shrink-0 text-[12px] text-zinc-500"
+                    className="shrink-0 text-[12px] text-zinc-400"
                   >
                     →
                   </span>

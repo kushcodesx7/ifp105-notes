@@ -231,7 +231,7 @@ function InlineModuleEditorInner({
               {module_.fullTitle ?? module_.title}
             </h1>
             {module_.subtitle && (
-              <p className="text-zinc-500 text-sm">{module_.subtitle}</p>
+              <p className="text-zinc-400 text-sm">{module_.subtitle}</p>
             )}
           </section>
 
@@ -298,7 +298,7 @@ function InlineModuleEditorInner({
                   />
                 </motion.div>
               ) : (
-                <p className="text-sm text-zinc-500 text-center py-10">
+                <p className="text-sm text-zinc-400 text-center py-10">
                   No topics in this module yet.
                 </p>
               )}

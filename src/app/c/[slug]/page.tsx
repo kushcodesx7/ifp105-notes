@@ -92,7 +92,7 @@ export default async function CoursePage({
           <h2 className="text-lg font-bold mb-4">Modules</h2>
           {rows.length === 0 ? (
             <div
-              className="rounded-2xl p-8 text-center text-sm text-zinc-500"
+              className="rounded-2xl p-8 text-center text-sm text-zinc-400"
               style={{
                 background: "rgba(255,255,255,0.02)",
                 border: "1px dashed rgba(255,255,255,0.08)",

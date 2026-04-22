@@ -105,7 +105,7 @@ export default function AdminAuthGate(_props: GateProps) {
             🛡️
           </div>
           <h1 className="text-xl font-bold mb-1">Admin access</h1>
-          <p className="text-[12px] text-zinc-500 mb-5 leading-relaxed">
+          <p className="text-[12px] text-zinc-400 mb-5 leading-relaxed">
             Sign in with the Google account on the admin list.
           </p>
 

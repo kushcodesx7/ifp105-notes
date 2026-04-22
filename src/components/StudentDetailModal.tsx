@@ -129,6 +129,10 @@ export default function StudentDetailModal({
                   <img
                     src={student.photoUrl}
                     alt={name}
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    decoding="async"
                     className="w-20 h-20 rounded-full object-cover"
                     style={{ border: `3px solid #0c0c14` }}
                     referrerPolicy="no-referrer"

@@ -538,7 +538,7 @@ export default function Home() {
             </motion.p>
           </AnimatePresence>
 
-          <div className="text-sm text-zinc-500 mb-8 animate-fade-up delay-3">
+          <div className="text-sm text-zinc-400 mb-8 animate-fade-up delay-3">
             by{" "}
             <span className="text-zinc-300 font-medium">Kushagra Tripathi</span>
             {" \u00B7 "}
@@ -806,7 +806,7 @@ export default function Home() {
             </p>
           </RevealOnScroll>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {modules.map((mod, i) => (
               <div key={mod.number} data-tour={i === 0 ? "module-1" : undefined}>
                 {/* key includes progressHydrationTick so ModuleCard's
@@ -860,7 +860,7 @@ export default function Home() {
               <span className="text-[11px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
                 IFP105
               </span>
-              <span className="text-sm text-zinc-500">ICT Study Notes</span>
+              <span className="text-sm text-zinc-400">ICT Study Notes</span>
             </div>
             <a
               href="https://www.linkedin.com/in/kushagra-x7/"

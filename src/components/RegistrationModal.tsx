@@ -414,7 +414,7 @@ export default function RegistrationModal({
                 {batchesLoading ? (
                   <div className="h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center px-4">
                     <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-                    <span className="ml-2 text-sm text-zinc-500">Loading...</span>
+                    <span className="ml-2 text-sm text-zinc-400">Loading...</span>
                   </div>
                 ) : (
                   <select
@@ -448,7 +448,7 @@ export default function RegistrationModal({
                   {sectionsLoading ? (
                     <div className="h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center px-4">
                       <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-                      <span className="ml-2 text-sm text-zinc-500">Loading sections...</span>
+                      <span className="ml-2 text-sm text-zinc-400">Loading sections...</span>
                     </div>
                   ) : sections.length === 0 ? (
                     <p className="text-xs text-amber-400">No sections available in this batch.</p>

@@ -49,7 +49,7 @@ export default function CheatSheet({
       >
         <div className="text-4xl mb-3">📋</div>
         <h2 className="text-2xl font-bold tracking-tight mb-2">{resolved.title}</h2>
-        <p className="text-sm text-zinc-500">Key terms, definitions, and exam tips — all in one place.</p>
+        <p className="text-sm text-zinc-400">Key terms, definitions, and exam tips — all in one place.</p>
       </motion.div>
 
       {/* Sections */}
@@ -121,7 +121,7 @@ export default function CheatSheet({
                     {pair.termB}
                   </span>
                 </div>
-                <p className="text-[12px] text-zinc-500 leading-relaxed">{pair.tip}</p>
+                <p className="text-[12px] text-zinc-400 leading-relaxed">{pair.tip}</p>
               </div>
             ))}
           </div>

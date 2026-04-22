@@ -91,7 +91,7 @@ export default function CoursePicker() {
                 </div>
                 <div className="text-base font-bold mb-1">{c.name}</div>
                 {c.description && (
-                  <p className="text-[12px] text-zinc-500 line-clamp-2">
+                  <p className="text-[12px] text-zinc-400 line-clamp-2">
                     {c.description}
                   </p>
                 )}
