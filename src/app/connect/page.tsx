@@ -723,21 +723,17 @@ export default function IFSConnectPage() {
                         : undefined,
                     }}
                   >
-                    {/* Top-right badge row */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                      {isMe && (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"
-                          style={{
-                            background: "linear-gradient(135deg, #FACC15, #F59E0B)",
-                            color: "#422006",
-                          }}
-                        >
-                          ⭐ You
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Avatar + name */}
+                    {/* Avatar + name. The "YOU" badge used to live
+                        absolute-positioned in the card's top-right
+                        corner (separate div above this row). When a
+                        student had a long name like
+                        "Nabixodjayev Abdufattoxxo ja", the absolute
+                        badge would overlap the name because truncate
+                        doesn't know the badge exists.
+                        Now the badge is INSIDE the name row as an
+                        inline flex child with shrink-0. The name
+                        (flex-1 min-w-0 truncate) naturally adjusts
+                        around it regardless of length. */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="relative shrink-0">
                         {student.photoUrl ? (
@@ -775,9 +771,24 @@ export default function IFSConnectPage() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-zinc-100 truncate leading-tight">
-                          {prettyName(student.name)}
-                        </p>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-sm font-semibold text-zinc-100 truncate leading-tight flex-1 min-w-0">
+                            {prettyName(student.name)}
+                          </p>
+                          {isMe && (
+                            <span
+                              className="shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #FACC15, #F59E0B)",
+                                color: "#422006",
+                              }}
+                              title="This is your own card"
+                            >
+                              ⭐ You
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-zinc-500 flex items-center gap-1.5">
                           <span>{student.section}</span>
                           <span className="text-zinc-700">·</span>
