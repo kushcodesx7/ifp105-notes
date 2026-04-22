@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/admin/students/reset-all-progress
 //
@@ -35,6 +36,19 @@ import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
+
+  // Defense-in-depth: this is the MOST destructive endpoint we have
+  // (wipes every student's progress). Even with requireAdmin + the
+  // typed-confirm phrase, a compromised admin token shouldn't be
+  // able to reset the class 20 times in a minute. 5 resets per
+  // 10 minutes is more than any legitimate teacher workflow.
+  const rl = await rateLimit({
+    bucket: "admin:destructive:reset-all",
+    id: actorFromAuth(admin),
+    limit: 5,
+    windowSec: 600,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 5);
 
   const body = await req.json().catch(() => ({}));
   if (body.confirm !== "RESET ALL PROGRESS") {

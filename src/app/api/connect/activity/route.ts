@@ -1,8 +1,20 @@
 import { NextRequest } from "next/server";
+import { createHash } from "node:crypto";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import { getCurrentCourse } from "@/lib/course-registry";
 import { ipFromRequest, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+
+// Opaque, short, stable id for an email. Used so React can have
+// stable keys on activity events without the raw student email being
+// included in the public payload. SHA-256 → first 10 hex chars is
+// ~40 bits of entropy — far more than enough for key uniqueness
+// within a 48-hour activity window (never more than a few hundred
+// events). Pre-image resistance means a leak here doesn't let a
+// caller recover the email address.
+function emailKey(email: string): string {
+  return createHash("sha256").update(email.toLowerCase()).digest("hex").slice(0, 10);
+}
 
 // GET /api/connect/activity
 // Recent peer activity for the home page glimpse. Two event types:
@@ -122,7 +134,7 @@ export async function GET(req: NextRequest) {
     const meta = studentByEmail[email];
     if (!meta) continue; // hidden section or email not in students table — skip
     events.push({
-      id: `c-${email}-${row.module_number}-${row.topic_id}`,
+      id: `c-${emailKey(email)}-${row.module_number}-${row.topic_id}`,
       type: "completed",
       who: meta.name,
       section: meta.section,
@@ -139,7 +151,7 @@ export async function GET(req: NextRequest) {
     if (!meta.addedAt) continue;
     if (meta.addedAt < sinceIso) continue;
     events.push({
-      id: `j-${email}`,
+      id: `j-${emailKey(email)}`,
       type: "joined",
       who: meta.name,
       section: meta.section,

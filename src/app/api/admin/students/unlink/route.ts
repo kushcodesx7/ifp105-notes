@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/admin/students/unlink
 // Body: { email }
@@ -18,6 +19,18 @@ import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
+
+  // Defense-in-depth rate limit: even an authenticated admin
+  // shouldn't be able to script bulk-unlink 200 students in a
+  // minute. Scoped per admin so one compromised token can't DoS
+  // the roster.
+  const rl = await rateLimit({
+    bucket: "admin:destructive:unlink",
+    id: actorFromAuth(admin),
+    limit: 60,
+    windowSec: 300,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 60);
 
   const body = await req.json();
   const email = (body.email as string | undefined)?.toLowerCase().trim();

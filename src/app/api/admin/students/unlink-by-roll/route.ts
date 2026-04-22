@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/admin/students/unlink-by-roll
 // Body: { enrollmentNo, batchId?, dryRun? }
@@ -32,6 +33,17 @@ import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
+
+  // Defense-in-depth rate limit — mirrors /admin/students/unlink.
+  // Dry-run calls also consume quota so a script can't enumerate
+  // the whole roll_list by hammering the lookup path.
+  const rl = await rateLimit({
+    bucket: "admin:destructive:unlink-by-roll",
+    id: actorFromAuth(admin),
+    limit: 60,
+    windowSec: 300,
+  });
+  if (!rl.ok) return rateLimitResponse(rl, 60);
 
   const body = await req.json().catch(() => ({}));
   const enrollmentNo =
