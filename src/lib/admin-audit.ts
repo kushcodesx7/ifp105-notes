@@ -57,7 +57,15 @@ export type AdminActionKind =
   // Fills photo_url on student rows by fetching the og:image of each
   // student's saved LinkedIn URL — no new data entry, just a pull from
   // what students already filled out voluntarily.
-  | "backfill_linkedin_photos";
+  | "backfill_linkedin_photos"
+  // ── Live-class broadcast (Apr 2026) ──
+  // Teacher pushes a short message + optional "open this topic" deep
+  // link to every signed-in student. Students poll the latest
+  // broadcast every ~15s and surface it as a banner at the top of the
+  // page. Not destructive — just attention. `broadcast_cancel` lets
+  // the teacher retract a live broadcast before it auto-expires.
+  | "broadcast"
+  | "broadcast_cancel";
 
 export interface LogAdminActionInput {
   actorEmail: string;

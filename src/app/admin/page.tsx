@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
@@ -9,6 +10,12 @@ import { parseUtcIso } from "@/lib/parse-utc";
 import ActiveNowWidget from "@/components/admin/ActiveNowWidget";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { MODULES } from "@/lib/modules";
+
+// Derived from the single source. Replaces hard-coded [1,2,3,4,5]
+// loops. Same one-liner as in other files so a 6th module lands
+// everywhere automatically.
+const MODULE_IDS = MODULES.map((m) => m.id);
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -130,6 +137,14 @@ export default function AdminHomePage() {
              click. "All quiet today" shows when nothing warrants
              attention — a daily "you're good" reassurance. */}
         <AlertsRow data={data} loading={fetchLoading} />
+
+        {/* ─── Live-class broadcast composer ────────────────────────
+             Teacher-to-class attention pill. Type a short message
+             (optionally pick a module + topic to deep-link into),
+             click send, and every signed-in student's page gets a
+             banner at the top within ~15s. Shows recent broadcasts
+             below so the teacher can cancel before auto-expiry. */}
+        <BroadcastComposer idToken={idToken} />
 
         {/* ─── Live Now widget ─────────────────────────────────────
              Polls /api/admin/active-now every 20s. Shows students
@@ -626,5 +641,403 @@ function InsightPanel<T>({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Broadcast composer ──────────────────────────────────────────────
+//
+// Dashboard card that lets the teacher fire a short message to every
+// signed-in student. Body lives in admin_actions with action='broadcast'
+// (no dedicated table — see POST /api/admin/broadcast). Students poll
+// /api/broadcasts/latest every ~15s and surface the active broadcast
+// as a banner at the top of every page.
+//
+// UX:
+//   · Textarea with live character count (max 240 — fits two lines on
+//     a phone). Submit disabled until at least one non-whitespace char.
+//   · Optional module + topic dropdowns (topic options populate when a
+//     module is picked). When set, the student banner shows an
+//     "Open Module N · Topic M" deep-link button that jumps straight
+//     into the topic via the ?topic=N query param we already handle.
+//   · TTL slider (10 / 30 / 60 / 120 minutes). 30 is the default.
+//     Teacher can cancel early from the "Recent broadcasts" list below.
+//   · "Recent" section lists broadcasts from the last 24h with a
+//     green/red dot (live / expired / cancelled) and a Cancel button
+//     for live ones.
+//
+// Safety:
+//   · Confirms before sending if the teacher typed less than 5 chars
+//     (prevents accidental "hi" or test sends to the whole class).
+//   · Rate-limited server-side (admin_actions insert cost is trivial;
+//     the rate limiter is scoped per admin email).
+
+interface ActiveBroadcast {
+  id: number;
+  actorEmail: string;
+  createdAt: string;
+  message: string;
+  moduleNumber: number | null;
+  topicId: number | null;
+  expiresAt: string | null;
+  cancelledAt: string | null;
+  ttlMinutes: number | null;
+  status: "live" | "cancelled" | "expired";
+}
+
+const MAX_MESSAGE_LEN = 240;
+const TTL_CHOICES = [10, 30, 60, 120];
+
+function BroadcastComposer({ idToken }: { idToken: string | null }) {
+  const [message, setMessage] = useState("");
+  const [moduleNumber, setModuleNumber] = useState<number | null>(null);
+  const [topicId, setTopicId] = useState<number | null>(null);
+  const [ttlMinutes, setTtlMinutes] = useState<number>(30);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [recent, setRecent] = useState<ActiveBroadcast[] | null>(null);
+  const [lastSentId, setLastSentId] = useState<number | null>(null);
+
+  const fetchHeaders = useMemo(() => {
+    const h: Record<string, string> = { "content-type": "application/json" };
+    if (idToken) h["x-id-token"] = idToken;
+    return h;
+  }, [idToken]);
+
+  // Topic-count-per-module driven by the registry (MODULE_IDS +
+  // MODULES). Hard-coded 1..N here only because the client doesn't
+  // fetch per-module topics by default — we use the module's
+  // topicCount from MODULES so the dropdown reflects real topic
+  // numbers.
+  const topicsForModule = useMemo(() => {
+    if (moduleNumber == null) return [];
+    const m = MODULES.find((x) => x.id === moduleNumber);
+    if (!m) return [];
+    return Array.from({ length: m.topicCount }, (_, i) => i + 1);
+  }, [moduleNumber]);
+
+  async function loadRecent() {
+    try {
+      const res = await fetch("/api/broadcasts/active", {
+        headers: fetchHeaders,
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setRecent(json.broadcasts || []);
+    } catch {}
+  }
+
+  useEffect(() => {
+    loadRecent();
+    // Refresh the recent list every 30s so "live" badges flip to
+    // "expired" without the teacher refreshing the page.
+    const t = setInterval(loadRecent, 30_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idToken]);
+
+  async function send() {
+    const trimmed = message.trim();
+    if (!trimmed) {
+      setError("Type something first.");
+      return;
+    }
+    // Soft-confirm very short messages — catches accidental "hi" sends.
+    if (
+      trimmed.length < 5 &&
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Send "${trimmed}" to EVERY signed-in student? Short messages are usually test sends by accident.`
+      )
+    ) {
+      return;
+    }
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/broadcast", {
+        method: "POST",
+        headers: fetchHeaders,
+        body: JSON.stringify({
+          message: trimmed,
+          moduleNumber,
+          topicId,
+          ttlMinutes,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || `Failed (${res.status})`);
+      } else {
+        setLastSentId(json.id);
+        setMessage("");
+        // Don't reset module/topic — teacher often sends multiple
+        // broadcasts pointing to the same target during a class.
+        await loadRecent();
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function cancel(id: number) {
+    try {
+      const res = await fetch(
+        `/api/admin/broadcast?id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          headers: fetchHeaders,
+        }
+      );
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error || "Couldn't cancel.");
+        return;
+      }
+      await loadRecent();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  const charOver = message.length > MAX_MESSAGE_LEN;
+  const armed = !sending && !!message.trim() && !charOver;
+
+  return (
+    <section className="mb-6">
+      <div
+        className="rounded-2xl p-5"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(99,102,241,0.07), rgba(139,92,246,0.05))",
+          border: "1px solid rgba(99,102,241,0.25)",
+        }}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <div
+            className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+            style={{
+              background: "rgba(99,102,241,0.16)",
+              color: "#A5B4FC",
+            }}
+            aria-hidden="true"
+          >
+            📣
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-zinc-100 mb-0.5">
+              Broadcast to the class
+            </h3>
+            <p className="text-[12px] text-zinc-500 leading-relaxed">
+              Push a short message to every signed-in student. Optional
+              &quot;open this module/topic&quot; deep-link is shown as a
+              button on their banner.
+            </p>
+          </div>
+        </div>
+
+        {/* Compose row */}
+        <div className="space-y-2.5">
+          <div>
+            <label className="sr-only" htmlFor="broadcast-message">
+              Broadcast message
+            </label>
+            <textarea
+              id="broadcast-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="e.g. Everyone open Module 3 Topic 5 now — we'll work on it together for 10 min."
+              rows={2}
+              maxLength={MAX_MESSAGE_LEN + 30}
+              className="w-full px-3.5 py-3 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none resize-none"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: `1px solid ${charOver ? "rgba(239,68,68,0.45)" : "rgba(255,255,255,0.1)"}`,
+              }}
+            />
+            <div className="flex items-center justify-between mt-1">
+              <span
+                className={`text-[10px] ${charOver ? "text-red-400" : "text-zinc-500"} tabular-nums`}
+              >
+                {message.length}/{MAX_MESSAGE_LEN}
+              </span>
+              {lastSentId && !sending && !error && (
+                <span className="text-[10px] text-emerald-400">
+                  ✓ Sent — banner is live
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Deep-link target */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-zinc-500 font-semibold">
+              Deep link (optional):
+            </span>
+            <select
+              value={moduleNumber ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setModuleNumber(v ? parseInt(v, 10) : null);
+                setTopicId(null);
+              }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg text-zinc-200"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <option value="">No module</option>
+              {MODULE_IDS.map((id) => {
+                const m = MODULES.find((x) => x.id === id);
+                return (
+                  <option key={id} value={id}>
+                    Module {id} — {m?.title}
+                  </option>
+                );
+              })}
+            </select>
+            {moduleNumber != null && (
+              <select
+                value={topicId ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTopicId(v ? parseInt(v, 10) : null);
+                }}
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg text-zinc-200"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <option value="">Whole module</option>
+                {topicsForModule.map((n) => (
+                  <option key={n} value={n}>
+                    Topic {n}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* TTL */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-zinc-500 font-semibold">
+              Auto-expire after:
+            </span>
+            {TTL_CHOICES.map((mins) => {
+              const active = mins === ttlMinutes;
+              return (
+                <button
+                  key={mins}
+                  onClick={() => setTtlMinutes(mins)}
+                  className="text-[11px] font-semibold px-3 py-1 rounded-full transition-colors"
+                  style={{
+                    background: active
+                      ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
+                      : "rgba(255,255,255,0.04)",
+                    color: active ? "#fff" : "#A1A1AA",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Send */}
+          <button
+            onClick={send}
+            disabled={!armed}
+            className="w-full sm:w-auto sm:self-start px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+              boxShadow: "0 4px 16px rgba(99,102,241,0.35)",
+            }}
+          >
+            {sending ? "Sending…" : "📣 Send to everyone"}
+          </button>
+          {error && (
+            <p className="text-[12px] text-red-400 leading-relaxed">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* Recent list */}
+        {recent && recent.length > 0 && (
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">
+              Recent broadcasts (24h)
+            </div>
+            <ul className="space-y-1.5">
+              <AnimatePresence initial={false}>
+                {recent.map((b) => {
+                  const dotColor =
+                    b.status === "live"
+                      ? "#34D399"
+                      : b.status === "cancelled"
+                        ? "#A1A1AA"
+                        : "#F87171";
+                  return (
+                    <motion.li
+                      key={b.id}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex items-start gap-2 px-2.5 py-2 rounded-lg text-[12px]"
+                      style={{
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px solid rgba(255,255,255,0.05)",
+                      }}
+                    >
+                      <span
+                        className="shrink-0 mt-1 w-1.5 h-1.5 rounded-full"
+                        style={{ background: dotColor }}
+                        aria-hidden="true"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-zinc-200 leading-relaxed break-words">
+                          {b.message}
+                        </p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">
+                          {b.status === "live" ? "Live" : b.status === "cancelled" ? "Cancelled" : "Expired"}
+                          {" · "}
+                          {b.moduleNumber != null
+                            ? `→ M${b.moduleNumber}${b.topicId != null ? `·T${b.topicId}` : ""}`
+                            : "no deep-link"}
+                          {" · "}
+                          {new Date(b.createdAt).toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {" · "}
+                          {b.actorEmail}
+                        </p>
+                      </div>
+                      {b.status === "live" && (
+                        <button
+                          onClick={() => cancel(b.id)}
+                          className="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full text-red-300 hover:text-red-200"
+                          style={{
+                            background: "rgba(239,68,68,0.1)",
+                            border: "1px solid rgba(239,68,68,0.25)",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </motion.li>
+                  );
+                })}
+              </AnimatePresence>
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

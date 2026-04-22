@@ -193,6 +193,17 @@ const ACTION_META: Record<
     label: "LinkedIn photos backfilled",
     color: "#60A5FA",
   },
+  // Live-class broadcasts
+  broadcast: {
+    icon: "📣",
+    label: "Class broadcast sent",
+    color: "#818CF8",
+  },
+  broadcast_cancel: {
+    icon: "🚫",
+    label: "Broadcast cancelled",
+    color: "#A1A1AA",
+  },
 };
 
 const ACTION_FILTER_OPTIONS: { value: string; label: string }[] = [

@@ -4,6 +4,7 @@ import { DM_Serif_Display } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import AdminBarMount from "@/components/admin/AdminBarMount";
+import BroadcastBanner from "@/components/BroadcastBanner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getCurrentCourse } from "@/lib/course-registry";
 import "./globals.css";
@@ -90,6 +91,11 @@ export default function RootLayout({
               non-admin users never download the chunk. Must sit inside
               AuthProvider since it reads the signed-in user. */}
           <AdminBarMount />
+          {/* Live-class broadcast banner. Renders a fixed-top
+              attention pill on every page when the teacher pushes a
+              message via /admin. Self-suppresses on /admin routes so
+              the teacher doesn't see their own broadcast. */}
+          <BroadcastBanner />
           {children}
           {/* Vercel Speed Insights — sends anonymous Core Web Vitals
               (LCP / CLS / INP / TTFB) from real student devices to
