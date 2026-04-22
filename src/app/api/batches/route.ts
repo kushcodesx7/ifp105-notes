@@ -137,10 +137,66 @@ export async function POST(req: NextRequest) {
       .eq("section", section);
 
     if ((sectionRollCount || 0) > 0) {
-      // Section is populated but this roll isn't in it → real mismatch
+      // Section is populated but this roll isn't in it. Before
+      // blocking, look up where the roll ACTUALLY lives so we can
+      // tell the student their correct section instead of a vague
+      // "ask your teacher" — teacher report Apr 2026: every class
+      // had ~3 students hitting this error because they had guessed
+      // the wrong section on the registration form.
+      //
+      // Two lookups run in parallel:
+      //   a) same batch, any section — most likely case, just a
+      //      wrong-section guess
+      //   b) any batch, any section — covers the rarer case of
+      //      a student whose roll sits in last year's batch by
+      //      mistake
+      const [sameBatchRes, anywhereRes] = await Promise.all([
+        supabase
+          .from("roll_list")
+          .select("section")
+          .eq("batch_id", batchId)
+          .eq("enrollment_no", enrollmentNo.toUpperCase())
+          .maybeSingle(),
+        supabase
+          .from("roll_list")
+          .select("batch_id, section")
+          .eq("enrollment_no", enrollmentNo.toUpperCase())
+          .limit(5),
+      ]);
+
+      const foundSameBatch = (
+        sameBatchRes.data as { section?: string | null } | null
+      )?.section;
+      if (foundSameBatch) {
+        return Response.json(
+          {
+            error: `Roll ${enrollmentNo.toUpperCase()} is in ${foundSameBatch} of ${batchId}, not ${section}. Change the section above to ${foundSameBatch} and try again. If that's wrong too, ask your teacher.`,
+          },
+          { status: 403 }
+        );
+      }
+
+      const anywhere = (anywhereRes.data || []) as Array<{
+        batch_id: string;
+        section: string;
+      }>;
+      if (anywhere.length > 0) {
+        const locations = anywhere
+          .map((r) => `${r.section} of ${r.batch_id}`)
+          .join(", ");
+        return Response.json(
+          {
+            error: `Roll ${enrollmentNo.toUpperCase()} exists but in ${locations}, not ${section} of ${batchId}. Ask your teacher to move it, or correct the batch/section above.`,
+          },
+          { status: 403 }
+        );
+      }
+
+      // Roll genuinely doesn't exist anywhere in the roll_list.
+      // Could be a typo or a roll the teacher hasn't imported yet.
       return Response.json(
         {
-          error: `Roll number ${enrollmentNo.toUpperCase()} is not in ${section} of ${batchId}. Please double-check your section and enrollment number with your teacher.`,
+          error: `Roll ${enrollmentNo.toUpperCase()} isn't on the class roster yet. Double-check it's correct (no typos, right capitalisation). If it is, your teacher needs to add it to ${section} of ${batchId}.`,
         },
         { status: 403 }
       );

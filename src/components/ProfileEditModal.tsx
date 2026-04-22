@@ -13,10 +13,15 @@ interface ProfileEditModalProps {
   initialBio: string;
   initialSkills: string[];
   initialLinkedIn: string;
+  /** Current photo URL on the student's row. Modal shows it as a
+   *  circular preview + lets the student replace it. Null/empty
+   *  means "no photo yet" (shows initials). */
+  initialPhotoUrl?: string | null;
   onSaved: (next: {
     bio: string;
     skills: string[];
     linkedinUrl: string;
+    photoUrl: string | null;
   }) => void;
 }
 
@@ -27,12 +32,24 @@ export default function ProfileEditModal({
   initialBio,
   initialSkills,
   initialLinkedIn,
+  initialPhotoUrl,
   onSaved,
 }: ProfileEditModalProps) {
   const { getIdToken } = useAuth();
   const [bio, setBio] = useState(initialBio);
   const [skills, setSkills] = useState<string[]>(initialSkills);
   const [linkedIn, setLinkedIn] = useState(initialLinkedIn);
+  // Photo state added Apr 2026. Students on /connect used to have
+  // no way to change their photo from this modal — they had to
+  // navigate to /profile/edit. Now they can upload right here and
+  // the same URL writes to students.photo_url, so /connect cards +
+  // admin drawer + home widgets all see the same photo immediately.
+  const [photoUrl, setPhotoUrl] = useState<string | null>(
+    initialPhotoUrl ?? null
+  );
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,9 +59,10 @@ export default function ProfileEditModal({
       setBio(initialBio);
       setSkills(initialSkills);
       setLinkedIn(initialLinkedIn);
+      setPhotoUrl(initialPhotoUrl ?? null);
       setError("");
     }
-  }, [open, initialBio, initialSkills, initialLinkedIn]);
+  }, [open, initialBio, initialSkills, initialLinkedIn, initialPhotoUrl]);
 
   // Esc closes (matches every other dialog). Gated on `open` so we don't
   // fight other modals' keydown listeners when closed.
@@ -70,6 +88,46 @@ export default function ProfileEditModal({
     });
   }
 
+  async function handlePhotoUpload(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Photo must be under 5MB.");
+      return;
+    }
+    const token = getIdToken();
+    if (!token) {
+      setError("Please sign in again to upload a photo.");
+      return;
+    }
+    setUploading(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("email", email);
+      const res = await fetch("/api/profiles/upload", {
+        method: "POST",
+        headers: { "x-id-token": token },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setPhotoUrl(data.url);
+      } else {
+        setError(data.error || "Photo upload failed.");
+      }
+    } catch {
+      setError("Network error uploading photo.");
+    } finally {
+      setUploading(false);
+      // Reset the input so the same file can be re-picked if needed.
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   async function save() {
     setError("");
     const token = getIdToken();
@@ -90,6 +148,11 @@ export default function ProfileEditModal({
           bio: bio.trim(),
           skills,
           linkedinUrl: linkedIn.trim(),
+          // Only include photoUrl when the student has one — sending
+          // undefined lets /api/students/profile's Google-photo
+          // auto-fill kick in for students who signed in with Google
+          // but don't have a custom photo yet.
+          ...(photoUrl ? { photoUrl } : {}),
         }),
       });
       const data = await res.json();
@@ -97,10 +160,16 @@ export default function ProfileEditModal({
         setError(data.error || "Couldn't save. Try again.");
         return;
       }
+      // If the server auto-filled a Google photo (because we sent no
+      // photoUrl and the student's photo_url was empty), reflect the
+      // returned URL so the parent gets the correct value.
+      const finalPhoto =
+        data.photoUrl || photoUrl || initialPhotoUrl || null;
       onSaved({
         bio: bio.trim(),
         skills,
         linkedinUrl: linkedIn.trim(),
+        photoUrl: finalPhoto,
       });
       onClose();
     } catch {
@@ -158,6 +227,75 @@ export default function ProfileEditModal({
             </div>
 
             <div className="px-6 pb-6 space-y-5">
+              {/* Photo — upload + preview. Student sees their current
+                  photo as a circle; clicking it (or the Change
+                  button) opens a file picker. Uploaded photos are
+                  hosted on our Supabase storage bucket; the returned
+                  URL writes to students.photo_url on save, so the
+                  same photo instantly shows on the student's /connect
+                  card + home-page top-learners widget + admin drawer. */}
+              <div className="flex items-center gap-4">
+                <div
+                  className={`relative shrink-0 group ${
+                    uploading ? "cursor-wait opacity-80" : "cursor-pointer"
+                  }`}
+                  onClick={() => {
+                    if (uploading) return;
+                    fileInputRef.current?.click();
+                  }}
+                  title="Click to change photo"
+                >
+                  <div
+                    className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/[0.08] group-hover:border-indigo-500/50 transition-colors relative flex items-center justify-center"
+                    style={{ background: "rgba(255,255,255,0.04)" }}
+                  >
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photoUrl}
+                        alt="Your profile photo"
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="text-xl font-bold text-zinc-600">
+                        ?
+                      </span>
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-[10px] font-semibold">
+                        {uploading ? "…" : "Change"}
+                      </span>
+                    </div>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={uploading}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-zinc-200 mb-0.5">
+                    Profile photo
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Click the circle to upload a new photo. Shows on
+                    every page classmates see you on. Max 5MB.
+                  </p>
+                  {photoUrl && (
+                    <button
+                      onClick={() => setPhotoUrl(null)}
+                      className="text-[10px] text-red-400 hover:text-red-300 mt-1"
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Bio */}
               <div>
                 <label className="flex items-center justify-between text-xs font-semibold text-zinc-300 mb-2">

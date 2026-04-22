@@ -996,6 +996,11 @@ export default function IFSConnectPage() {
           initialBio={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.bio || ""}
           initialSkills={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.skills || []}
           initialLinkedIn={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.linkedinUrl || ""}
+          // Pass current photo so the modal can preview + replace it.
+          // When onSaved returns a new photoUrl, we mirror it into
+          // local state so the student's /connect card updates on
+          // the spot without waiting for the next /api/connect poll.
+          initialPhotoUrl={students.find((s) => s.enrollmentNo === user.enrollmentNo)?.photoUrl || null}
           onSaved={(next) => {
             setStudents((prev) =>
               prev.map((s) =>
@@ -1005,6 +1010,7 @@ export default function IFSConnectPage() {
                       bio: next.bio,
                       skills: next.skills,
                       linkedinUrl: next.linkedinUrl || null,
+                      photoUrl: next.photoUrl,
                     }
                   : s
               )
