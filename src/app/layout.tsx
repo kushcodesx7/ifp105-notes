@@ -47,20 +47,19 @@ export const metadata: Metadata = {
     type: "website",
     siteName: currentCourse.code,
     url: SITE_URL,
-    images: [
-      {
-        url: "/og-cover.png",
-        width: 1200,
-        height: 630,
-        alt: pageTitle,
-      },
-    ],
+    // OG image is generated at request time by src/app/opengraph-image.tsx
+    // (Next.js file convention) — pulls live course code + name from
+    // the course-registry. No static /public/og-cover.png to maintain.
+    // The file convention adds itself to openGraph.images automatically,
+    // so we don't declare `images` here.
   },
   twitter: {
     card: "summary_large_image",
     title: pageTitle,
     description: twitterDescription,
-    images: ["/og-cover.png"],
+    // `twitter-image.tsx` convention would mirror this, but Twitter +
+    // Telegram both fall back to openGraph.images when
+    // twitter.images is absent, so we let the OG generator serve both.
   },
   robots: "index, follow",
 };
