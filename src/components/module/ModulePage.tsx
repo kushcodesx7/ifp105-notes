@@ -12,6 +12,7 @@ import XpBar from "@/components/XpBar";
 import LoginPrompt from "@/components/module/LoginPrompt";
 import StudyStreak from "@/components/module/StudyStreak";
 import { updateStreak } from "@/lib/gamification";
+import { bumpStreak } from "@/lib/streak";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { CURRENT_COURSE_SLUG, getCurrentCourse } from "@/lib/course-registry";
@@ -225,9 +226,37 @@ export default function ModulePage({
   // (Localstorage progress load + persistence + remote Supabase sync
   // all moved into useStudentProgress above.)
 
-  // Restore last viewed topic on mount so refresh stays on same topic
+  // Restore last viewed topic on mount so refresh stays on same topic.
+  //
+  // Priority (Apr 2026):
+  //   1. URL query `?topic=N` (deep-link from the home "Continue"
+  //      strip — lets a signed-in student tap the strip and land on
+  //      the exact topic they're supposed to resume, not the module's
+  //      first topic).
+  //   2. Saved `ifp105_mN_active_tab` in localStorage (refresh/reload
+  //      stays on the current topic).
+  //   3. Default = Topic 1.
   useEffect(() => {
     try {
+      // Parse ?topic=N from the URL. Use window.location directly so
+      // we don't drag in useSearchParams (would force the module page
+      // into the dynamic-rendering branch).
+      if (typeof window !== "undefined") {
+        const qs = new URLSearchParams(window.location.search);
+        const topicParam = qs.get("topic");
+        if (topicParam) {
+          const n = parseInt(topicParam, 10);
+          if (n >= 1 && n <= TOTAL_TOPICS) {
+            setActiveTab(n);
+            // Persist immediately so a reload without the query param
+            // still lands back on this topic.
+            try {
+              localStorage.setItem(LS_ACTIVE_TAB_KEY, String(n));
+            } catch {}
+            return;
+          }
+        }
+      }
       const saved = localStorage.getItem(LS_ACTIVE_TAB_KEY);
       if (saved) {
         const n = parseInt(saved, 10);
@@ -235,7 +264,7 @@ export default function ModulePage({
       }
     } catch {}
     // Only on mount per module
-     
+
   }, [LS_ACTIVE_TAB_KEY, TOTAL_TOPICS]);
 
   // Persist active topic when it changes
@@ -305,6 +334,16 @@ export default function ModulePage({
       body: JSON.stringify({ currentPath }),
     }).catch(() => {});
   }, [isLoggedIn, user, getIdToken]);
+
+  // Study-streak bump on module-page open. Once per mount is enough —
+  // bumpStreak itself no-ops if today is already counted, so re-running
+  // it on every render would be wasteful but not wrong. Gated on
+  // isLoggedIn so anonymous browsers don't accumulate a streak that
+  // evaporates the moment they sign in on another device.
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    bumpStreak();
+  }, [isLoggedIn]);
 
   // Reading progress bar — rAF-throttled so setState fires at most once per frame
   useEffect(() => {
@@ -541,8 +580,72 @@ export default function ModulePage({
         </motion.div>
       </section>
 
-      {/* Tab Bar */}
-      <div className="sticky top-14 z-40" style={{ background: 'rgba(9,9,15,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1e1e28' }}>
+      {/* ─── Sticky topic-progress header ─────────────────────────
+           Sits between the Navbar (h-14 / 56px) and the existing tab
+           bar. Shows "Topic N of M · Module K · Title" on the left and
+           a mini progress indicator on the right that animates when
+           `done.size` changes — the whole bar springs to the new width
+           the moment a student clicks Mark-as-done, so they get
+           immediate visual confirmation without scrolling back up.
+           Hidden on the narrowest phones so the label doesn't collide
+           with itself — Tailwind's sm breakpoint (640px) comfortably
+           fits the full text. */}
+      <div
+        className="sticky top-14 z-40 hidden sm:flex items-center gap-3 px-5 h-9 bg-[#0A0A12]/90 backdrop-blur-[12px] border-b border-white/[0.06]"
+        role="status"
+        aria-label={`Topic ${activeTab} of ${topics.length}, ${done.size} complete`}
+      >
+        <div className="max-w-5xl mx-auto flex items-center gap-3 w-full">
+          <span className="text-[11px] font-semibold text-zinc-300 truncate">
+            <span className="text-zinc-500">Topic </span>
+            <span className="tabular-nums">{activeTab}</span>
+            <span className="text-zinc-500"> of </span>
+            <span className="tabular-nums">{topics.length}</span>
+            <span className="text-zinc-600 mx-1.5">·</span>
+            <span className="text-zinc-500">Module {moduleNumber}</span>
+            <span className="text-zinc-600 mx-1.5">·</span>
+            <span className="text-zinc-300">{moduleTitle}</span>
+          </span>
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <span
+              className="text-[10px] font-bold tabular-nums"
+              style={{ color: accentFrom }}
+            >
+              {done.size}/{topics.length}
+            </span>
+            <div
+              className="w-20 h-1 rounded-full overflow-hidden"
+              style={{ background: "rgba(255,255,255,0.08)" }}
+              role="progressbar"
+              aria-valuenow={done.size}
+              aria-valuemin={0}
+              aria-valuemax={topics.length}
+            >
+              {/* Spring on width so the bar snaps forward the instant a
+                   student marks a topic done — matches the rhythm of the
+                   confetti burst that fires at the same moment. */}
+              <motion.div
+                className="h-full rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})`,
+                }}
+                animate={{
+                  width: `${(done.size / topics.length) * 100}%`,
+                }}
+                transition={{ type: "spring", stiffness: 260, damping: 30 }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Bar — sits directly below the sticky topic-progress
+           header above. Using `top-[5.75rem]` (56px navbar + 36px new
+           header = 92px) so BOTH sticky elements pin one below the
+           other instead of overlapping. On mobile the new header is
+           hidden (sm:flex above), so dropping back to top-14 keeps
+           the tab bar glued to the navbar there. */}
+      <div className="sticky top-14 sm:top-[5.75rem] z-40" style={{ background: 'rgba(9,9,15,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1e1e28' }}>
         <div data-tour="tab-bar" role="tablist" aria-label="Topic navigation" className="max-w-5xl mx-auto flex items-center overflow-x-auto" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', maskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 40px), transparent)' }}>
           {topics.map((t) => (
             <button

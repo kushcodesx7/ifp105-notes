@@ -116,6 +116,11 @@ export default function ToolsPage() {
             LinkedIn URL but never uploaded a photo. Non-destructive. */}
         <BackfillLinkedInPhotosCard idToken={idToken} />
 
+        {/* Download one CSV row per (student, topic) touched on a
+            given day. Used for grading/attendance exports during a
+            session. */}
+        <ExportSessionCsvCard idToken={idToken} />
+
         {/* Audit log — ready */}
         <AuditLogCard idToken={idToken} />
 
@@ -187,6 +192,11 @@ const ACTION_META: Record<
     icon: "🃏",
     label: "TS flashcards migrated to DB",
     color: "#A78BFA",
+  },
+  export_session_csv: {
+    icon: "📥",
+    label: "Session CSV exported",
+    color: "#60A5FA",
   },
   // Backfill actions
   backfill_linkedin_photos: {
@@ -2164,6 +2174,245 @@ function UnlinkByRollCard({ idToken }: { idToken: string | null }) {
                           </p>
                         </div>
                       )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Export session CSV card ───────────────────────────────────
+
+// Fires a GET against /api/admin/export/session.csv with the
+// currently-selected date + optional batch + optional section. The
+// browser can't set custom headers on a normal <a download> click, so
+// we fetch the file as a blob (attaching the x-id-token auth header
+// the way every other admin call does), then anchor-click a
+// blob: URL to trigger the actual download.
+function ExportSessionCsvCard({ idToken }: { idToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<string>(() => {
+    return new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Tashkent",
+    });
+  });
+  const [batchId, setBatchId] = useState<string>("");
+  const [section, setSection] = useState<string>("");
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastDownload, setLastDownload] = useState<{
+    filename: string;
+    bytes: number;
+  } | null>(null);
+
+  // Same pattern as ResetAllProgressCard — lazy-load the cohort lists
+  // only once the card opens, so the default tools page render doesn't
+  // prefetch them.
+  const { data: cohortLists } = useAdminFetch<CohortLists>(
+    "/api/admin/summary",
+    { idToken },
+    { enabled: open, refreshInterval: 0 }
+  );
+  const sectionOptions = useMemo(
+    () => (cohortLists?.sectionHealth ?? []).map((s) => s.name),
+    [cohortLists]
+  );
+  const batchOptions = useMemo(
+    () => cohortLists?.batches ?? [],
+    [cohortLists]
+  );
+
+  async function download() {
+    setDownloading(true);
+    setError(null);
+    try {
+      const sp = new URLSearchParams();
+      if (date) sp.set("date", date);
+      if (batchId) sp.set("batchId", batchId);
+      if (section) sp.set("section", section);
+      const headers: Record<string, string> = {};
+      if (idToken) headers["x-id-token"] = idToken;
+      const res = await fetch(
+        `/api/admin/export/session.csv?${sp.toString()}`,
+        { headers }
+      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        setError(text || `HTTP ${res.status}`);
+        return;
+      }
+      const blob = await res.blob();
+      const filename = `ifp105-session-${date}.csv`;
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      setLastDownload({ filename, bytes: blob.size });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div
+      className="mb-6 rounded-2xl p-5 transition-colors"
+      style={{
+        background: "rgba(59,130,246,0.04)",
+        border: "1px solid rgba(59,130,246,0.22)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+          style={{ background: "rgba(59,130,246,0.14)", color: "#93C5FD" }}
+          aria-hidden="true"
+        >
+          📥
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div>
+              <div className="text-sm font-bold mb-0.5 text-blue-300">
+                Export today&apos;s session
+              </div>
+              <p className="text-[12px] text-zinc-500 leading-relaxed">
+                Download one CSV row per (student, topic) touched on the
+                chosen day — scores, Bloom levels, calibration flags. Date
+                is in Tashkent time. Optional batch + section narrow the
+                export to just the class you ran.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setOpen((v) => !v);
+                setError(null);
+              }}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
+              style={{
+                background: open
+                  ? "rgba(59,130,246,0.16)"
+                  : "rgba(255,255,255,0.06)",
+                color: open ? "#93C5FD" : "#D4D4D8",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {open ? "Close" : "Open"}
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="mt-4 pt-4 space-y-3"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                >
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <label className="block">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">
+                        Date
+                      </span>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full text-[12px] px-3 py-2 rounded-lg bg-black/30 border text-zinc-200"
+                        style={{
+                          borderColor: "rgba(255,255,255,0.1)",
+                        }}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">
+                        Batch (optional)
+                      </span>
+                      <select
+                        value={batchId}
+                        onChange={(e) => setBatchId(e.target.value)}
+                        className="w-full text-[12px] px-3 py-2 rounded-lg bg-black/30 border text-zinc-200"
+                        style={{
+                          borderColor: "rgba(255,255,255,0.1)",
+                        }}
+                      >
+                        <option value="">All batches</option>
+                        {batchOptions.map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 block">
+                        Section (optional)
+                      </span>
+                      <select
+                        value={section}
+                        onChange={(e) => setSection(e.target.value)}
+                        className="w-full text-[12px] px-3 py-2 rounded-lg bg-black/30 border text-zinc-200"
+                        style={{
+                          borderColor: "rgba(255,255,255,0.1)",
+                        }}
+                      >
+                        <option value="">All sections</option>
+                        {sectionOptions.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={download}
+                      disabled={downloading}
+                      className="text-[12px] font-semibold px-4 py-2 rounded-full transition-colors disabled:opacity-50"
+                      style={{
+                        background: "linear-gradient(135deg, #3B82F6, #60A5FA)",
+                        color: "white",
+                        boxShadow: "0 4px 14px rgba(59,130,246,0.35)",
+                      }}
+                    >
+                      {downloading ? "Preparing…" : "Download CSV"}
+                    </button>
+                    {lastDownload && !downloading && (
+                      <span className="text-[11px] text-emerald-400">
+                        Saved {lastDownload.filename} (
+                        {(lastDownload.bytes / 1024).toFixed(1)} KB)
+                      </span>
+                    )}
+                  </div>
+
+                  {error && (
+                    <div
+                      className="p-3 rounded-lg text-[12px] text-red-300"
+                      style={{
+                        background: "rgba(239,68,68,0.08)",
+                        border: "1px solid rgba(239,68,68,0.22)",
+                      }}
+                    >
+                      {error}
                     </div>
                   )}
                 </div>

@@ -555,12 +555,27 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── STUDY STREAK PILL ─── (signed-in only)
+           Sits above the continueData strip so students see their
+           current streak before deciding where to pick up. Client-only
+           because getStreak() reads localStorage; rendering it on the
+           server would cause a hydration flash. */}
+      {isLoggedIn && (
+        <section className="relative px-6 -mt-4 mb-4 z-10 flex justify-center">
+          <StreakPill />
+        </section>
+      )}
+
       {/* ─── CONTINUE LEARNING ─── */}
       {continueData && (
         <section className="relative px-6 -mt-8 mb-8 z-10">
           <div className="max-w-3xl mx-auto">
             <motion.a
-              href={continueData.href}
+              // Deep-link to the exact next-incomplete topic via
+              // `?topic=N` so the student lands mid-module instead of
+              // on the intro. ModulePage reads this query param on
+              // mount.
+              href={`${continueData.href}?topic=${continueData.topicId}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}

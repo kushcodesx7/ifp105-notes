@@ -391,6 +391,16 @@ export function useStudentProgress({
     (topicId: number) => {
       setDone((prev) => new Set([...prev, topicId]));
       if (isLoggedIn) saveToSupabase({ topicId, completed: true });
+      // Completing a topic counts as today's study activity, so tick
+      // the streak. Lazy-imported so this module stays importable in
+      // SSR / server-component contexts — streak.ts is itself SSR-safe
+      // but we keep the import off the server-side bundle graph so a
+      // future server-side caller doesn't pick up a localStorage
+      // reference it doesn't need. Fire-and-forget: we don't need the
+      // result, and any LS failure is swallowed inside bumpStreak.
+      import("@/lib/streak")
+        .then((mod) => mod.bumpStreak())
+        .catch(() => {});
     },
     [isLoggedIn, saveToSupabase]
   );

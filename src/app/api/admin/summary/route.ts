@@ -165,6 +165,7 @@ export async function GET(req: NextRequest) {
     name: string;
     section: string;
     completionPct: number;
+    completedCount: number;
     avgMcq: number | null;
     lastActive: string | null;
     daysSinceActive: number | null;
@@ -174,6 +175,7 @@ export async function GET(req: NextRequest) {
     const email = s.email!;
     const agg = byStudent.get(email);
     const completionPct = agg ? moduleWeightedPct(agg.modDone) : 0;
+    const completedCount = agg ? agg.completed : 0;
     const avg =
       agg && agg.mcqCount > 0 ? Math.round(agg.mcqSum / agg.mcqCount) : null;
     const lastActive = lastActiveMap[email] || null;
@@ -185,17 +187,38 @@ export async function GET(req: NextRequest) {
       name: s.name || "(no name)",
       section: s.section || "Section 1",
       completionPct,
+      completedCount,
       avgMcq: avg,
       lastActive,
       daysSinceActive,
     };
   });
 
-  // ─── Needs attention: 0% progress OR 14+ days inactive ──────────
+  // ─── Needs attention ───────────────────────────────────────────
+  // Widened Apr 2026 to feed the 3-tier at-risk card on /admin:
+  //   • Stuck      — never finished anything AND idle > 3 days
+  //   • Drifting   — some progress, but inactive 7+ days
+  //   • Cramming   — active within 2 days but behind (<30% done)
+  // UI slices per-tier to top 10 each; we keep the top 30 overall to
+  // cover all three tiers without shipping the full table.
   const needsAttention = studentScores
     .filter((s) => {
-      if (s.completionPct === 0) return true;
-      if (s.daysSinceActive !== null && s.daysSinceActive >= 14) return true;
+      const dsa = s.daysSinceActive;
+      // Stuck: nothing completed + not active in the last few days.
+      if (s.completedCount === 0 && (dsa === null || dsa > 3)) return true;
+      // Drifting: some progress but inactive 7+ days.
+      if (s.completedCount > 0 && dsa !== null && dsa >= 7) return true;
+      // Cramming behind: active within 2 days but way behind.
+      if (
+        s.completedCount > 0 &&
+        s.completionPct < 30 &&
+        dsa !== null &&
+        dsa <= 2
+      )
+        return true;
+      // Legacy fallback — keep anyone idle 14+ days so the number
+      // can't go backwards from the previous behaviour.
+      if (dsa !== null && dsa >= 14) return true;
       return false;
     })
     .sort((a, b) => {
@@ -204,7 +227,7 @@ export async function GET(req: NextRequest) {
         return a.completionPct - b.completionPct;
       return (b.daysSinceActive ?? 0) - (a.daysSinceActive ?? 0);
     })
-    .slice(0, 10);
+    .slice(0, 30);
 
   // ─── Top performers: blend completion + mcq, need some progress ─
   const topPerformers = studentScores

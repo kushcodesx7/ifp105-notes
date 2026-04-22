@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
@@ -26,6 +27,7 @@ interface StudentScore {
   name: string;
   section: string;
   completionPct: number;
+  completedCount?: number;
   avgMcq: number | null;
   lastActive: string | null;
   daysSinceActive: number | null;
@@ -239,32 +241,9 @@ export default function AdminHomePage() {
 
         {/* ─── Insights row ────────────────────────────────────── */}
         <div className="grid md:grid-cols-2 gap-4 mb-8">
-          <InsightPanel
-            title="🚨 Needs attention"
-            subtitle="0% progress or inactive 14d+"
-            empty="No students flagged — nice."
-            href="/admin/people?filter=atRisk"
+          <AtRiskTieredPanel
             items={data?.needsAttention ?? []}
             loading={fetchLoading}
-            renderItem={(s) => (
-              <Link
-                key={s.email}
-                href={`/admin/people?student=${encodeURIComponent(s.email)}`}
-                className="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-semibold text-zinc-200 truncate">
-                    {s.name}
-                  </div>
-                  <div className="text-[10px] text-zinc-500">
-                    {sectionShort(s.section)} · {s.completionPct}% done
-                  </div>
-                </div>
-                <div className="text-[10px] text-zinc-500 tabular-nums shrink-0">
-                  {daysAgo(s.lastActive)} ago
-                </div>
-              </Link>
-            )}
           />
 
           <InsightPanel
@@ -572,6 +551,247 @@ function KpiCard({
         </div>
       )}
     </Link>
+  );
+}
+
+// At-risk tiered panel — replaces the single flat "needs attention"
+// list with 3 severity tiers so the teacher can triage instead of
+// eyeballing a mixed list. Each tier collapses/expands independently
+// and offers two one-click actions per row: open the admin drawer
+// (navigates to /admin/people?student=…) and send a pre-filled
+// mailto:. The summary endpoint returns a widened set (top 30 across
+// all tiers), classified client-side so tier boundaries are visible
+// without a second round-trip.
+type AtRiskTier = {
+  key: "stuck" | "drifting" | "cramming";
+  icon: string;
+  label: string;
+  subtitle: string;
+  accent: string;
+  students: StudentScore[];
+};
+
+function classifyAtRisk(items: StudentScore[]): AtRiskTier[] {
+  const stuck: StudentScore[] = [];
+  const drifting: StudentScore[] = [];
+  const cramming: StudentScore[] = [];
+
+  for (const s of items) {
+    const completed = s.completedCount ?? (s.completionPct > 0 ? 1 : 0);
+    const dsa = s.daysSinceActive;
+    if (completed === 0 && (dsa === null || dsa > 3)) {
+      stuck.push(s);
+    } else if (completed > 0 && dsa !== null && dsa >= 7) {
+      drifting.push(s);
+    } else if (
+      completed > 0 &&
+      s.completionPct < 30 &&
+      dsa !== null &&
+      dsa <= 2
+    ) {
+      cramming.push(s);
+    }
+  }
+
+  return [
+    {
+      key: "stuck",
+      icon: "🔴",
+      label: "Stuck",
+      subtitle: "Haven't started · idle 3d+",
+      accent: "#F87171",
+      students: stuck.slice(0, 10),
+    },
+    {
+      key: "drifting",
+      icon: "🟡",
+      label: "Drifting",
+      subtitle: "Started but quiet for a week",
+      accent: "#FBBF24",
+      students: drifting.slice(0, 10),
+    },
+    {
+      key: "cramming",
+      icon: "🟠",
+      label: "Cramming behind",
+      subtitle: "Active but <30% done",
+      accent: "#FB923C",
+      students: cramming.slice(0, 10),
+    },
+  ];
+}
+
+function emailBody(name: string): string {
+  const first = (name || "").split(/\s+/)[0] || "there";
+  return `Hi ${first},\n\nJust a quick check-in from IFP105. I noticed you haven't made much progress on the notes lately — anything I can help unblock?\n\nIf you're stuck, reply to this email or catch me after class. If you're already on top of it, ignore this.\n\nThanks,\nDr Kush`;
+}
+
+function AtRiskTieredPanel({
+  items,
+  loading,
+}: {
+  items: StudentScore[];
+  loading: boolean;
+}) {
+  const tiers = classifyAtRisk(items);
+  const [openTier, setOpenTier] = useState<AtRiskTier["key"] | null>(() => {
+    // Default-open the most urgent non-empty tier so the teacher sees
+    // SOMETHING on first paint rather than three collapsed rows.
+    const first = tiers.find((t) => t.students.length > 0);
+    return first?.key ?? null;
+  });
+
+  const totalCount = tiers.reduce((sum, t) => sum + t.students.length, 0);
+
+  return (
+    <div
+      className="rounded-2xl p-5 card-glass flex flex-col"
+      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div>
+          <h2 className="text-sm font-bold text-zinc-300">🚨 Needs attention</h2>
+          <p className="text-[10px] text-zinc-500 mt-0.5">
+            Triaged · tap a tier to see the top 10
+          </p>
+        </div>
+        <Link
+          href="/admin/people?filter=atRisk"
+          className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 shrink-0"
+        >
+          See all →
+        </Link>
+      </div>
+
+      {loading && items.length === 0 ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-10 bg-white/[0.03] rounded-lg animate-pulse"
+            />
+          ))}
+        </div>
+      ) : totalCount === 0 ? (
+        <p className="text-[12px] text-zinc-500 italic py-2">
+          No students flagged — nice.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {tiers.map((tier) => {
+            const isOpen = openTier === tier.key;
+            const count = tier.students.length;
+            const disabled = count === 0;
+            return (
+              <div
+                key={tier.key}
+                className="rounded-lg overflow-hidden"
+                style={{
+                  background: `${tier.accent}08`,
+                  border: `1px solid ${tier.accent}22`,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (disabled) return;
+                    setOpenTier(isOpen ? null : tier.key);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.02] disabled:opacity-50 disabled:cursor-default"
+                  disabled={disabled}
+                  aria-expanded={isOpen}
+                >
+                  <span className="text-base leading-none" aria-hidden="true">
+                    {tier.icon}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-[12px] font-bold"
+                      style={{ color: tier.accent }}
+                    >
+                      {tier.label} · {count}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 truncate">
+                      {tier.subtitle}
+                    </div>
+                  </div>
+                  {!disabled && (
+                    <span
+                      className="text-[10px] text-zinc-500 shrink-0"
+                      aria-hidden="true"
+                    >
+                      {isOpen ? "▾" : "▸"}
+                    </span>
+                  )}
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {isOpen && count > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="px-2 pb-2 space-y-0.5"
+                        style={{ borderTop: `1px solid ${tier.accent}18` }}
+                      >
+                        {tier.students.map((s) => (
+                          <div
+                            key={s.email}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12px] font-semibold text-zinc-200 truncate">
+                                {s.name}
+                              </div>
+                              <div className="text-[10px] text-zinc-500 truncate">
+                                {sectionShort(s.section)} · {s.completionPct}% ·{" "}
+                                {daysAgo(s.lastActive)} ago
+                              </div>
+                            </div>
+                            <Link
+                              href={`/admin/people?student=${encodeURIComponent(
+                                s.email
+                              )}`}
+                              className="text-[10px] font-semibold px-2 py-1 rounded-md transition-colors shrink-0"
+                              style={{
+                                background: "rgba(255,255,255,0.06)",
+                                color: "#D4D4D8",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                              }}
+                              title="Open admin drawer"
+                            >
+                              Open
+                            </Link>
+                            <a
+                              href={`mailto:${s.email}?subject=${encodeURIComponent(
+                                "IFP105 — quick check-in"
+                              )}&body=${encodeURIComponent(emailBody(s.name))}`}
+                              className="text-[10px] font-semibold px-2 py-1 rounded-md transition-colors shrink-0"
+                              style={{
+                                background: `${tier.accent}18`,
+                                color: tier.accent,
+                                border: `1px solid ${tier.accent}40`,
+                              }}
+                              title="Send pre-filled check-in email"
+                            >
+                              ✉
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -702,6 +702,28 @@ function IctSeedPrompt({
   }, [scopeChoice]);
 
   async function runSeed(moduleNumber: number | null) {
+    // Extra belt-and-suspenders for Module 1 — this is the module the
+    // teacher has explicitly finalised by hand in the admin UI. The
+    // typed-confirmation gate already catches divergence, but Module 1
+    // is easy to muscle-memory past in a tired moment, so even for a
+    // non-divergent re-seed (or for all-modules scope that INCLUDES
+    // Module 1), we surface a native confirm() so the teacher has to
+    // physically OK "yes, re-seed Module 1 specifically". Non-Module-1
+    // seeds go straight through.
+    const touchesModule1 =
+      moduleNumber === 1 || (moduleNumber == null /* "all" */);
+    if (touchesModule1) {
+      const scopeLabel =
+        moduleNumber === 1 ? "Module 1 ONLY" : "ALL modules (including Module 1)";
+      const ok =
+        typeof window === "undefined"
+          ? true
+          : window.confirm(
+              `You are about to re-seed ${scopeLabel}.\n\nModule 1 is the one you finalised in the admin UI. Any admin-UI edits to Module 1 that differ from the TS source WILL BE OVERWRITTEN.\n\nContinue?`
+            );
+      if (!ok) return;
+    }
+
     setErr(null);
     setSeeding(true);
     try {

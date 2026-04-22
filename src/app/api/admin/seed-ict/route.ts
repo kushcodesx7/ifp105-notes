@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { MODULES } from "@/lib/modules";
+import { clearCourseIdCache } from "@/lib/course-registry";
 import type { ContentBlock } from "@/types/content";
 
 // POST /api/admin/seed-ict
@@ -137,6 +138,10 @@ export async function POST(req: NextRequest) {
   if (!rl.ok) return rateLimitResponse(rl, 2);
 
   // Resolve ICT course row. Phase 3 migration seeds it; bail if missing.
+  // Bust the in-process slug-id cache first so a teacher who ran a
+  // migration that dropped + recreated the courses row doesn't see a
+  // stale null on the first post-migration seed.
+  clearCourseIdCache("ict");
   const { data: course, error: courseErr } = await supabase
     .from("courses")
     .select("id")

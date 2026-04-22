@@ -53,6 +53,7 @@ export type AdminActionKind =
   // ── Content migration / one-shot actions (Phase 5.5) ──
   | "seed_ict"
   | "migrate_ts_flashcards"
+  | "export_session_csv"
   // ── Admin-only backfill actions (Apr 2026) ──
   // Fills photo_url on student rows by fetching the og:image of each
   // student's saved LinkedIn URL — no new data entry, just a pull from

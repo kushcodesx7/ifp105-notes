@@ -146,3 +146,24 @@ export async function getCourseIdBySlug(
 export async function getCurrentCourseId(): Promise<string | null> {
   return getCourseIdBySlug(CURRENT_COURSE_SLUG);
 }
+
+/**
+ * Invalidate the in-process slug → UUID cache.
+ *
+ * Call from admin endpoints that KNOW the courses table has changed:
+ *   · schema migrations that drop/recreate courses
+ *   · admin UI that deletes or re-slugs a course row
+ *   · test setup / teardown
+ *
+ * Not called automatically — the cache is correct for 99% of the
+ * lifetime of a serverless instance (the courses table is effectively
+ * immutable per deployment). But a teacher running the Phase 6
+ * multi-course migration mid-session would otherwise hit a stale
+ * cached null from /api/admin/seed-ict and silently skip writes.
+ *
+ * Takes no args → clears everything. Cheap.
+ */
+export function clearCourseIdCache(slug?: string): void {
+  if (slug) slugToIdCache.delete(slug);
+  else slugToIdCache.clear();
+}

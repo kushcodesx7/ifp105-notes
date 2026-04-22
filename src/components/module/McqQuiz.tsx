@@ -321,9 +321,24 @@ export default function McqQuiz({
   // initializers below share the same fingerprint-aligned answer/score
   // view. Without this, they'd each parse the blob and apply slightly
   // different fallback rules, and length-mismatched blobs would wipe
-  // some fields but not others. This also keeps the new fingerprint-
-  // based rehydration in a single code path.
-  const initialState = useState(() => {
+  // some fields but not others.
+  //
+  // Switched Apr 2026 from `useState(() => fn())[0]` to `useMemo(() =>
+  // fn(), [])` — the old pattern created a useState slot whose setter
+  // was discarded. Semantically identical but React's Strict Mode
+  // double-invoked the initialiser, briefly running the localStorage
+  // read + fingerprint rehydrate twice on every mount. `useMemo`
+  // invokes once. Deps intentionally empty: we want this snapshot
+  // frozen for the lifetime of the mount; the realignment useEffect
+  // below handles any subsequent fingerprint changes via proper state
+  // updates.
+  //
+  // Also `questions` is guarded — if it arrives empty on first render
+  // (next/dynamic race), fall back to `defaults` so the student sees
+  // a clean zero-state quiz instead of a fingerprint-mismatched
+  // rehydrate that would be reset by the realignment effect one tick
+  // later anyway.
+  const initialState = useMemo(() => {
     const defaults = {
       shuffleSeed: (topicId * 1000 + moduleNumber) ^ userSalt,
       shuffleVersion: CURRENT_SHUFFLE_VERSION,
@@ -334,6 +349,10 @@ export default function McqQuiz({
       currentQ: 0,
     };
     if (typeof window === "undefined") return defaults;
+    // Guard: if questions hasn't loaded yet (rare — dynamic import
+    // race), skip the fingerprint rehydrate and return defaults; the
+    // realignment effect picks things up once `questions` hydrates.
+    if (!Array.isArray(questions) || questions.length === 0) return defaults;
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return defaults;
@@ -356,7 +375,8 @@ export default function McqQuiz({
     } catch {
       return defaults;
     }
-  })[0];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load saved state or create fresh
   const [shuffleSeed, setShuffleSeed] = useState(initialState.shuffleSeed);
@@ -910,6 +930,39 @@ export default function McqQuiz({
             );
           })}
         </div>
+
+        {/* "Re-read this topic" nudge — only shown when the student
+            got at least one answer wrong. Closes the most-requested
+            learning loop: review screen exposes what's wrong → link
+            sends them back to the theory to re-read → redo quiz. */}
+        {score < total && (
+          <div className="px-5 pb-3">
+            <button
+              onClick={() => {
+                // Scroll to the top of the topic body (the McqQuiz
+                // component lives below the topic content, so a
+                // window.scrollTo(0,0) reliably lands the student on
+                // the theory block. Smooth-scroll so the transition
+                // feels intentional, not accidental.
+                if (typeof window !== "undefined") {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="w-full py-3 rounded-xl text-[13px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(99,102,241,0.22), rgba(139,92,246,0.18))",
+                border: "1px solid rgba(139,92,246,0.35)",
+              }}
+            >
+              📖 Why was I wrong? Re-read the topic above →
+            </button>
+            <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed text-center">
+              Scroll up to the topic content, skim the parts covering
+              the questions you missed, then come back and tap <em>Reset &amp; Try Again</em>.
+            </p>
+          </div>
+        )}
 
         {/* Bottom actions */}
         <div className="px-5 pb-5 flex gap-3">
