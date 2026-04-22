@@ -6,28 +6,12 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ModuleCard from "@/components/ModuleCard";
 import dynamic from "next/dynamic";
-import { mcqData as _m1 } from "@/data/module1-mcq";
-import { mcqData as _m2 } from "@/data/module2-mcq";
-import { mcqData as _m3 } from "@/data/module3-mcq";
-import { mcqData as _m4 } from "@/data/module4-mcq";
-import { mcqData as _m5 } from "@/data/module5-mcq";
-
-// Live count of MCQs across the whole course. Summed once at module
-// load so the home-page teaser never drifts from reality — previous
-// version hard-coded "540+ questions" which was off by nearly 60%
-// (actual ≈ 336). Recomputes at build time, not at render, so there's
-// no per-render cost.
-const TOTAL_QUESTIONS = [
-  _m1, _m2, _m3, _m4, _m5,
-].reduce(
-  (sum, data) =>
-    sum +
-    Object.values(data).reduce(
-      (modSum, arr) => modSum + (arr?.length ?? 0),
-      0
-    ),
-  0
-);
+// Single source of truth for the whole-course MCQ total lives in
+// src/lib/course-stats.ts — /admin/courses/ict and other places that
+// need the same number import the same constant. Previously this page
+// did its own sum + the admin page hard-coded "370 MCQs" literal.
+import { TOTAL_QUESTIONS } from "@/lib/course-stats";
+import { MODULES } from "@/lib/modules";
 
 // Lazy-load the social / peer-compare widgets — not critical for first paint, no SSR needed
 const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse"), {
@@ -701,7 +685,7 @@ export default function Home() {
                           border: "1px solid rgba(99,102,241,0.2)",
                         }}
                       >
-                        👋 Sign in to track <strong className="text-white">{TOTAL_QUESTIONS}+ questions like this</strong> across all 5 modules, see your Bloom&apos;s thinking profile, and unlock your section&apos;s leaderboard.
+                        👋 Sign in to track <strong className="text-white">{TOTAL_QUESTIONS}+ questions like this</strong> across all {MODULES.length} modules, see your Bloom&apos;s thinking profile, and unlock your section&apos;s leaderboard.
                       </div>
                     )}
                     <div className="flex items-center gap-4 flex-wrap">
@@ -802,7 +786,7 @@ export default function Home() {
               Pick a Module
             </h2>
             <p className="text-sm text-zinc-400 max-w-md mx-auto">
-              5 modules available now. Each is self-contained with theory, analogies, and quizzes.
+              {MODULES.length} modules available now. Each is self-contained with theory, analogies, and quizzes.
             </p>
           </RevealOnScroll>
 
