@@ -34,7 +34,15 @@ export async function GET(req: NextRequest) {
   const rawRoll = req.nextUrl.searchParams.get("enrollmentNo");
   const rawName = req.nextUrl.searchParams.get("name");
   const enrollmentNo = rawRoll && rawRoll.trim() ? rawRoll.trim().toUpperCase() : null;
-  const name = rawName && rawName.trim() ? rawName.trim() : null;
+  // Escape `%` and `_` so a curious/sloppy admin query like "komron%"
+  // matches the literal character instead of expanding as a SQL LIKE
+  // wildcard. PostgREST's .ilike() delegates directly to Postgres
+  // ILIKE which treats `%` as "anything" and `_` as "one char"; we
+  // want substring-match semantics only. Admin-only endpoint so this
+  // isn't a security fix so much as a correctness fix.
+  const name = rawName && rawName.trim()
+    ? rawName.trim().replace(/[\\%_]/g, (c) => `\\${c}`)
+    : null;
 
   if (!enrollmentNo && !name) {
     return Response.json(

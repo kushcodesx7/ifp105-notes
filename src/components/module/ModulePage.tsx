@@ -387,20 +387,65 @@ export default function ModulePage({
   // those stay reserved for handleQuizComplete's final save, so a
   // partial quiz never shows up as "75% Module 3 Topic 1" on the
   // home page card. See /api/progress (bloom_stats-only upsert path).
+  //
+  // Cross-topic flush: the ref-backed debounce slot is SHARED across
+  // topics (only one quiz mounts at a time, but switching topics
+  // unmounts+remounts and the ref survives). So if the student
+  // answers Topic 1 Q3, switches to Topic 2, and answers Q1 within
+  // 1.2s, the pending Topic 1 save would otherwise be replaced with
+  // Topic 2's and never fire. We detect the topic change and flush
+  // the pending save synchronously BEFORE queueing the new one.
+  //
+  // Unmount flush: leaving the module page (router navigation, not a
+  // hard reload) also needs to flush the pending save, otherwise the
+  // last answer's bloom data never reaches the server.
+  type BloomPayload = Parameters<typeof saveToSupabase>[0]["bloomStats"];
+  type ConfidencePayload = Parameters<typeof saveToSupabase>[0]["confidenceStats"];
   const incrementalSaveRef = useRef<{
     timer: ReturnType<typeof setTimeout> | null;
     lastTopicId: number | null;
-    lastBloom: unknown;
-    lastConfidence: unknown;
+    lastBloom: BloomPayload | null;
+    lastConfidence: ConfidencePayload | null;
   }>({ timer: null, lastTopicId: null, lastBloom: null, lastConfidence: null });
+
+  // Synchronously fire the pending save (if any) for whatever topic
+  // is currently parked in the ref. Used by both the cross-topic
+  // flush path and the unmount-cleanup effect.
+  const flushIncrementalSave = useCallback(() => {
+    const slot = incrementalSaveRef.current;
+    if (slot.timer) {
+      clearTimeout(slot.timer);
+      slot.timer = null;
+    }
+    if (slot.lastTopicId == null) return;
+    saveToSupabase({
+      topicId: slot.lastTopicId,
+      bloomStats: slot.lastBloom ?? undefined,
+      confidenceStats: slot.lastConfidence ?? undefined,
+    });
+    slot.lastTopicId = null;
+    slot.lastBloom = null;
+    slot.lastConfidence = null;
+  }, [saveToSupabase]);
+
   const handleAnswerProgress = useCallback(
     (
       topicId: number,
-      bloomStats: Partial<Record<string, { correct: number; total: number }>>,
-      confidenceStats: { rated: number; confidentWrong: number; humbleRight: number }
+      bloomStats: BloomPayload,
+      confidenceStats: ConfidencePayload
     ) => {
       if (!isLoggedIn) return; // anonymous users save nothing — LoginPrompt covers them on completion
       const slot = incrementalSaveRef.current;
+      // If a save is queued for a DIFFERENT topic, flush it first so
+      // we don't silently lose the student's Topic 1 progress when
+      // they start answering Topic 2.
+      if (
+        slot.timer &&
+        slot.lastTopicId != null &&
+        slot.lastTopicId !== topicId
+      ) {
+        flushIncrementalSave();
+      }
       slot.lastTopicId = topicId;
       slot.lastBloom = bloomStats;
       slot.lastConfidence = confidenceStats;
@@ -409,14 +454,23 @@ export default function ModulePage({
         if (slot.lastTopicId == null) return;
         saveToSupabase({
           topicId: slot.lastTopicId,
-          bloomStats: slot.lastBloom as Parameters<typeof saveToSupabase>[0]["bloomStats"],
-          confidenceStats: slot.lastConfidence as Parameters<typeof saveToSupabase>[0]["confidenceStats"],
+          bloomStats: slot.lastBloom ?? undefined,
+          confidenceStats: slot.lastConfidence ?? undefined,
         });
         slot.timer = null;
       }, 1200);
     },
-    [isLoggedIn, saveToSupabase]
+    [isLoggedIn, saveToSupabase, flushIncrementalSave]
   );
+
+  // Unmount flush: if the student navigates away before the 1.2s
+  // debounce fires, make sure the last answer still reaches the DB.
+  useEffect(() => {
+    return () => {
+      flushIncrementalSave();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function markDone(topicId: number) {
     // addDone updates the `done` Set AND fires the remote save.
