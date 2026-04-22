@@ -183,7 +183,7 @@ export default function HomeBloomsProfile() {
             )}
 
             {!weakMeta && data.calibration.confidentWrong === 0 && data.calibration.humbleRight === 0 && (
-              <div className="text-[12px] text-zinc-500 leading-relaxed italic">
+              <div className="text-[12px] text-zinc-400 leading-relaxed italic">
                 Complete a few more quizzes to unlock per-level insights and
                 confidence calibration.
               </div>

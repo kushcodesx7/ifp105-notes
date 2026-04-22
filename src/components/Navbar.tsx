@@ -430,7 +430,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                 href="/profile/edit"
                 aria-label="Edit your profile"
                 title="Edit profile · set quick-login password"
-                className="text-[11px] font-semibold transition-colors px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 inline-flex items-center gap-1 text-indigo-300 hover:text-indigo-200 hover:bg-indigo-500/[0.10]"
+                className="text-[11px] font-semibold transition-colors px-2 sm:px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 inline-flex items-center gap-1 text-indigo-300 hover:text-indigo-200 hover:bg-indigo-500/[0.10]"
                 style={{
                   background: "rgba(99,102,241,0.08)",
                   border: "1px solid rgba(99,102,241,0.18)",
@@ -440,7 +440,11 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                <span>Profile</span>
+                {/* 320px crush fix: hide the word on very narrow viewports
+                    where 7+ pills compete for space (admin accounts see
+                    Connect + Admin + Name + Profile + Logout all at
+                    once). Icon + aria-label preserve the affordance. */}
+                <span className="hidden sm:inline">Profile</span>
               </Link>
               <button
                 onClick={logout}
@@ -609,7 +613,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                       setPwError(null);
                       setSignInMode("google");
                     }}
-                    className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                    className="text-[12px] text-zinc-400 hover:text-zinc-300 transition-colors"
                   >
                     ← Use Google sign-in instead
                   </button>

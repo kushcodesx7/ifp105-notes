@@ -120,7 +120,7 @@ export default function CourseEditPage({
           <>
             <div className="mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold">{course.name}</h1>
-              <p className="text-sm text-zinc-500 mt-1">
+              <p className="text-sm text-zinc-400 mt-1">
                 <code className="text-zinc-400">{course.slug}</code> · edit
                 course metadata, manage modules
               </p>
@@ -155,7 +155,7 @@ export default function CourseEditPage({
             <div className="mt-8 mb-4 flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <h2 className="text-lg font-bold">Modules</h2>
-                <p className="text-[12px] text-zinc-500">
+                <p className="text-[12px] text-zinc-400">
                   {modules.length} module{modules.length === 1 ? "" : "s"}
                 </p>
               </div>
@@ -215,7 +215,7 @@ export default function CourseEditPage({
             </AnimatePresence>
 
             {modules.length === 0 && !creatingModule && !isICT && (
-              <div className="text-center py-8 text-sm text-zinc-500">
+              <div className="text-center py-8 text-sm text-zinc-400">
                 No modules yet. Click + New module to add the first one.
               </div>
             )}

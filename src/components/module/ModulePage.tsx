@@ -27,7 +27,7 @@ import type { ContentBlock, Question as CanonicalQuestion } from "@/types/conten
 const CheatSheet = dynamic(() => import("@/components/module/CheatSheet"), {
   ssr: false,
   loading: () => (
-    <div className="text-center py-12 text-sm text-zinc-500">
+    <div className="text-center py-12 text-sm text-zinc-400">
       Loading cheat sheet…
     </div>
   ),
@@ -622,7 +622,7 @@ export default function ModulePage({
             <br />
             <span className="text-zinc-400 text-3xl sm:text-4xl">{moduleSubtitle}</span>
           </h1>
-          <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed mb-6">{moduleDescription}</p>
+          <p className="text-sm text-zinc-400 max-w-md mx-auto leading-relaxed mb-6">{moduleDescription}</p>
           <div className="inline-flex items-center gap-0 rounded-xl overflow-hidden inner-glow"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {stats.map((s, i) => (

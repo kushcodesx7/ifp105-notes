@@ -44,22 +44,37 @@ export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
 
+  // Future-proof query caps. 218 students today → far below the 5k
+  // cap. But once this course scales past ~3k students (or gets used
+  // for a wider IFP cohort), the unbounded SELECT would pull every
+  // progress row into one response — 3k × ~40 topics = 120k rows.
+  // Hard cap at 5k/50k respectively as a defence-in-depth against
+  // accidental explosion. If the real cohort ever nears these caps
+  // we add server-side pagination + a ?cursor= param to the UI.
   const [studentsRes, rollsRes, sessionsRes, progressRes] = await Promise.all([
     supabase
       .from("students")
       .select(
         "email, name, enrollment_no, section, batch_id, photo_url, linkedin_url, bio, skills, added_at"
-      ),
+      )
+      .limit(5000),
     // Try to include name. Column may not exist yet → handled below.
-    supabase.from("roll_list").select("batch_id, section, enrollment_no, name"),
-    supabase.from("student_sessions").select("student_email, last_active_at"),
+    supabase
+      .from("roll_list")
+      .select("batch_id, section, enrollment_no, name")
+      .limit(5000),
+    supabase
+      .from("student_sessions")
+      .select("student_email, last_active_at")
+      .limit(5000),
     // Pull per-topic progress so we can build module breakdowns + aggregate
     // Bloom's stats by summing the JSONB columns across topics per student.
     supabase
       .from("student_progress")
       .select(
         "student_email, module_number, topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at, bloom_stats, confidence_stats"
-      ),
+      )
+      .limit(50000),
   ]);
 
   // Graceful: if bloom_stats column missing (migration pending), retry without.
@@ -72,7 +87,8 @@ export async function GET(req: NextRequest) {
       .from("student_progress")
       .select(
         "student_email, module_number, topic_id, completed, mcq_score, mcq_total, challenge_attempted, updated_at"
-      );
+      )
+      .limit(50000);
     progressRows = (fallback.data || []).map((r) => ({
       ...(r as Omit<TopicProgressRow, "bloom_stats" | "confidence_stats">),
       bloom_stats: null,

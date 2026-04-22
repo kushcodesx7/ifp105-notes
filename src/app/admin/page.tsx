@@ -114,7 +114,7 @@ export default function AdminHomePage() {
         <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Admin Home</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               Daily status · at-risk students · class health at a glance
             </p>
           </div>
@@ -634,7 +634,7 @@ function InsightPanel<T>({
           ))}
         </div>
       ) : items.length === 0 ? (
-        <p className="text-[12px] text-zinc-500 italic py-2">{empty}</p>
+        <p className="text-[12px] text-zinc-400 italic py-2">{empty}</p>
       ) : (
         <div className="space-y-0.5 -mx-2 max-h-72 overflow-y-auto">
           {items.map(renderItem)}
@@ -910,7 +910,7 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
             <h3 className="text-sm font-bold text-zinc-100 mb-0.5">
               Broadcast to the class
             </h3>
-            <p className="text-[12px] text-zinc-500 leading-relaxed">
+            <p className="text-[12px] text-zinc-400 leading-relaxed">
               Push a short message to every signed-in student. Optional
               &quot;open this module/topic&quot; deep-link is shown as a
               button on their banner.

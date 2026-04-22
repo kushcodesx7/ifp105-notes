@@ -74,7 +74,7 @@ export function ImageEditor({
         </div>
       ) : (
         <label
-          className="block cursor-pointer text-center py-6 rounded-lg text-[12px] text-zinc-500 hover:text-white transition-colors"
+          className="block cursor-pointer text-center py-6 rounded-lg text-[12px] text-zinc-400 hover:text-white transition-colors"
           style={{
             background: "rgba(99,102,241,0.04)",
             border: "1px dashed rgba(99,102,241,0.3)",

@@ -202,7 +202,7 @@ export default function FlashcardsEditor({
 
       {live.length === 0 && (
         <div
-          className="rounded-lg px-4 py-6 text-center text-[12px] text-zinc-500 italic mb-3"
+          className="rounded-lg px-4 py-6 text-center text-[12px] text-zinc-400 italic mb-3"
           style={{
             background: "rgba(255,255,255,0.02)",
             border: "1px dashed rgba(255,255,255,0.08)",

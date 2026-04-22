@@ -288,7 +288,7 @@ export default function BatchProgressDetailPage() {
             <h1 className="text-lg font-bold mb-1">
               {is404 ? `Batch "${batchId}" not found` : "Couldn't load this batch"}
             </h1>
-            <p className="text-sm text-zinc-500 mb-4">
+            <p className="text-sm text-zinc-400 mb-4">
               {is404
                 ? "It may have been renamed or deleted. Pick a different batch from the list."
                 : (fetchError as Error)?.message ||
@@ -468,7 +468,7 @@ export default function BatchProgressDetailPage() {
                         <p className="text-[10px] text-zinc-600 truncate">{s.email}</p>
                       </>
                     ) : (
-                      <p className="text-sm text-zinc-500 italic">Not registered yet</p>
+                      <p className="text-sm text-zinc-400 italic">Not registered yet</p>
                     )}
                   </div>
 

@@ -326,7 +326,7 @@ function PeoplePage() {
         <div className="flex items-end justify-between mb-5 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">People</h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               {data
                 ? `${filtered.length} shown · ${data.students.length} total`
                 : "Loading…"}

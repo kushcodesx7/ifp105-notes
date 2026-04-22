@@ -57,7 +57,7 @@ export default function ToolsPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold">Tools</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-sm text-zinc-400 mt-1">
             Destructive &amp; sensitive actions · audit trail
           </p>
         </div>
@@ -86,12 +86,12 @@ export default function ToolsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold mb-0.5">Trash</div>
-              <p className="text-[12px] text-zinc-500 leading-relaxed">
+              <p className="text-[12px] text-zinc-400 leading-relaxed">
                 Restore or permanently delete topics and questions you&apos;ve
                 moved to the bin. Deletes are recoverable until you purge them.
               </p>
             </div>
-            <span className="text-zinc-500 text-sm shrink-0">→</span>
+            <span className="text-zinc-400 text-sm shrink-0">→</span>
           </div>
         </Link>
 
@@ -341,7 +341,7 @@ function AuditLogCard({
       ) : rows.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-3xl mb-2">✨</div>
-          <p className="text-[12px] text-zinc-500">
+          <p className="text-[12px] text-zinc-400">
             No actions yet — or none match your filters.
           </p>
           <p className="text-[11px] text-zinc-600 mt-1">
@@ -637,7 +637,7 @@ function MigrateTsFlashcardsCard({
           <div className="text-sm font-bold mb-1">
             Migrate TS flashcards → DB
           </div>
-          <p className="text-[12px] text-zinc-500 leading-relaxed mb-3">
+          <p className="text-[12px] text-zinc-400 leading-relaxed mb-3">
             One-click move of every flashcard deck currently bundled in
             <code className="px-1 py-0.5 rounded bg-black/30 text-zinc-400 mx-1">src/data/flashcards.ts</code>
             into its matching topic in the database. After this, you can
@@ -1007,7 +1007,7 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
               <div className="text-sm font-bold mb-0.5 text-red-300">
                 Reset all student progress
               </div>
-              <p className="text-[12px] text-zinc-500 leading-relaxed mb-2">
+              <p className="text-[12px] text-zinc-400 leading-relaxed mb-2">
                 Wipes every row of <code className="text-zinc-400">student_progress</code>{" "}
                 across every module. Clients clear their localStorage on
                 next load so nothing re-uploads.
@@ -1614,7 +1614,7 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
               <div className="text-sm font-bold mb-0.5 text-blue-300">
                 Profile photo coverage
               </div>
-              <p className="text-[12px] text-zinc-500 leading-relaxed">
+              <p className="text-[12px] text-zinc-400 leading-relaxed">
                 Students get a photo automatically when they sign in
                 with Google and open{" "}
                 <code className="text-zinc-400">/profile/edit</code> —
@@ -1658,7 +1658,7 @@ function BackfillLinkedInPhotosCard({ idToken }: { idToken: string | null }) {
                   style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
                 >
                   {loading && !report && (
-                    <div className="text-[12px] text-zinc-500">
+                    <div className="text-[12px] text-zinc-400">
                       Counting photos…
                     </div>
                   )}
@@ -1998,7 +1998,7 @@ function UnlinkByRollCard({ idToken }: { idToken: string | null }) {
               <div className="text-sm font-bold mb-0.5 text-amber-300">
                 Unlink stuck roll
               </div>
-              <p className="text-[12px] text-zinc-500 leading-relaxed">
+              <p className="text-[12px] text-zinc-400 leading-relaxed">
                 When a student sees &ldquo;duplicate key&rdquo; or
                 &ldquo;roll already registered&rdquo; on the sign-up form,
                 someone else has claimed their roll. Type the roll
@@ -2299,7 +2299,7 @@ function RollLookupCard({ idToken }: { idToken: string | null }) {
               <div className="text-sm font-bold mb-0.5 text-indigo-300">
                 Look up a roll or name
               </div>
-              <p className="text-[12px] text-zinc-500 leading-relaxed">
+              <p className="text-[12px] text-zinc-400 leading-relaxed">
                 Search by roll number OR by name. Shows where the roll
                 sits in the roster and whether they&apos;ve registered
                 yet. Read-only — not logged.

@@ -137,7 +137,7 @@ export default function QuestionBankPage({
 
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold">MCQ bank</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-sm text-zinc-400 mt-1">
             Every question in this course · Bloom&apos;s distribution · filter by module or level
           </p>
         </div>
@@ -254,7 +254,7 @@ export default function QuestionBankPage({
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-sm text-zinc-500">
+          <div className="text-center py-12 text-sm text-zinc-400">
             No questions match these filters.
           </div>
         ) : (

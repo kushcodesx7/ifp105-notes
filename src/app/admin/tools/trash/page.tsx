@@ -163,7 +163,7 @@ export default function TrashPage() {
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <span aria-hidden="true">🗑️</span> Trash
             </h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               Soft-deleted topics, questions, and flashcards. Restore anytime, or permanently delete to free up the slot.
             </p>
           </div>
@@ -203,7 +203,7 @@ export default function TrashPage() {
           >
             <div className="text-4xl mb-3">✨</div>
             <h2 className="text-base font-bold mb-1">Bin is empty</h2>
-            <p className="text-sm text-zinc-500 max-w-sm mx-auto">
+            <p className="text-sm text-zinc-400 max-w-sm mx-auto">
               Deleted topics, questions, and flashcards show up here. Every
               delete goes to the bin first — nothing is lost on a misclick.
             </p>

@@ -276,6 +276,10 @@ export default function ProfileEditModal({
                       <img
                         src={photoUrl}
                         alt="Your profile photo"
+                        width={64}
+                        height={64}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />

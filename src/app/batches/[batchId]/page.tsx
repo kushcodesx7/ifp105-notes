@@ -561,7 +561,7 @@ export default function BatchDetailPage() {
               <p className="text-zinc-600 text-sm">Be the first to add your career profile!</p>
             </motion.div>
           ) : filteredProfiles.length === 0 ? (
-            <div className="text-center py-16 text-zinc-500 text-sm">
+            <div className="text-center py-16 text-zinc-400 text-sm">
               No profiles match your filters.
             </div>
           ) : (
@@ -680,7 +680,7 @@ export default function BatchDetailPage() {
                     setGoogleUser(null);
                     setError("");
                   }}
-                  className="mt-4 w-full py-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="mt-4 w-full py-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors"
                 >
                   Cancel
                 </button>
