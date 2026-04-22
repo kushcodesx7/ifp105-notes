@@ -96,6 +96,7 @@ import { getCurrentCourse } from "@/lib/course-registry";
 import { progressKey } from "@/lib/storage-keys";
 import { RevealOnScroll } from "@/components/ui/RevealOnScroll";
 import CoursePicker from "@/components/CoursePicker";
+import StreakPill from "@/components/StreakPill";
 
 // Module grid on the home page. Derived from the course registry so
 // titles / accents / topic counts can't drift between this page and
