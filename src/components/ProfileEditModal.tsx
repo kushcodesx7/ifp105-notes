@@ -243,6 +243,28 @@ export default function ProfileEditModal({
                     if (uploading) return;
                     fileInputRef.current?.click();
                   }}
+                  // A11y: the avatar tile is the upload affordance but
+                  // was a plain <div> — keyboard users couldn't reach
+                  // it and screen readers couldn't identify it. Making
+                  // it a button-role focusable element with an
+                  // Enter/Space handler fixes both.
+                  role="button"
+                  tabIndex={uploading ? -1 : 0}
+                  aria-label={
+                    uploading
+                      ? "Uploading profile photo"
+                      : photoUrl
+                        ? "Change profile photo"
+                        : "Upload profile photo"
+                  }
+                  aria-busy={uploading || undefined}
+                  onKeyDown={(e) => {
+                    if (uploading) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
                   title="Click to change photo"
                 >
                   <div

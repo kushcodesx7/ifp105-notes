@@ -561,6 +561,8 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                     placeholder="e.g. 24-IFS-001"
                     autoComplete="username"
                     autoFocus
+                    aria-invalid={!!pwError}
+                    aria-describedby={pwError ? "nav-pw-error" : undefined}
                     className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
                   />
                 </div>
@@ -574,11 +576,24 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
                     onChange={(e) => setPwPassword(e.target.value)}
                     placeholder="Your quick-login password"
                     autoComplete="current-password"
+                    aria-invalid={!!pwError}
+                    aria-describedby={pwError ? "nav-pw-error" : undefined}
                     className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
                   />
                 </div>
                 {pwError && (
-                  <p className="text-[12px] text-red-400">{pwError}</p>
+                  // role=alert + aria-live announces the failure as
+                  // soon as it lands; aria-describedby on the inputs
+                  // ties the field back to this message for SR users
+                  // tabbing into the form.
+                  <p
+                    id="nav-pw-error"
+                    role="alert"
+                    aria-live="polite"
+                    className="text-[12px] text-red-400"
+                  >
+                    {pwError}
+                  </p>
                 )}
                 <button
                   type="submit"
