@@ -15,6 +15,7 @@ import { updateStreak } from "@/lib/gamification";
 import { useAuth } from "@/lib/auth-context";
 import { addBookmark, removeBookmark, isBookmarked } from "@/lib/bookmarks";
 import { CURRENT_COURSE_SLUG, getCurrentCourse } from "@/lib/course-registry";
+import { MODULES } from "@/lib/modules";
 import { prettyName } from "@/lib/names";
 import { activeTabKey } from "@/lib/storage-keys";
 import { useStudentProgress } from "@/lib/use-student-progress";
@@ -962,7 +963,10 @@ export default function ModulePage({
                   <span aria-hidden="true">📋</span>
                   Share on LinkedIn
                 </button>
-                {moduleNumber < 5 && (
+                {/* "Continue to Next Module" — shows for every module
+                    except the last. Previously gated on `moduleNumber < 5`
+                    which silently breaks when a 6th module lands. */}
+                {moduleNumber < MODULES.length && (
                   <a
                     href={`/module/${moduleNumber + 1}`}
                     className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01]"
