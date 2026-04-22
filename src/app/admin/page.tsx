@@ -678,24 +678,45 @@ interface ActiveBroadcast {
   message: string;
   moduleNumber: number | null;
   topicId: number | null;
+  targetBatchId: string | null;
+  targetSection: string | null;
   expiresAt: string | null;
   cancelledAt: string | null;
   ttlMinutes: number | null;
   status: "live" | "cancelled" | "expired";
 }
 
+// Minimal batch info needed by the audience selector. Pulled from
+// /api/batches/admin (same source the Roster page uses) so we never
+// show a batch that doesn't actually exist.
+interface BroadcastBatchInfo {
+  id: string;
+  name: string;
+  sections: string[]; // unique, sorted
+}
+
 const MAX_MESSAGE_LEN = 240;
-const TTL_CHOICES = [10, 30, 60, 120];
+// Short TTLs (1-5m) are for live-class "everyone open X now" nudges
+// that auto-clear before the next activity. Longer TTLs (10m+) are
+// for pre-class reminders. Keep them in one sorted list so the UI
+// just maps straight through.
+const TTL_CHOICES = [1, 2, 3, 5, 10, 30, 60, 120];
 
 function BroadcastComposer({ idToken }: { idToken: string | null }) {
   const [message, setMessage] = useState("");
   const [moduleNumber, setModuleNumber] = useState<number | null>(null);
   const [topicId, setTopicId] = useState<number | null>(null);
-  const [ttlMinutes, setTtlMinutes] = useState<number>(30);
+  const [ttlMinutes, setTtlMinutes] = useState<number>(10);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<ActiveBroadcast[] | null>(null);
   const [lastSentId, setLastSentId] = useState<number | null>(null);
+  // Audience targeting. null = send to everyone (default + previous
+  // behaviour). Setting targetBatchId narrows to one batch; setting
+  // targetSection further narrows to one section of that batch.
+  const [targetBatchId, setTargetBatchId] = useState<string | null>(null);
+  const [targetSection, setTargetSection] = useState<string | null>(null);
+  const [batches, setBatches] = useState<BroadcastBatchInfo[]>([]);
 
   const fetchHeaders = useMemo(() => {
     const h: Record<string, string> = { "content-type": "application/json" };
@@ -736,6 +757,56 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idToken]);
 
+  // Load batches + derive per-batch section lists for the audience
+  // selector. Sections come from both rolls (roster) and registered
+  // students — a section with zero imported rolls still shows up if
+  // a student registered there, so the teacher can broadcast into it.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBatches() {
+      try {
+        const res = await fetch("/api/batches/admin", {
+          headers: fetchHeaders,
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        type AdminBatchShape = {
+          id: string;
+          name: string;
+          rolls?: { section?: string | null }[];
+          students?: { section?: string | null }[];
+        };
+        const next: BroadcastBatchInfo[] = (
+          (json.batches ?? []) as AdminBatchShape[]
+        ).map((b) => {
+          const uniq = new Set<string>();
+          for (const r of b.rolls ?? []) {
+            if (r.section) uniq.add(r.section);
+          }
+          for (const s of b.students ?? []) {
+            if (s.section) uniq.add(s.section);
+          }
+          const sections = Array.from(uniq).sort((a, z) => a.localeCompare(z));
+          return { id: b.id, name: b.name, sections };
+        });
+        if (!cancelled) setBatches(next);
+      } catch {
+        // Non-fatal — composer still works for "send to everyone".
+      }
+    }
+    loadBatches();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idToken]);
+
+  const activeBatch = useMemo(
+    () => batches.find((b) => b.id === targetBatchId) || null,
+    [batches, targetBatchId]
+  );
+
   async function send() {
     const trimmed = message.trim();
     if (!trimmed) {
@@ -743,11 +814,18 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
       return;
     }
     // Soft-confirm very short messages — catches accidental "hi" sends.
+    // Audience label reflects the currently selected target so the
+    // confirm dialog names exactly who will see it.
+    const audienceLabel = targetBatchId
+      ? targetSection
+        ? `${targetSection} of ${targetBatchId}`
+        : `every section of ${targetBatchId}`
+      : "EVERY signed-in student";
     if (
       trimmed.length < 5 &&
       typeof window !== "undefined" &&
       !window.confirm(
-        `Send "${trimmed}" to EVERY signed-in student? Short messages are usually test sends by accident.`
+        `Send "${trimmed}" to ${audienceLabel}? Short messages are usually test sends by accident.`
       )
     ) {
       return;
@@ -763,6 +841,8 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
           moduleNumber,
           topicId,
           ttlMinutes,
+          targetBatchId,
+          targetSection,
         }),
       });
       const json = await res.json();
@@ -922,6 +1002,54 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
             )}
           </div>
 
+          {/* Audience — who receives this broadcast */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-zinc-500 font-semibold">
+              Send to:
+            </span>
+            <select
+              value={targetBatchId ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setTargetBatchId(v || null);
+                setTargetSection(null); // reset section when batch changes
+              }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg text-zinc-200"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <option value="">Everyone</option>
+              {batches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            {activeBatch && activeBatch.sections.length > 0 && (
+              <select
+                value={targetSection ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTargetSection(v || null);
+                }}
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg text-zinc-200"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <option value="">All sections</option>
+                {activeBatch.sections.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           {/* TTL */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-zinc-500 font-semibold">
@@ -958,7 +1086,13 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
               boxShadow: "0 4px 16px rgba(99,102,241,0.35)",
             }}
           >
-            {sending ? "Sending…" : "📣 Send to everyone"}
+            {sending
+              ? "Sending…"
+              : targetBatchId
+                ? targetSection
+                  ? `📣 Send to ${targetSection} of ${targetBatchId}`
+                  : `📣 Send to ${targetBatchId} (all sections)`
+                : "📣 Send to everyone"}
           </button>
           {error && (
             <p className="text-[12px] text-red-400 leading-relaxed">
@@ -1005,6 +1139,12 @@ function BroadcastComposer({ idToken }: { idToken: string | null }) {
                         </p>
                         <p className="text-[10px] text-zinc-500 mt-0.5">
                           {b.status === "live" ? "Live" : b.status === "cancelled" ? "Cancelled" : "Expired"}
+                          {" · "}
+                          {b.targetBatchId
+                            ? b.targetSection
+                              ? `👥 ${b.targetSection} of ${b.targetBatchId}`
+                              : `👥 ${b.targetBatchId}`
+                            : "👥 everyone"}
                           {" · "}
                           {b.moduleNumber != null
                             ? `→ M${b.moduleNumber}${b.topicId != null ? `·T${b.topicId}` : ""}`

@@ -14,8 +14,19 @@ const MODULE_IDS = MODULES.map((m) => m.id);
 //   message: string,                 // 1..240 chars
 //   moduleNumber?: number | null,    // optional deep-link target
 //   topicId?: number | null,         // requires moduleNumber
-//   ttlMinutes?: number              // default 30, max 240
+//   ttlMinutes?: number,             // default 30, max 240
+//   targetBatchId?: string | null,   // optional audience filter
+//   targetSection?: string | null,   // optional audience filter (requires targetBatchId)
 // }
+//
+// Audience targeting: when targetBatchId is set the broadcast is
+// only shown to students whose batchId matches; targetSection
+// narrows further to a specific section of that batch. Both null =
+// send to everyone (default, preserves the one-click path). Filtering
+// happens in the student's browser (the /latest endpoint returns the
+// target fields and the banner checks against the logged-in
+// student's own batch/section). This keeps /latest CDN-cacheable —
+// see the comment there for the architecture rationale.
 //
 // Fires a short attention-grabbing banner to every signed-in student.
 // Storage: one row in admin_actions with action='broadcast' and a
@@ -99,6 +110,24 @@ export async function POST(req: NextRequest) {
       ? Math.min(Math.floor(rawTtl), MAX_TTL_MIN)
       : DEFAULT_TTL_MIN;
 
+  // Audience filters. Both optional — null means "everyone".
+  // Light validation: trim strings, reject suspiciously long ones
+  // (a batch id like "2025-2026" is ~10 chars; 64 is ample headroom
+  // and stops malformed payloads from polluting details JSON).
+  const rawTargetBatch = body.targetBatchId;
+  const targetBatchId =
+    typeof rawTargetBatch === "string" && rawTargetBatch.trim()
+      ? rawTargetBatch.trim().slice(0, 64)
+      : null;
+  const rawTargetSection = body.targetSection;
+  const targetSectionRaw =
+    typeof rawTargetSection === "string" && rawTargetSection.trim()
+      ? rawTargetSection.trim().slice(0, 64)
+      : null;
+  // A section without a batch doesn't make sense (Section 3 of which
+  // batch?). Drop it rather than 400ing — safer default, still logged.
+  const targetSection = targetBatchId ? targetSectionRaw : null;
+
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlMinutes * 60_000);
 
@@ -113,6 +142,8 @@ export async function POST(req: NextRequest) {
       moduleNumber,
       topicId,
       ttlMinutes,
+      targetBatchId,
+      targetSection,
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       cancelledAt: null,
@@ -146,6 +177,8 @@ export async function POST(req: NextRequest) {
     expiresAt: expiresAt.toISOString(),
     moduleNumber,
     topicId,
+    targetBatchId,
+    targetSection,
     message: rawMessage,
   });
 }

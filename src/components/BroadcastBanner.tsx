@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useAuth } from "@/lib/auth-context";
 
 // Attention banner that surfaces the latest teacher broadcast at the
 // top of every page for every signed-in student.
@@ -34,6 +35,14 @@ interface Broadcast {
   message: string;
   moduleNumber: number | null;
   topicId: number | null;
+  // Audience filters. Both null = send to everyone. When set, the
+  // banner only renders for students whose own batchId/section match.
+  // Filtering here (client-side) rather than in the API keeps
+  // /api/broadcasts/latest CDN-cacheable — one response serves all
+  // ~220 polling students. Unseen broadcast payloads for the "wrong"
+  // audience are harmless: the banner simply never paints them.
+  targetBatchId: string | null;
+  targetSection: string | null;
   createdAt: string;
   expiresAt: string;
 }
@@ -68,6 +77,7 @@ function writeDismissed(ids: Set<number>) {
 }
 
 export default function BroadcastBanner() {
+  const { user } = useAuth();
   const [broadcast, setBroadcast] = useState<Broadcast | null>(null);
   const [dismissed, setDismissed] = useState<Set<number>>(() => readDismissed());
   // `suppressedByPath` gates the banner on routes where it would be
@@ -152,10 +162,32 @@ export default function BroadcastBanner() {
     writeDismissed(next);
   }
 
-  // Nothing to render if: admin page, no broadcast, or already
-  // dismissed.
+  // Audience match check. If the broadcast targets a batch/section,
+  // the signed-in student must match for it to render.
+  //   - target null  → everyone
+  //   - targetBatchId set  → must match user.batchId
+  //   - targetSection also set → must also match user.section
+  // If the user hasn't loaded a profile yet (user == null, e.g. not
+  // signed in), a targeted broadcast is suppressed — the teacher
+  // isn't trying to reach anonymous visitors.
+  const targetsMe = (() => {
+    if (!broadcast) return false;
+    if (!broadcast.targetBatchId) return true; // global broadcast
+    if (!user) return false;
+    if (user.batchId !== broadcast.targetBatchId) return false;
+    if (broadcast.targetSection && user.section !== broadcast.targetSection) {
+      return false;
+    }
+    return true;
+  })();
+
+  // Nothing to render if: admin page, no broadcast, already
+  // dismissed, or the broadcast is aimed at a different audience.
   const show =
-    !suppressedByPath && broadcast && !dismissed.has(broadcast.id);
+    !suppressedByPath &&
+    broadcast &&
+    !dismissed.has(broadcast.id) &&
+    targetsMe;
 
   // Compute the deep-link when the broadcast has a module target.
   const deepLink = broadcast?.moduleNumber

@@ -13,13 +13,22 @@ import { supabase } from "@/lib/supabase";
 //
 // Shape:
 //   { broadcast: null }
-//   { broadcast: { id, message, moduleNumber, topicId, createdAt, expiresAt } }
+//   { broadcast: { id, message, moduleNumber, topicId, targetBatchId,
+//                   targetSection, createdAt, expiresAt } }
 //
 // Public (no auth). Broadcasts are, by design, visible to every
 // student — they're class-wide announcements, not personalised.
 // Cached briefly at the CDN so ~220 students polling every 15s
 // doesn't slam the DB; `revalidatePath` on the admin POST+DELETE
 // keeps freshness on state changes.
+//
+// Audience targeting: targetBatchId + targetSection are returned
+// straight to the client. The BroadcastBanner compares them against
+// the signed-in student's own batch/section and skips rendering on a
+// mismatch. Doing the filter client-side keeps the endpoint
+// cacheable (one response → all 220 students) which is the whole
+// reason this endpoint is fast at poll-every-15s. A "leaked" message
+// in a non-targeted browser is harmless — it just never paints.
 
 export async function GET(_req: NextRequest) {
   // Pull recent broadcast rows. Order newest-first so the top hit is
@@ -61,6 +70,8 @@ export async function GET(_req: NextRequest) {
       message?: string;
       moduleNumber?: number | null;
       topicId?: number | null;
+      targetBatchId?: string | null;
+      targetSection?: string | null;
       expiresAt?: string | null;
       cancelledAt?: string | null;
     } | null;
@@ -93,6 +104,8 @@ export async function GET(_req: NextRequest) {
         message: live.details!.message!,
         moduleNumber: live.details!.moduleNumber ?? null,
         topicId: live.details!.topicId ?? null,
+        targetBatchId: live.details!.targetBatchId ?? null,
+        targetSection: live.details!.targetSection ?? null,
         createdAt: live.created_at,
         expiresAt: live.details!.expiresAt!,
       },
