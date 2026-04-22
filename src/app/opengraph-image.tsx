@@ -3,30 +3,27 @@ import { getCurrentCourse } from "@/lib/course-registry";
 
 // Dynamic OpenGraph card rendered at request time by Next.js's
 // opengraph-image file convention. Telegram / LinkedIn / X / iMessage
-// all fetch /opengraph-image whenever someone shares the site URL,
-// and each platform caches the PNG for days — so the visual has to
-// be impossible to miss and consistent with the live home page
-// (dark bg + indigo→violet title gradient + the current course
-// code + name from the registry).
+// all fetch this whenever someone shares the site URL.
 //
-// Design goals (v2, after teacher feedback Apr 22):
-//   - The main title "Your Complete ICT Study Notes" was wrapping to
-//     two lines on v1 because `${course.name} Study Notes` produced
-//     "ICT Fundamentals Study Notes" (26 chars, overflowed). Fixed:
-//     always use "ICT" as the short-form in the headline — the course
-//     badge above already carries the full course name, so the
-//     headline doesn't need to repeat it.
-//   - Stronger hierarchy: drop the repeat supporting line, bump the
-//     gradient title, add a feature-strip that actually tells a
-//     passing student what's inside (quizzes + flashcards + thinking
-//     profile), not a generic "interactive" tagline.
-//   - Keep the layout centred + symmetric so it reads cleanly on
-//     both square (iMessage) and wide (Telegram/LinkedIn) crops.
+// IMPORTANT — SATORI COMPATIBILITY
+//   @vercel/og uses Satori under the hood. Satori supports a SUBSET
+//   of CSS. Properties known to crash the render silently (endpoint
+//   returns 200 with 0-byte body):
+//     · `filter: drop-shadow(...)` — NOT supported
+//     · `text-shadow` — partial support; avoid if unsure
+//     · `backdrop-filter` — NOT supported
+//     · any animation / transition / transform that isn't a
+//       static translate/rotate/scale string
+//   The v2 redesign (PR #146) used `filter: drop-shadow(...)` on the
+//   gradient headline and the whole endpoint started returning 0
+//   bytes in production. This v3 strips all unsafe properties and
+//   sticks to Satori's verified-safe surface: flex layout, linear +
+//   radial gradients, background-clip:text, border, border-radius,
+//   letter-spacing, line-height, font-weight, and plain color/bg.
 //
-// NOTE ON PROPAGATION
-//   Telegram caches OG data per-URL for ~24h. After a deploy, forward
-//   the link to @WebpageBot once to force a refresh, or append
-//   `?v=<something>` as a one-time cachebust.
+// Propagation note: Telegram/LinkedIn cache OG per-URL for ~24h.
+// Forward to @WebpageBot once after a deploy to force-refresh, or
+// append ?v=<n> as a one-time cachebust.
 
 export const runtime = "edge";
 export const alt =
@@ -34,24 +31,63 @@ export const alt =
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// The short-form used in the headline. Derived heuristically from the
-// course code + name so renaming the course in the registry keeps the
-// preview correct. Preference: first word of the name, unless the
-// name is literally "ICT Fundamentals" (the current course), in which
-// case "ICT" is the recognisable short form students use.
+// Short-form for the headline so renaming the course in the registry
+// doesn't blow past the canvas width. Preference: "ICT" for ICT
+// Fundamentals, first word otherwise, course code as final fallback.
 function shortForm(code: string, name: string): string {
   if (/ICT/i.test(name)) return "ICT";
-  // Pull the first word ("Python", "Web") as the short form — keeps
-  // the headline from wrapping on long descriptive names.
   const firstWord = name.split(/\s+/)[0];
   return firstWord || code;
+}
+
+// Minimal fallback card — used if the main ImageResponse throws
+// anywhere in its JSX tree (some Satori errors surface as a 200 with
+// a 0-byte body, which is exactly the v2 symptom we hit). Stripped to
+// Satori's safest properties: flat background, single-line title,
+// plain text. Never breaks.
+function FallbackCard({ code, name }: { code: string; name: string }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#0A0A12",
+        fontFamily: "system-ui, sans-serif",
+        color: "#ffffff",
+      }}
+    >
+      <div style={{ fontSize: 36, color: "#A1A1AA", marginBottom: 24 }}>
+        {/* Single string child — Satori rejects {code} · {name} as
+            "more than one child node". */}
+        {`${code} · ${name}`}
+      </div>
+      <div
+        style={{
+          fontSize: 112,
+          fontWeight: 900,
+          color: "#A78BFA",
+          letterSpacing: "-0.035em",
+        }}
+      >
+        Study Notes
+      </div>
+      <div style={{ fontSize: 24, color: "#71717A", marginTop: 40 }}>
+        ifp105-notes.vercel.app
+      </div>
+    </div>
+  );
 }
 
 export default async function OpengraphImage() {
   const course = getCurrentCourse();
   const short = shortForm(course.code, course.name);
 
-  return new ImageResponse(
+  try {
+    return new ImageResponse(
     (
       <div
         style={{
@@ -61,32 +97,19 @@ export default async function OpengraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "56px 72px",
-          // Layered background: deep-violet glow behind the title
-          // (matches the home hero's orb) + pure-black base so the
-          // image survives Telegram's grey chat bubble framing.
-          background:
-            "radial-gradient(900px 500px at 50% 38%, rgba(99,102,241,0.28), rgba(139,92,246,0.10) 45%, transparent 70%), #08080F",
+          // Single background declaration. Satori parses stacked
+          // backgrounds (gradient over base colour) correctly, but
+          // keeping it to one layer + a solid fallback is the safest
+          // form across Satori versions.
+          backgroundColor: "#08080F",
+          backgroundImage:
+            "radial-gradient(900px 500px at 50% 36%, rgba(99,102,241,0.32), rgba(139,92,246,0.10) 45%, transparent 72%)",
           position: "relative",
           fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
         }}
       >
-        {/* Ambient grid — very subtle so it reads as texture not
-            pattern. Matches the site's home hero backdrop. */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-            display: "flex",
-          }}
-        />
-
-        {/* Top-left wordmark pill — course code + name in the live-dot
-            style that matches the home page hero badge. Left-anchored
-            so the centred title has the whole width to breathe. */}
+        {/* Top-left course pill — live-dot style that matches the
+            home page badge. */}
         <div
           style={{
             position: "absolute",
@@ -97,8 +120,8 @@ export default async function OpengraphImage() {
             gap: 14,
             padding: "12px 24px",
             borderRadius: 999,
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.14)",
             fontSize: 22,
             color: "#E4E4E7",
           }}
@@ -108,8 +131,9 @@ export default async function OpengraphImage() {
               width: 10,
               height: 10,
               borderRadius: 999,
-              background: "#34D399",
-              boxShadow: "0 0 14px rgba(52,211,153,0.7)",
+              backgroundColor: "#34D399",
+              // boxShadow IS supported by Satori.
+              boxShadow: "0 0 14px rgba(52,211,153,0.8)",
             }}
           />
           <span style={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
@@ -121,9 +145,10 @@ export default async function OpengraphImage() {
           </span>
         </div>
 
-        {/* Headline block — centred, two lines. "Your Complete" sits
-            smaller above the gradient headline to cue the promise
-            without competing for attention. */}
+        {/* Headline block — two lines, centred. The gradient is
+            applied via backgroundImage + WebkitBackgroundClip:text,
+            which Satori supports. NO filter:drop-shadow (that was
+            the v2 crash). */}
         <div
           style={{
             display: "flex",
@@ -150,31 +175,30 @@ export default async function OpengraphImage() {
               fontSize: 148,
               fontWeight: 900,
               backgroundImage:
-                "linear-gradient(135deg, #A78BFA 0%, #818CF8 40%, #C4B5FD 100%)",
+                "linear-gradient(135deg, #A78BFA, #818CF8 45%, #C4B5FD)",
               backgroundClip: "text",
               WebkitBackgroundClip: "text",
               color: "transparent",
               letterSpacing: "-0.045em",
               lineHeight: 0.95,
-              marginBottom: 8,
-              // Light drop-shadow under the gradient text so it feels
-              // lifted off the grid rather than printed on it.
-              filter: "drop-shadow(0 8px 24px rgba(139,92,246,0.18))",
             }}
           >
-            {short} Study Notes
+            {/* Template literal so this div has exactly ONE child
+                node. Satori throws "Expected <div> to have explicit
+                display: flex if it has more than one child" when
+                you mix an expression with a literal string like
+                `{short} Study Notes`. One string child = safe. */}
+            {`${short} Study Notes`}
           </div>
         </div>
 
-        {/* Feature strip — what students actually get. Four pills in
-            a row, dot-separated, muted enough to sit below the
-            headline without competing. */}
+        {/* Feature strip — what's actually inside the site. */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 18,
-            marginTop: 36,
+            marginTop: 44,
             fontSize: 26,
             color: "#A1A1AA",
             fontWeight: 500,
@@ -190,8 +214,7 @@ export default async function OpengraphImage() {
           <span style={{ color: "#C4B5FD" }}>Thinking profile</span>
         </div>
 
-        {/* Byline + URL — bottom-anchored so the card survives being
-            screenshot-reshared without context. */}
+        {/* Byline + URL footer */}
         <div
           style={{
             position: "absolute",
@@ -214,4 +237,14 @@ export default async function OpengraphImage() {
     ),
     { ...size }
   );
+  } catch (err) {
+    // Log so Vercel function logs show what broke, and serve a
+    // minimal card instead of the 0-byte body Satori emits on an
+    // unhandled throw.
+    console.error("[opengraph-image] render failed, serving fallback:", err);
+    return new ImageResponse(
+      <FallbackCard code={course.code} name={course.name} />,
+      { ...size }
+    );
+  }
 }
