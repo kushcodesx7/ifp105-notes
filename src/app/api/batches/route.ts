@@ -182,6 +182,33 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Check whether someone else has ALREADY taken this enrollment number in
+  // this batch. The `students` table has a UNIQUE (batch_id, enrollment_no)
+  // constraint (`students_batch_id_enrollment_no_key`). Without this
+  // pre-check the upsert below would hit the constraint and surface the
+  // raw Postgres error to the student — which is exactly what happened in
+  // Bexzod's registration attempt (Apr 2026): email A new, roll already
+  // claimed by email B → raw "duplicate key value violates unique
+  // constraint students_batch_id_enrollment_no_key" on the form. Now we
+  // detect it first and give a human-readable message + a clear action
+  // for both the real owner and for typo cases.
+  if (!existing) {
+    const { data: rollOwner } = await supabase
+      .from("students")
+      .select("email")
+      .eq("batch_id", batchId)
+      .eq("enrollment_no", enrollmentNo.toUpperCase())
+      .maybeSingle();
+    if (rollOwner) {
+      return Response.json(
+        {
+          error: `Roll number ${enrollmentNo.toUpperCase()} is already registered in this batch by a different account. If this is YOUR roll number: sign in with the same Google account you used before (the app shows it at the top). If someone else took your roll number by mistake, ask your teacher to reset it.`,
+        },
+        { status: 409 }
+      );
+    }
+  }
+
   // Upsert student (legacy per-student table — kept as identity source).
   const { error } = await supabase.from("students").upsert(
     {
@@ -198,6 +225,25 @@ export async function POST(req: NextRequest) {
   );
 
   if (error) {
+    // Translate the two unique-constraint errors into messages a
+    // first-year student can act on. Fall back to the raw message
+    // for anything else — those are genuine bugs we need to see.
+    if (/students_batch_id_enrollment_no_key/i.test(error.message)) {
+      return Response.json(
+        {
+          error: `Roll number ${enrollmentNo.toUpperCase()} is already registered in this batch. If this is your roll number, sign in with your original Google account. If you think someone took it by mistake, ask your teacher.`,
+        },
+        { status: 409 }
+      );
+    }
+    if (/students_email_key/i.test(error.message)) {
+      return Response.json(
+        {
+          error: `This email is already registered. Try signing in instead of registering again.`,
+        },
+        { status: 409 }
+      );
+    }
     return Response.json({ error: error.message }, { status: 500 });
   }
 
