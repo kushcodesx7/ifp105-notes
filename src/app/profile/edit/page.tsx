@@ -687,17 +687,24 @@ export default function EditProfilePage() {
         </motion.div>
       </div>
 
-      {/* Toast */}
+      {/* Toast — responsive: caps width to viewport - safe-area on
+          mobile, softer corners so long messages wrap cleanly, and
+          enough padding to breathe. Previously `rounded-full` +
+          no max-width — a success message like "Quick-login password
+          saved. You can now sign in with your enrollment number on
+          any device" shot off the right edge on a 375px phone. */}
       <AnimatePresence>
         {toast && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full text-sm font-medium ${
+            role="status"
+            aria-live="polite"
+            className={`fixed bottom-6 inset-x-4 sm:left-1/2 sm:right-auto sm:bottom-8 sm:-translate-x-1/2 sm:inset-x-auto z-50 sm:max-w-md mx-auto px-5 py-3 rounded-2xl text-[13px] sm:text-sm font-medium text-center leading-relaxed shadow-lg ${
               toast.type === "success"
-                ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                : "bg-red-500/20 text-red-400 border border-red-500/30"
+                ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                : "bg-red-500/20 text-red-300 border border-red-500/30"
             }`}
           >
             {toast.message}

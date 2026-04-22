@@ -109,10 +109,10 @@ export default function QuickLoginPasswordCard({ onToast }: Props) {
       setDone(true);
       setPassword("");
       setConfirm("");
-      onToast?.(
-        "success",
-        "Quick-login password saved. You can now sign in with your enrollment number on any device."
-      );
+      // Keep the toast short — on a 375px phone, anything long gets
+      // truncated to one line or wraps ugly. The "✓ Password saved"
+      // banner inside the card itself explains the how below.
+      onToast?.("success", "Password saved ✓");
     } catch (e) {
       const msg = (e as Error).message || "Network error";
       setErr(msg);
@@ -160,14 +160,20 @@ export default function QuickLoginPasswordCard({ onToast }: Props) {
 
       {done && (
         <div
-          className="mb-3 rounded-lg px-3 py-2 text-[12px] text-emerald-300 flex items-center gap-2"
+          className="mb-3 rounded-lg px-3 py-2.5 text-[12px] text-emerald-300 flex items-start gap-2 leading-relaxed"
           style={{
             background: "rgba(16,185,129,0.08)",
             border: "1px solid rgba(16,185,129,0.25)",
           }}
         >
-          <span aria-hidden="true">✓</span>
-          Password saved. You can change it again any time.
+          <span aria-hidden="true" className="shrink-0 mt-0.5">
+            ✓
+          </span>
+          <span>
+            Password saved. You can sign in with your enrollment number
+            on any device now, and you can change this password any
+            time.
+          </span>
         </div>
       )}
 
@@ -209,7 +215,9 @@ export default function QuickLoginPasswordCard({ onToast }: Props) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="New password (min. 6 characters)"
             autoComplete="new-password"
-            className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+            // Mobile-first sizing: 12px base font-size avoids iOS
+            // auto-zoom on focus; min-h-11 hits the 44px touch target.
+            className="w-full px-3.5 py-3 min-h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-base sm:text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
           />
           <input
             type="password"
@@ -217,13 +225,17 @@ export default function QuickLoginPasswordCard({ onToast }: Props) {
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Confirm password"
             autoComplete="new-password"
-            className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+            className="w-full px-3.5 py-3 min-h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-base sm:text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
           />
-          {err && <p className="text-[12px] text-red-400">{err}</p>}
+          {err && (
+            <p className="text-[12px] text-red-400 leading-relaxed break-words">
+              {err}
+            </p>
+          )}
           <button
             onClick={submit}
             disabled={busy || !password || !confirm}
-            className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 transition-opacity"
+            className="w-full py-3 min-h-11 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-50 hover:opacity-90 active:scale-[0.98] transition-all"
           >
             {busy ? "Saving…" : done ? "Update password" : "Set quick-login password"}
           </button>
