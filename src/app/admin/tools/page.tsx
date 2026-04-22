@@ -107,6 +107,10 @@ export default function ToolsPage() {
         {/* Nuclear: wipe every student's progress in one action. */}
         <ResetAllProgressCard idToken={idToken} />
 
+        {/* Search a roll number, see who currently owns it, unlink
+            with one click so the real student can re-register. */}
+        <UnlinkByRollCard idToken={idToken} />
+
         {/* Pull LinkedIn profile photos for every student who saved a
             LinkedIn URL but never uploaded a photo. Non-destructive. */}
         <BackfillLinkedInPhotosCard idToken={idToken} />
@@ -1827,6 +1831,336 @@ function StatChip({
       </div>
       <div className="text-lg font-bold tabular-nums" style={{ color: palette.fg }}>
         {value}
+      </div>
+    </div>
+  );
+}
+
+// ─── Unlink stuck roll card ───────────────────────────────────
+//
+// Teacher-facing fix for the scenario where a student can't register
+// because another account has already claimed their roll number.
+// Teacher types the roll, we show the current owner(s), and one
+// click detaches them so the real student can register.
+//
+// Typical flow (Apr 2026 — came up with student Bexzod, roll
+// A85456325219):
+//   1. Student sees "duplicate key" error on registration form.
+//   2. Teacher opens /admin/tools → "Unlink stuck roll" card.
+//   3. Types A85456325219 → clicks Search.
+//   4. Card shows "Currently owned by: wrong-email@gmail.com
+//      (name: FakeName, Section 2)".
+//   5. Teacher clicks Unlink → confirms → row deleted.
+//   6. Student retries registration with their own Google account.
+//
+// Safety model:
+//   · Search is harmless (no DB writes). See the owner FIRST.
+//   · Unlink button gated on the search having returned owners.
+//   · The underlying delete leaves student_progress + sessions
+//     intact, keyed on the old email — if the real owner ever
+//     re-registers with that same wrong email + same roll, their
+//     history reattaches (should be rare; stale rows aren't a
+//     problem). Same guarantee the per-email unlink already has.
+//   · Audit log records every unlink via `action: "unlink"` with
+//     `details.via = "unlink-by-roll"` so the /admin/tools audit
+//     viewer stays consistent.
+function UnlinkByRollCard({ idToken }: { idToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [roll, setRoll] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lookup, setLookup] = useState<{
+    enrollmentNo: string;
+    owners: {
+      email: string;
+      name: string | null;
+      batchId: string | null;
+      section: string | null;
+      addedAt: string | null;
+    }[];
+    message: string;
+  } | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const fetchHeaders = useMemo(() => {
+    const h: Record<string, string> = { "content-type": "application/json" };
+    if (idToken) h["x-id-token"] = idToken;
+    return h;
+  }, [idToken]);
+
+  async function search() {
+    const trimmed = roll.trim().toUpperCase();
+    if (!trimmed) {
+      setError("Type a roll number first.");
+      return;
+    }
+    setSearching(true);
+    setError(null);
+    setLookup(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/students/unlink-by-roll", {
+        method: "POST",
+        headers: fetchHeaders,
+        body: JSON.stringify({ enrollmentNo: trimmed, dryRun: true }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+      } else {
+        setLookup({
+          enrollmentNo: json.enrollmentNo,
+          owners: json.owners || [],
+          message: json.message,
+        });
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function runUnlink() {
+    if (!lookup || lookup.owners.length === 0) return;
+    setUnlinking(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/students/unlink-by-roll", {
+        method: "POST",
+        headers: fetchHeaders,
+        body: JSON.stringify({ enrollmentNo: lookup.enrollmentNo }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+      } else {
+        setSuccess(
+          json.message ||
+            `Unlinked ${json.unlinkedCount || 0} account(s). The real student can register now.`
+        );
+        setLookup(null);
+        setRoll("");
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUnlinking(false);
+    }
+  }
+
+  function reset() {
+    setLookup(null);
+    setSuccess(null);
+    setError(null);
+    setRoll("");
+  }
+
+  return (
+    <div
+      className="mb-6 rounded-2xl p-5 transition-colors"
+      style={{
+        background: "rgba(245,158,11,0.04)",
+        border: "1px solid rgba(245,158,11,0.22)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+          style={{ background: "rgba(245,158,11,0.14)", color: "#FCD34D" }}
+          aria-hidden="true"
+        >
+          🔓
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div>
+              <div className="text-sm font-bold mb-0.5 text-amber-300">
+                Unlink stuck roll
+              </div>
+              <p className="text-[12px] text-zinc-500 leading-relaxed">
+                When a student sees &ldquo;duplicate key&rdquo; or
+                &ldquo;roll already registered&rdquo; on the sign-up form,
+                someone else has claimed their roll. Type the roll
+                number → see who owns it → unlink → the real student
+                registers cleanly. Audit-logged.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !open;
+                setOpen(next);
+                if (!next) reset();
+              }}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
+              style={{
+                background: open
+                  ? "rgba(245,158,11,0.16)"
+                  : "rgba(255,255,255,0.06)",
+                color: open ? "#FCD34D" : "#D4D4D8",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {open ? "Close" : "Open"}
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="mt-4 pt-4 space-y-3"
+                  style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                >
+                  {/* Roll number input + search */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={roll}
+                      onChange={(e) => {
+                        setRoll(e.target.value);
+                        setLookup(null);
+                        setSuccess(null);
+                        setError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") search();
+                      }}
+                      placeholder="Roll number, e.g. A85456325219"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      disabled={searching || unlinking}
+                      className="flex-1 px-3 py-2 text-sm rounded-lg text-white placeholder:text-zinc-600 focus:outline-none"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        fontFamily:
+                          "ui-monospace, SFMono-Regular, Menlo, monospace",
+                      }}
+                    />
+                    <button
+                      onClick={search}
+                      disabled={searching || unlinking || !roll.trim()}
+                      className="shrink-0 text-[12px] font-semibold px-4 py-2 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #F59E0B, #D97706)",
+                      }}
+                    >
+                      {searching ? "Searching…" : "🔎 Search"}
+                    </button>
+                  </div>
+
+                  {error && (
+                    <div
+                      className="p-3 rounded-lg text-[12px] text-red-300"
+                      style={{
+                        background: "rgba(239,68,68,0.08)",
+                        border: "1px solid rgba(239,68,68,0.22)",
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div
+                      className="p-3 rounded-lg text-[12px] text-emerald-300"
+                      style={{
+                        background: "rgba(34,197,94,0.08)",
+                        border: "1px solid rgba(34,197,94,0.22)",
+                      }}
+                    >
+                      ✅ {success}
+                    </div>
+                  )}
+
+                  {/* Lookup result */}
+                  {lookup && (
+                    <div
+                      className="rounded-lg p-3"
+                      style={{
+                        background:
+                          lookup.owners.length > 0
+                            ? "rgba(245,158,11,0.06)"
+                            : "rgba(34,197,94,0.06)",
+                        border: `1px solid ${
+                          lookup.owners.length > 0
+                            ? "rgba(245,158,11,0.22)"
+                            : "rgba(34,197,94,0.22)"
+                        }`,
+                      }}
+                    >
+                      <div
+                        className={`text-[12px] ${lookup.owners.length > 0 ? "text-amber-300" : "text-emerald-300"}`}
+                      >
+                        {lookup.owners.length > 0 ? "⚠" : "✓"} {lookup.message}
+                      </div>
+                      {lookup.owners.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {lookup.owners.map((o) => (
+                            <div
+                              key={o.email}
+                              className="text-[12px] p-2.5 rounded-lg"
+                              style={{
+                                background: "rgba(255,255,255,0.03)",
+                                border: "1px solid rgba(255,255,255,0.06)",
+                              }}
+                            >
+                              <div className="font-semibold text-zinc-100 truncate">
+                                {o.name || "(no name)"}
+                              </div>
+                              <div className="text-zinc-400 text-[11px] truncate">
+                                {o.email}
+                              </div>
+                              <div className="text-zinc-500 text-[11px] mt-0.5">
+                                {o.section || "(no section)"} ·{" "}
+                                {o.batchId || "(no batch)"}
+                                {o.addedAt && ` · joined ${o.addedAt}`}
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            onClick={runUnlink}
+                            disabled={unlinking}
+                            className="w-full py-2.5 text-sm font-bold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, #EF4444, #B91C1C)",
+                              boxShadow: "0 2px 12px rgba(239,68,68,0.3)",
+                            }}
+                          >
+                            {unlinking
+                              ? "Unlinking…"
+                              : `🔓 Unlink ${lookup.owners.length === 1 ? "this account" : `these ${lookup.owners.length} accounts`}`}
+                          </button>
+                          <p className="text-[10px] text-zinc-500 leading-relaxed">
+                            Unlinking deletes the{" "}
+                            <code className="text-zinc-400">students</code> row
+                            for the account(s) above. Their progress
+                            (completions, quiz scores) stays in the DB and
+                            auto-reattaches if they ever re-register with
+                            the same email + same roll. The roll becomes
+                            free immediately — the real student can
+                            register right after this.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
