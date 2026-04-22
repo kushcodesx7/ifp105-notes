@@ -853,9 +853,39 @@ export default function IFSConnectPage() {
                       </div>
                     )}
 
-                    {/* Actions */}
+                    {/* Actions — branch on isMe FIRST so a student
+                        looking at their own card never sees a
+                        "Connect on LinkedIn" button that would send
+                        them to their own profile. Previously the
+                        check order was `hasLinkedIn ? ... : isMe ?`
+                        so a student who had filled in their LinkedIn
+                        got a CTA to connect with themselves. Now:
+                          · Own card + has LinkedIn → "View my LinkedIn"
+                          · Own card + no LinkedIn → "+ Add your LinkedIn"
+                          · Other card + has LinkedIn → "Connect on LinkedIn"
+                          · Other card + no LinkedIn → "LinkedIn not added yet"
+                    */}
                     <div className="flex items-stretch gap-2">
-                      {hasLinkedIn ? (
+                      {isMe && hasLinkedIn ? (
+                        <a
+                          href={student.linkedinUrl!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.99]"
+                          style={{
+                            background: "rgba(10,102,194,0.18)",
+                            border: "1px solid rgba(10,102,194,0.35)",
+                            color: "#93C5FD",
+                          }}
+                          title="Opens your LinkedIn profile in a new tab"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                          </svg>
+                          View my LinkedIn
+                        </a>
+                      ) : hasLinkedIn ? (
                         <a
                           href={student.linkedinUrl!}
                           target="_blank"
