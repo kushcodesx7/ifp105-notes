@@ -85,13 +85,20 @@ export async function GET(req: NextRequest) {
 
   for (const row of (data || []) as ProgressRow[]) {
     if (row.bloom_stats) {
-      topicsContributing++;
+      // Only count this row toward topicsContributing if it has at
+      // least one level with a non-zero total. An empty {} (possible
+      // from a partial write or a quiz whose questions lacked bloom
+      // tags) was previously triggering a "radar exists but is
+      // 0/0 everywhere" state — looks broken, not helpful.
+      let rowContributed = false;
       for (const level of BLOOM_ORDER) {
         const entry = row.bloom_stats[level];
         if (!entry) continue;
+        if ((entry.total || 0) > 0) rowContributed = true;
         agg[level].correct += entry.correct || 0;
         agg[level].total += entry.total || 0;
       }
+      if (rowContributed) topicsContributing++;
     }
     if (row.confidence_stats) {
       rated += row.confidence_stats.rated || 0;
@@ -125,7 +132,13 @@ export async function GET(req: NextRequest) {
     },
     {
       headers: {
-        "Cache-Control": "private, max-age=30",
+        // Keep this short: after a student answers a quiz question,
+        // the home page SWR poll (60s) or focus-refetch may land
+        // inside this window. A browser-cached "empty" response would
+        // delay the radar appearing. Upstream /api/progress calls
+        // revalidatePath("/api/me/blooms") which clears the Next.js
+        // route cache — but the BROWSER cache needs a short TTL too.
+        "Cache-Control": "private, max-age=5",
       },
     }
   );

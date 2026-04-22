@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
@@ -142,6 +142,7 @@ export default function ModulePage({
     setNeedsReauth,
     addDone,
     recordQuiz,
+    saveToSupabase,
   } = useStudentProgress({
     courseSlug,
     moduleNumber,
@@ -376,6 +377,46 @@ export default function ModulePage({
       }, 1500);
     }
   }
+
+  // Incremental bloom + calibration save — fires on every quiz answer
+  // so the student's home-page thinking profile unlocks after their
+  // FIRST question, not only after they click through the full results
+  // screen. Debounced via a trailing 1.2s window so a student
+  // answering 5 questions in quick succession only triggers one server
+  // write. We intentionally do NOT send mcqScore/mcqTotal/completed —
+  // those stay reserved for handleQuizComplete's final save, so a
+  // partial quiz never shows up as "75% Module 3 Topic 1" on the
+  // home page card. See /api/progress (bloom_stats-only upsert path).
+  const incrementalSaveRef = useRef<{
+    timer: ReturnType<typeof setTimeout> | null;
+    lastTopicId: number | null;
+    lastBloom: unknown;
+    lastConfidence: unknown;
+  }>({ timer: null, lastTopicId: null, lastBloom: null, lastConfidence: null });
+  const handleAnswerProgress = useCallback(
+    (
+      topicId: number,
+      bloomStats: Partial<Record<string, { correct: number; total: number }>>,
+      confidenceStats: { rated: number; confidentWrong: number; humbleRight: number }
+    ) => {
+      if (!isLoggedIn) return; // anonymous users save nothing — LoginPrompt covers them on completion
+      const slot = incrementalSaveRef.current;
+      slot.lastTopicId = topicId;
+      slot.lastBloom = bloomStats;
+      slot.lastConfidence = confidenceStats;
+      if (slot.timer) clearTimeout(slot.timer);
+      slot.timer = setTimeout(() => {
+        if (slot.lastTopicId == null) return;
+        saveToSupabase({
+          topicId: slot.lastTopicId,
+          bloomStats: slot.lastBloom as Parameters<typeof saveToSupabase>[0]["bloomStats"],
+          confidenceStats: slot.lastConfidence as Parameters<typeof saveToSupabase>[0]["confidenceStats"],
+        });
+        slot.timer = null;
+      }, 1200);
+    },
+    [isLoggedIn, saveToSupabase]
+  );
 
   function markDone(topicId: number) {
     // addDone updates the `done` Set AND fires the remote save.
@@ -731,6 +772,9 @@ export default function ModulePage({
                     onAnswerCountChange={(answered, total) => {
                       setMcqAnswerCounts(prev => ({ ...prev, [activeTab]: { answered, total } }));
                     }}
+                    onAnswerProgress={(bloomStats, confidenceStats) =>
+                      handleAnswerProgress(activeTab, bloomStats, confidenceStats)
+                    }
                   />
                 </ErrorBoundary>
                 </div>

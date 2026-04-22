@@ -98,6 +98,21 @@ interface McqQuizProps {
     confidenceStats?: ConfidenceStatsPayload
   ) => void;
   onAnswerCountChange?: (answered: number, total: number) => void;
+  // Fires on EVERY answer or confidence rating with the quiz's
+  // cumulative Bloom's + calibration state so far. Purpose: unlock
+  // the student's "thinking profile" on the home page (/api/me/blooms)
+  // without requiring full quiz completion + the "click through to
+  // results" step. Before this, bloom_stats was only written in
+  // onComplete — so a student who answered 8/10 questions but closed
+  // the tab before clicking Next contributed zero data to their
+  // profile. After the Apr 2026 class-reset wave, most students fell
+  // into that bucket and their thinking profiles hid.
+  // The caller is expected to save these fields to the server; they
+  // are strictly additive (never overwrite mcq_score / completed etc).
+  onAnswerProgress?: (
+    bloomStats: BloomStatsPayload,
+    confidenceStats: ConfidenceStatsPayload
+  ) => void;
 }
 
 const letters = ["A", "B", "C", "D"];
@@ -293,6 +308,7 @@ export default function McqQuiz({
   questions,
   onComplete,
   onAnswerCountChange,
+  onAnswerProgress,
 }: McqQuizProps) {
   const courseSlug = courseSlugProp ?? CURRENT_COURSE_SLUG;
   const LS_KEY = quizStateKey(courseSlug, moduleNumber, topicId);
@@ -600,6 +616,41 @@ export default function McqQuiz({
   const isAnswered = picked !== null;
   const isCorrect = picked === sq.ans;
 
+  // Derive a Bloom + calibration payload from an arbitrary
+  // answered/confidences pair. Identical math to the bloomBreakdown
+  // useMemo + calibration useMemo, but callable synchronously against
+  // freshly-updated state inside event handlers (useMemo only refreshes
+  // on the next render). Used by the incremental-save path below so
+  // every answer/confidence rating pushes live data to the server.
+  function buildPayloads(
+    ans: (number | null)[],
+    confs: (ConfidenceLevel | null)[]
+  ): { bloom: BloomStatsPayload; conf: ConfidenceStatsPayload } {
+    const bloom: BloomStatsPayload = {};
+    let confidentWrong = 0;
+    let humbleRight = 0;
+    let rated = 0;
+    for (let i = 0; i < questions.length; i++) {
+      const a = ans[i];
+      if (a === null) continue;
+      const lvl = questions[i].bloom;
+      if (lvl) {
+        const bucket = bloom[lvl] ?? { correct: 0, total: 0 };
+        bucket.total += 1;
+        if (a === shuffled[i].ans) bucket.correct += 1;
+        bloom[lvl] = bucket;
+      }
+      const c = confs[i];
+      if (c !== null) {
+        rated++;
+        const correct = a === shuffled[i].ans;
+        if (!correct && (c === "pretty-sure" || c === "certain")) confidentWrong++;
+        if (correct && c === "guessing") humbleRight++;
+      }
+    }
+    return { bloom, conf: { rated, confidentWrong, humbleRight } };
+  }
+
   function handlePick(oi: number) {
     // Locking semantics: once the student has rated their confidence
     // ("Guessing / Maybe / Pretty sure / Certain") we reveal the
@@ -641,6 +692,16 @@ export default function McqQuiz({
 
     // Save immediately
     saveState(newAnswered, newScore, isNowCompleted, confidences);
+
+    // Fire the incremental progress callback. Cheap (a ~10-entry loop)
+    // and the caller debounces via React's event batching, but we
+    // still keep this path off the critical render path by deferring
+    // the payload build + call to a microtask (no await, no sleep —
+    // just yielding so the optimistic UI update renders first).
+    if (onAnswerProgress) {
+      const { bloom, conf } = buildPayloads(newAnswered, confidences);
+      onAnswerProgress(bloom, conf);
+    }
   }
 
   // Called AFTER the student has picked an answer but BEFORE the reveal.
@@ -651,6 +712,15 @@ export default function McqQuiz({
     next[currentQ] = level;
     setConfidences(next);
     saveState(answered, score, completed, next);
+
+    // Incremental save: confidence ratings feed the calibration
+    // payload (rated / confidentWrong / humbleRight), so push them
+    // up for the home-page thinking profile the same way handlePick
+    // does for Bloom's.
+    if (onAnswerProgress) {
+      const { bloom, conf } = buildPayloads(answered, next);
+      onAnswerProgress(bloom, conf);
+    }
   }
 
   function handleNext() {
