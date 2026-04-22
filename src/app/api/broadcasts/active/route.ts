@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
       message?: string;
       moduleNumber?: number | null;
       topicId?: number | null;
+      targetBatchId?: string | null;
+      targetSection?: string | null;
       expiresAt?: string | null;
       cancelledAt?: string | null;
       ttlMinutes?: number | null;
@@ -63,6 +65,8 @@ export async function GET(req: NextRequest) {
       message: d.message ?? "",
       moduleNumber: d.moduleNumber ?? null,
       topicId: d.topicId ?? null,
+      targetBatchId: d.targetBatchId ?? null,
+      targetSection: d.targetSection ?? null,
       expiresAt,
       cancelledAt,
       ttlMinutes: d.ttlMinutes ?? null,
