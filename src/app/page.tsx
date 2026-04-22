@@ -32,15 +32,46 @@ const TOTAL_QUESTIONS = [
 // Lazy-load the social / peer-compare widgets — not critical for first paint, no SSR needed
 const HomeConnectGlimpse = dynamic(() => import("@/components/HomeConnectGlimpse"), {
   ssr: false,
+  // Shape-matched skeleton rather than a blank grey block. Matches
+  // the real widget's layout (title + subtitle + avatar row + three
+  // learner cards) so there's less visual jump when the real content
+  // swaps in, and slow-4G students don't stare at a mystery grey box.
   loading: () => (
     <section className="px-6 mb-10">
       <div
-        className="max-w-5xl mx-auto rounded-2xl p-5 h-[180px] animate-pulse"
+        className="max-w-5xl mx-auto rounded-2xl p-5"
         style={{
           background: "rgba(255,255,255,0.02)",
           border: "1px solid rgba(255,255,255,0.04)",
         }}
-      />
+      >
+        {/* Header row: title + subtitle block + trailing avatar strip */}
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
+          <div className="flex-1 min-w-[200px]">
+            <div className="h-4 w-56 max-w-full rounded-md bg-white/[0.06] animate-pulse mb-2" />
+            <div className="h-3 w-44 max-w-full rounded-md bg-white/[0.04] animate-pulse" />
+          </div>
+          <div className="flex -space-x-2">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="w-7 h-7 rounded-full bg-white/[0.05] border border-white/[0.06] animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+        {/* Activity row */}
+        <div className="h-10 rounded-full bg-white/[0.03] animate-pulse mb-4" />
+        {/* Top-learners grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-20 rounded-xl bg-white/[0.03] animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
     </section>
   ),
 });
