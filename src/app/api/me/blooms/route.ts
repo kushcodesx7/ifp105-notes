@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAuth } from "@/lib/verify-google-token";
 import { BLOOM_ORDER, type BloomLevel } from "@/lib/blooms";
+import { aggregateBloomStats, type BloomAggregateRow } from "@/lib/bloom-stats";
 
 // GET /api/me/blooms
 //
@@ -69,51 +70,16 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  // Aggregate per level across all topic rows for this student.
-  const agg: Record<BloomLevel, BloomStatEntry> = {
-    remember: { correct: 0, total: 0 },
-    understand: { correct: 0, total: 0 },
-    apply: { correct: 0, total: 0 },
-    analyze: { correct: 0, total: 0 },
-    evaluate: { correct: 0, total: 0 },
-    create: { correct: 0, total: 0 },
-  };
-  let rated = 0;
-  let confidentWrong = 0;
-  let humbleRight = 0;
-  let topicsContributing = 0;
-
-  for (const row of (data || []) as ProgressRow[]) {
-    if (row.bloom_stats) {
-      topicsContributing++;
-      for (const level of BLOOM_ORDER) {
-        const entry = row.bloom_stats[level];
-        if (!entry) continue;
-        agg[level].correct += entry.correct || 0;
-        agg[level].total += entry.total || 0;
-      }
-    }
-    if (row.confidence_stats) {
-      rated += row.confidence_stats.rated || 0;
-      confidentWrong += row.confidence_stats.confidentWrong || 0;
-      humbleRight += row.confidence_stats.humbleRight || 0;
-    }
-  }
-
-  const levels = BLOOM_ORDER.map((level) => {
-    const { correct, total } = agg[level];
-    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-    return { level, correct, total, pct };
-  });
-
-  // Weakest level = lowest pct among levels with meaningful sample size (>=3
-  // attempted). Prevents "0/0 create" from being flagged as the weak spot
-  // when the student simply hasn't hit Create questions yet.
-  const meaningful = levels.filter((l) => l.total >= 3);
-  const weakestLevel =
-    meaningful.length > 0
-      ? meaningful.reduce((a, b) => (a.pct <= b.pct ? a : b)).level
-      : null;
+  // Aggregate per level + calibration across all topic rows for this
+  // student. The loop + "meaningful levels for weakest-level" logic
+  // used to live inline here AND in /api/admin/people/route.ts (same
+  // pattern, same thresholds). Extracted to aggregateBloomStats so a
+  // future tweak to the aggregation rule (say, raising the
+  // meaningful-sample threshold from 3 to 5) changes both endpoints
+  // in lockstep.
+  const aggregated = aggregateBloomStats((data || []) as BloomAggregateRow[]);
+  const { levels, calibration, topicsContributing, weakestLevel } = aggregated;
+  const { rated, confidentWrong, humbleRight } = calibration;
 
   return Response.json(
     {
