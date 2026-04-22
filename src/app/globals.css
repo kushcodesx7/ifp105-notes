@@ -36,6 +36,29 @@
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
+/* Native <select> dropdown theming.
+   Students reported the "Select your batch..." dropdown rendering in
+   WHITE when they clicked the registration modal's batch picker. Root
+   cause: the <select> trigger is dark-themed via Tailwind, but the
+   browser draws the OPEN popup using system defaults — which on most
+   Chromium/Firefox/Safari default to white background with white text
+   in dark-mode OS environments, producing an unreadable list.
+   Setting these two properties on <option> AND the parent <select>
+   makes browsers use our dark theme for the popup too. Applies
+   globally across the site so every select (registration, admin
+   filters, scope pickers) renders consistently. */
+select {
+  color-scheme: dark;
+}
+select option {
+  background-color: #111118;
+  color: #FAFAFA;
+}
+select option:checked {
+  background-color: #1F1F2A;
+  color: #ffffff;
+}
+
 /* Horizontal scroll containers (mobile batch pills, filter strips) that
    should scroll without a visible bar — looks cleaner on phones. */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
