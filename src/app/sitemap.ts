@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { MODULE_IDS } from "@/lib/course-stats";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base =
@@ -11,7 +12,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/batches`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
   ];
 
-  const moduleRoutes: MetadataRoute.Sitemap = [1, 2, 3, 4, 5].map((n) => ({
+  // Was `[1, 2, 3, 4, 5].map(...)` — migrated to the MODULE_IDS
+  // constant so a 6th module auto-lands in the sitemap.
+  const moduleRoutes: MetadataRoute.Sitemap = MODULE_IDS.map((n) => ({
     url: `${base}/module/${n}`,
     lastModified: now,
     changeFrequency: "monthly" as const,

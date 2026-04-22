@@ -8,6 +8,7 @@ import Breadcrumbs from "@/components/admin/Breadcrumbs";
 import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { MODULE_TOTALS } from "@/lib/modules";
+import { MODULE_IDS } from "@/lib/course-stats";
 import type { AdminActionKind } from "@/lib/admin-audit";
 
 // Phase 3 — real Tools page.
@@ -745,7 +746,7 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
   const [open, setOpen] = useState(false);
   const [phrase, setPhrase] = useState("");
   // "all" = every module, 1-5 = just that module.
-  const [moduleScope, setModuleScope] = useState<"all" | "1" | "2" | "3" | "4" | "5">("all");
+  const [moduleScope, setModuleScope] = useState<"all" | string>("all");
   // Optional narrower scope: null = wipe the whole chosen module,
   // number = wipe only that topic. Reset whenever moduleScope
   // changes to avoid pointing at a topic that doesn't exist in
@@ -1080,7 +1081,7 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
                       Scope
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {(["all", "1", "2", "3", "4", "5"] as const).map((k) => {
+                      {(["all", ...MODULE_IDS.map(String)] as const).map((k) => {
                         const label = k === "all" ? "All modules" : `Module ${k}`;
                         const isActive = moduleScope === k;
                         return (

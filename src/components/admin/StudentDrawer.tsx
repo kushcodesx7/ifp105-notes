@@ -11,6 +11,7 @@ import { isAdminEmail } from "@/lib/admins";
 import { compareSections } from "@/lib/sections";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import { TOTAL_TOPICS } from "@/lib/course-registry";
+import { MODULE_IDS } from "@/lib/course-stats";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -659,7 +660,7 @@ function OverviewTab({
                 border: "1px solid rgba(255,255,255,0.1)",
               }}
             >
-              {[1, 2, 3, 4, 5].map((n) => (
+              {MODULE_IDS.map((n) => (
                 <option key={n} value={n}>
                   Module {n}
                 </option>

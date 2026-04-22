@@ -13,6 +13,8 @@ import DangerDeleteDialog from "@/components/admin/DangerDeleteDialog";
 import { useToast } from "@/components/admin/Toast";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
+import { MODULES, TOTAL_TOPICS } from "@/lib/modules";
+import { TOTAL_QUESTIONS, MODULE_IDS } from "@/lib/course-stats";
 
 // /admin/courses/[slug] — edit a single course.
 //
@@ -608,10 +610,12 @@ function IctSeedPrompt({
   } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   // Which module to re-seed. "all" = every module (original behaviour);
-  // 1..5 = only that module, others untouched. Added for the Module 5
-  // rewrite (Apr 2026) so a teacher can push one module's TS without
-  // clobbering admin-UI edits in the others.
-  const [scopeChoice, setScopeChoice] = useState<"all" | 1 | 2 | 3 | 4 | 5>("all");
+  // a number = only that module, others untouched. Added for the
+  // Module 5 rewrite (Apr 2026) so a teacher can push one module's
+  // TS without clobbering admin-UI edits in the others. Union is
+  // typed as "all" | number so a 6th module lands without a type
+  // tweak here; the button list below is derived from MODULE_IDS.
+  const [scopeChoice, setScopeChoice] = useState<"all" | number>("all");
 
   // Pre-flight divergence preview. Loaded once on open (for "all
   // modules"); per-module scope reads from the same cached payload
@@ -744,7 +748,7 @@ function IctSeedPrompt({
         {isEmpty ? (
           <>
             ICT content currently lives in TypeScript files (<code>src/data/module*.ts</code>).
-            Click below to copy all 5 modules, 48 topics, and 370 MCQs into the DB
+            Click below to copy all {MODULES.length} modules, {TOTAL_TOPICS} topics, and {TOTAL_QUESTIONS} MCQs into the DB
             tables so you can edit them from this UI. <strong>Students keep seeing
             the same content</strong> — the module pages prefer the DB copy and fall
             back to TS automatically if anything goes wrong.
@@ -797,7 +801,7 @@ function IctSeedPrompt({
               <span className="text-[11px] text-zinc-400 font-semibold">
                 Scope:
               </span>
-              {(["all", 1, 2, 3, 4, 5] as const).map((opt) => {
+              {(["all", ...MODULE_IDS] as const).map((opt) => {
                 const label = opt === "all" ? "All modules" : `Module ${opt}`;
                 const active = scopeChoice === opt;
                 // Per-module divergence dot: red = admin edits would

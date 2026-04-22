@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { MODULE_TOTALS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
+import { MODULE_IDS } from "@/lib/course-stats";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { isHiddenSection } from "@/lib/hidden-sections";
 import type { BloomLevel } from "@/lib/blooms";
@@ -215,7 +216,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const moduleStats: ModuleStat[] = [1, 2, 3, 4, 5].map((mn) => {
+    const moduleStats: ModuleStat[] = MODULE_IDS.map((mn) => {
       const total = MODULE_TOTALS[mn] || 0;
       const done = modDone[mn];
       const mcqCount = modMcqCount[mn];
