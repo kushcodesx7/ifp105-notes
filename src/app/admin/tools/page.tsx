@@ -9,6 +9,7 @@ import AdminAuthGate, { useAdminAuth } from "@/components/admin/AdminAuthGate";
 import { useAdminFetch } from "@/lib/useAdminFetch";
 import { MODULE_TOTALS } from "@/lib/modules";
 import type { AdminActionKind } from "@/lib/admin-audit";
+import { logError } from "@/lib/log-error";
 
 // Phase 3 — real Tools page.
 // Today ships: the audit log viewer. Tomorrow ships: dedicated export,
@@ -943,14 +944,17 @@ function ResetAllProgressCard({ idToken }: { idToken: string | null }) {
         // flagged this as the main cascade miss after a reset.
         // `cache: "no-store"` + sending to the admin-aware endpoints
         // warms the HTTP cache with post-reset data.
+        // Fire-and-forget cache warmup — errors are non-fatal (the
+        // next real page fetch retries). Log via logError so they're
+        // observable in Vercel logs instead of being silent.
         fetch("/api/admin/summary", {
           headers: fetchHeaders,
           cache: "no-store",
-        }).catch(() => {});
+        }).catch((e) => logError("admin/tools.cache-warm.summary", e));
         fetch("/api/admin/people", {
           headers: fetchHeaders,
           cache: "no-store",
-        }).catch(() => {});
+        }).catch((e) => logError("admin/tools.cache-warm.people", e));
       }
     } catch (e) {
       setError((e as Error).message);

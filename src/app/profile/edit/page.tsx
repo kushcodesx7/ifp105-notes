@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import { decodeJwt } from "@/lib/jwt";
 import { GoogleLogin } from "@react-oauth/google";
 import { SKILLS, MAX_SKILLS, MAX_BIO_LENGTH } from "@/lib/skills";
+import { logError } from "@/lib/log-error";
 
 // ─── /profile/edit ────────────────────────────────────────────────
 //
@@ -95,7 +96,7 @@ export default function EditProfilePage() {
           }))
         );
       })
-      .catch(() => {});
+      .catch((e) => logError("profile/edit.load-batches", e));
   }, []);
 
   // Flip the loading grace window off after 500ms.
