@@ -684,6 +684,23 @@ export default function IFSConnectPage() {
               {students.length === 0 && !isLoggedIn &&
                 "Be the first! Sign in and register to appear here."}
             </p>
+            {/* Recovery affordance: when filters are the problem
+                 (students exist but none match), one-click reset so
+                 the student doesn't have to hunt for each filter
+                 control to clear it. */}
+            {students.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSectionFilter("all");
+                  setSkillFilter("all");
+                }}
+                className="mt-4 text-xs font-semibold text-indigo-300 hover:text-indigo-200 underline underline-offset-4"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         ) : (
           // Filter changes used to take up to 500ms (card stagger delay cap)
