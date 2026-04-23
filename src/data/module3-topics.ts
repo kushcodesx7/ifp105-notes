@@ -554,6 +554,11 @@ export const topics: Topic[] = [
         html: `A business card has your name and phone number \u2014 you hand it to someone and hope they call. <strong>Your LinkedIn profile is a business card that works 24/7.</strong> It shows your photo, your school, your skills, your projects, and your goals to anyone searching. Recruiters search for \"Computer Science student Tashkent\" and your card pops up \u2014 even while you sleep.`,
       },
       {
+        type: "image",
+        src: "/images/m3/linkedin-profile.webp",
+        description: "Anatomy of a great student LinkedIn profile \u2014 clear head-shot, headline mentioning skills (\"CS Student | Interested in AI & Web Development\"), Tashkent + Amity location, Connect and Message buttons, About paragraph and Skills pills (HTML, CSS, Python, Teamwork). Callouts highlight the three things recruiters see in 3 seconds: PHOTO, HEADLINE, and the growing Skills list.",
+      },
+      {
         type: "text",
         html: `<strong>Why LinkedIn actually matters for YOU:</strong>`,
       },
