@@ -22,10 +22,18 @@ export interface ErrorContext {
   meta?: Record<string, unknown>;
 }
 
+// Narrow window type so the client-side opt-in flag is type-safe
+// without a one-off `as any` cast. DevTools users set
+// `window.__IFP_LOG_CLIENT_ERRORS__ = true` to unmute client logs.
+declare global {
+  interface Window {
+    __IFP_LOG_CLIENT_ERRORS__?: boolean;
+  }
+}
+
 function shouldLogClientSide(): boolean {
   if (typeof window === "undefined") return true; // server: always log
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return Boolean((window as any).__IFP_LOG_CLIENT_ERRORS__);
+  return Boolean(window.__IFP_LOG_CLIENT_ERRORS__);
 }
 
 /**
