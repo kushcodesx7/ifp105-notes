@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
@@ -94,6 +95,20 @@ export async function POST(req: NextRequest) {
       scope: moduleNumber != null ? `module_${moduleNumber}` : "all_modules",
     },
   });
+
+  // Bust caches: admin dashboards + the student's own home page
+  // ModuleCards + IFS Connect progress bar all derive from these
+  // tables. Without this the teacher sees "Reset OK" but the UI
+  // still shows the old percentages until the 30s SWR poll.
+  try {
+    revalidatePath("/admin/people");
+    revalidatePath("/admin/progress");
+    revalidatePath("/api/admin/people");
+    revalidatePath("/api/progress/mine");
+    revalidatePath("/api/connect");
+    revalidatePath("/api/connect/glimpse");
+    revalidatePath("/api/me/blooms");
+  } catch {}
 
   return Response.json({
     ok: true,
