@@ -28,15 +28,15 @@ export default function Module3Client({ topics }: { topics: Topic[] }) {
       moduleNumber={3}
       moduleTitle="Social Media"
       moduleSubtitle="Foundation"
-      moduleDescription="Social media platforms, modern tools & automation, metrics, advertising, LinkedIn, and personal branding."
+      moduleDescription="Social media platforms, modern tools & automation, metrics, advertising, and LinkedIn — your professional identity online."
       accentFrom="#3B82F6"
       accentTo="#2563EB"
       orbColor1="rgba(59,130,246,0.15)"
       orbColor2="rgba(37,99,235,0.1)"
       topics={topics}
       stats={[
-        { n: "7", l: "Topics" },
-        { n: "~40", l: "Minutes" },
+        { n: "6", l: "Topics" },
+        { n: "~35", l: "Minutes" },
         { n: String(_mcqCount3), l: "Practice Qs" },
       ]}
     />
