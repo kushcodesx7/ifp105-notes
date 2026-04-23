@@ -222,6 +222,14 @@ export async function POST(req: NextRequest) {
             hook: topic.hook || null,
             content_json: topic.content || [],
             order_index: topic.id,
+            // Seed = "the TS file is authoritative, this topic is live."
+            // Without this, re-seeding a topic whose DB row was
+            // soft-deleted (e.g. Module 3 topic 6 after the Apr 23
+            // Facebook→LinkedIn overhaul) would write new content
+            // into the deleted row and students would still see
+            // nothing. An explicit deleted_at: null resurrects the
+            // row as part of the same upsert.
+            deleted_at: null,
           },
           { onConflict: "module_id,number" }
         )
@@ -251,6 +259,11 @@ export async function POST(req: NextRequest) {
             bloom: q.bloom || null,
             explanation: q.why || null,
             order_index: i + 1,
+            // Same resurrection logic as the topic upsert above —
+            // re-seeding must produce LIVE rows, not overwrite
+            // previously-trashed ones with new content that stays
+            // invisible.
+            deleted_at: null,
           },
           { onConflict: "topic_id,number" }
         );
