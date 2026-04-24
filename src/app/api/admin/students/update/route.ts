@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
@@ -309,6 +310,19 @@ export async function POST(req: NextRequest) {
 
   // Silence unused-var warning (isHiddenSection reserved for future validation)
   void isHiddenSection;
+
+  // Bust caches for every surface that displays this student's data
+  // so the teacher sees the change immediately instead of waiting
+  // for the 30s SWR poll. Without this, renaming a section shows
+  // the old name on /admin/people for up to 30s.
+  try {
+    revalidatePath("/admin/people");
+    revalidatePath("/admin/progress");
+    revalidatePath("/admin/roster");
+    revalidatePath("/api/batches/admin");
+    revalidatePath("/api/admin/people");
+    revalidatePath("/api/connect");
+  } catch {}
 
   return Response.json({ ok: true });
 }
