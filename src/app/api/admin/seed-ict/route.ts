@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { logAdminAction, actorFromAuth } from "@/lib/admin-audit";
 import { MODULES } from "@/lib/modules";
-import type { ContentBlock } from "@/types/content";
+import { loadModuleData, parseTimeMin } from "@/lib/seed-source";
 
 // POST /api/admin/seed-ict
 //
@@ -31,75 +31,10 @@ import type { ContentBlock } from "@/types/content";
 //     by the full-bank question upserts, ~10 per topic × 48 topics)
 //     and would make error reporting harder.
 
-interface TopicRow {
-  id: number;
-  title: string;
-  time: string;
-  hook: string;
-  content: ContentBlock[];
-}
-
-interface McqRow {
-  q: string;
-  opts: string[];
-  ans: number;
-  why: string;
-  bloom?: string;
-}
-
-// ── Parsers — pull each module's TS data via dynamic import ──
-async function loadModuleData(
-  moduleNumber: number
-): Promise<{ topics: TopicRow[]; mcq: Record<number, McqRow[]> }> {
-  switch (moduleNumber) {
-    case 1: {
-      const [t, m] = await Promise.all([
-        import("@/data/module1-topics"),
-        import("@/data/module1-mcq"),
-      ]);
-      return { topics: t.topics as TopicRow[], mcq: m.mcqData as Record<number, McqRow[]> };
-    }
-    case 2: {
-      const [t, m] = await Promise.all([
-        import("@/data/module2-topics"),
-        import("@/data/module2-mcq"),
-      ]);
-      return { topics: t.topics as TopicRow[], mcq: m.mcqData as Record<number, McqRow[]> };
-    }
-    case 3: {
-      const [t, m] = await Promise.all([
-        import("@/data/module3-topics"),
-        import("@/data/module3-mcq"),
-      ]);
-      return { topics: t.topics as TopicRow[], mcq: m.mcqData as Record<number, McqRow[]> };
-    }
-    case 4: {
-      const [t, m] = await Promise.all([
-        import("@/data/module4-topics"),
-        import("@/data/module4-mcq"),
-      ]);
-      return { topics: t.topics as TopicRow[], mcq: m.mcqData as Record<number, McqRow[]> };
-    }
-    case 5: {
-      const [t, m] = await Promise.all([
-        import("@/data/module5-topics"),
-        import("@/data/module5-mcq"),
-      ]);
-      return { topics: t.topics as TopicRow[], mcq: m.mcqData as Record<number, McqRow[]> };
-    }
-    default:
-      throw new Error(`Unknown module number: ${moduleNumber}`);
-  }
-}
-
-// Parse "~4 mins" → 4. Topic rows store `time_min` as INT in DB;
-// the TS file has strings like "~4 mins" / "5 min" / "".
-function parseTimeMin(time: string): number | null {
-  const match = /(\d+)/.exec(time || "");
-  if (!match) return null;
-  const n = parseInt(match[1], 10);
-  return Number.isFinite(n) ? n : null;
-}
+// loadModuleData + parseTimeMin extracted to @/lib/seed-source so the
+// new /admin/courses/[slug]/diff endpoints share the same canonical
+// loader and the two consumers can't drift on which TS file is
+// authoritative for each module number.
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
