@@ -87,15 +87,44 @@ interface TopicSummary {
   hasDivergence: boolean;
 }
 
+// Plain-language labels for each diff status. Replaces the previous
+// jargon ("TS source", "DB", "ts-only") which was confusing for the
+// teacher who's not a developer. New labels use vocabulary the
+// admin already understands: "what students see" + "new version".
 const STATUS_META: Record<
   QStatus,
   { label: string; color: string; bg: string; border: string }
 > = {
-  unchanged: { label: "Unchanged", color: "#A1A1AA", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)" },
-  edited: { label: "Edited in TS", color: "#FBBF24", bg: "rgba(251,191,36,0.10)", border: "rgba(251,191,36,0.30)" },
-  "ts-only": { label: "Only in TS (would create)", color: "#34D399", bg: "rgba(52,211,153,0.10)", border: "rgba(52,211,153,0.30)" },
-  "db-only": { label: "Only in DB (untouched)", color: "#60A5FA", bg: "rgba(96,165,250,0.10)", border: "rgba(96,165,250,0.30)" },
-  trashed: { label: "Trashed in DB (would resurrect)", color: "#F87171", bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.30)" },
+  unchanged: {
+    label: "No change",
+    color: "#A1A1AA",
+    bg: "rgba(255,255,255,0.04)",
+    border: "rgba(255,255,255,0.08)",
+  },
+  edited: {
+    label: "Has updates",
+    color: "#FBBF24",
+    bg: "rgba(251,191,36,0.10)",
+    border: "rgba(251,191,36,0.30)",
+  },
+  "ts-only": {
+    label: "New (will be added)",
+    color: "#34D399",
+    bg: "rgba(52,211,153,0.10)",
+    border: "rgba(52,211,153,0.30)",
+  },
+  "db-only": {
+    label: "Only on site (kept)",
+    color: "#60A5FA",
+    bg: "rgba(96,165,250,0.10)",
+    border: "rgba(96,165,250,0.30)",
+  },
+  trashed: {
+    label: "Was deleted (would come back)",
+    color: "#F87171",
+    bg: "rgba(248,113,113,0.10)",
+    border: "rgba(248,113,113,0.30)",
+  },
 };
 
 export default function DiffPage() {
@@ -347,14 +376,36 @@ export default function DiffPage() {
             { label: "Admin", href: "/admin" },
             { label: "Courses", href: "/admin/courses" },
             { label: slug.toUpperCase(), href: `/admin/courses/${slug}` },
-            { label: "Diff & apply" },
+            { label: "Update lessons & questions" },
           ]}
         />
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">Per-topic diff &amp; apply</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Update lessons & questions</h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Side-by-side preview of the live DB version vs the canonical TS source. Pick exactly what to apply — topic content and/or specific questions.
+            See what students see now, side-by-side with the new version. Pick exactly what to update — lesson content and/or specific questions. Nothing is changed until you click <strong className="text-white">Push update to students</strong>.
           </p>
+        </div>
+
+        {/* How-it-works hint — 3 quick steps the first-time admin can
+             skim. Subtle (low-contrast) so it stays helpful without
+             stealing focus from the actual controls. */}
+        <div
+          className="mb-5 rounded-xl px-4 py-3 text-[12px] flex items-start gap-3 flex-wrap"
+          style={{
+            background: "rgba(167,139,250,0.06)",
+            border: "1px solid rgba(167,139,250,0.18)",
+          }}
+        >
+          <span className="text-base shrink-0" aria-hidden="true">💡</span>
+          <div className="text-zinc-300 leading-relaxed flex-1 min-w-0">
+            <strong className="text-white">How to use this page:</strong>{" "}
+            <span className="text-zinc-400">
+              <strong className="text-zinc-300">1.</strong> Pick a Module · {" "}
+              <strong className="text-zinc-300">2.</strong> Click any topic with changes (only topics that need attention show up) · {" "}
+              <strong className="text-zinc-300">3.</strong> Compare the two sides + tick what you want to update · {" "}
+              <strong className="text-zinc-300">4.</strong> Click the green button at the bottom.
+            </span>
+          </div>
         </div>
 
         {/* ── Module picker ── */}
@@ -597,7 +648,7 @@ export default function DiffPage() {
                             <span
                               className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
                               style={{ background: "rgba(52,211,153,0.15)", color: "#34D399" }}
-                              title="Questions in TS but not in DB — would be ADDED on apply"
+                              title="New questions that aren't on the site yet — applying will publish them"
                             >
                               + {s.breakdown.tsOnly} new
                             </span>
@@ -606,27 +657,27 @@ export default function DiffPage() {
                             <span
                               className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
                               style={{ background: "rgba(251,191,36,0.15)", color: "#FBBF24" }}
-                              title="Questions whose text/options/answer differ between DB and TS"
+                              title="Questions with updated text or options — applying replaces what students see"
                             >
-                              ~ {s.breakdown.edited} edited
+                              ~ {s.breakdown.edited} updated
                             </span>
                           )}
                           {s.breakdown.trashed > 0 && (
                             <span
                               className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
                               style={{ background: "rgba(248,113,113,0.15)", color: "#F87171" }}
-                              title="Questions soft-deleted in DB — would be RESURRECTED on apply"
+                              title="Questions you previously deleted from the site — applying brings them back"
                             >
-                              ↺ {s.breakdown.trashed} trashed
+                              ↺ {s.breakdown.trashed} would come back
                             </span>
                           )}
                           {s.breakdown.dbOnly > 0 && (
                             <span
                               className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
                               style={{ background: "rgba(96,165,250,0.15)", color: "#60A5FA" }}
-                              title="Questions in DB but not in TS — apply leaves these alone (you've kept them deleted from TS)"
+                              title="Questions you've added directly through the admin editor — applying leaves these alone"
                             >
-                              ✕ {s.breakdown.dbOnly} only-DB
+                              ✦ {s.breakdown.dbOnly} kept as-is
                             </span>
                           )}
                         </div>
@@ -714,8 +765,8 @@ export default function DiffPage() {
 
             {/* ── Side-by-side rendered preview ── */}
             <div className="grid lg:grid-cols-2 gap-4 mb-8">
-              <RenderedSide label="Current (DB) — what students see now" tone="db" topic={data.db ? { title: data.db.title, time: data.db.time_min ? `~${data.db.time_min} min` : "", hook: data.db.hook ?? "", content: data.db.content } : null} />
-              <RenderedSide label="Proposed (TS) — what apply will push" tone="ts" topic={data.ts ? { title: data.ts.title, time: data.ts.time, hook: data.ts.hook, content: data.ts.content } : null} />
+              <RenderedSide label="🎓 What students see now" tone="db" topic={data.db ? { title: data.db.title, time: data.db.time_min ? `~${data.db.time_min} min` : "", hook: data.db.hook ?? "", content: data.db.content } : null} />
+              <RenderedSide label="✨ What apply will change it to" tone="ts" topic={data.ts ? { title: data.ts.title, time: data.ts.time, hook: data.ts.hook, content: data.ts.content } : null} />
             </div>
 
             {/* ── Per-question diff ── */}
@@ -726,34 +777,61 @@ export default function DiffPage() {
             />
 
             {/* ── Apply bar ── */}
+            {/* Plain-language "what will happen" summary above the
+                 button so the admin reads a sentence in normal English
+                 before they click. Was previously a terse
+                 "topic content + 2 questions" line that didn't tell
+                 a non-developer what the action actually does. */}
             <div
-              className="sticky bottom-4 mt-6 rounded-2xl p-4 flex items-center gap-3 flex-wrap"
+              className="sticky bottom-4 mt-6 rounded-2xl p-4"
               style={{
                 background: "linear-gradient(135deg, rgba(99,102,241,0.16), rgba(139,92,246,0.10))",
                 border: "1px solid rgba(99,102,241,0.35)",
                 backdropFilter: "blur(12px)",
               }}
             >
-              <div className="text-sm text-zinc-200 flex-1 min-w-[200px]">
-                <strong>Ready to apply:</strong>{" "}
-                {applyContent ? "topic content" : ""}
-                {applyContent && applyQs.size > 0 ? " + " : ""}
-                {applyQs.size > 0 ? `${applyQs.size} question${applyQs.size === 1 ? "" : "s"}` : ""}
-                {!applyContent && applyQs.size === 0 && (
-                  <span className="text-zinc-500"> nothing selected</span>
-                )}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="text-sm text-zinc-200 flex-1 min-w-[200px]">
+                  <strong>Ready to update:</strong>{" "}
+                  {(() => {
+                    const parts: string[] = [];
+                    if (applyContent) parts.push("lesson content");
+                    if (applyQs.size > 0) {
+                      parts.push(
+                        `${applyQs.size} question${applyQs.size === 1 ? "" : "s"}`
+                      );
+                    }
+                    if (parts.length === 0) {
+                      return (
+                        <span className="text-zinc-500">
+                          nothing selected — tick at least one item above
+                        </span>
+                      );
+                    }
+                    return (
+                      <>
+                        {parts.join(" + ")}.{" "}
+                        <span className="text-zinc-400">
+                          Students will see the new version on their next page load.
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+                <button
+                  onClick={applyDiff}
+                  disabled={applying || (!applyContent && applyQs.size === 0)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.98]"
+                  style={{
+                    background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+                    boxShadow: "0 4px 16px rgba(99,102,241,0.35)",
+                  }}
+                >
+                  {applying
+                    ? "Updating…"
+                    : `✅ Push update to students`}
+                </button>
               </div>
-              <button
-                onClick={applyDiff}
-                disabled={applying || (!applyContent && applyQs.size === 0)}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.98]"
-                style={{
-                  background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
-                  boxShadow: "0 4px 16px rgba(99,102,241,0.35)",
-                }}
-              >
-                {applying ? "Applying…" : `Apply to Module ${moduleNumber} · Topic ${topicNumber}`}
-              </button>
             </div>
           </>
         )}
@@ -777,16 +855,18 @@ function TopicStatusBanner({
   setApplyContent: (v: boolean) => void;
 }) {
   const meta = STATUS_META[status];
+  // Plain-language summaries — replaces the previous teacher-confusing
+  // jargon ("TS source", "DB", "soft-deleted").
   const summary =
     status === "unchanged"
-      ? "Topic content matches TS source. Nothing to apply for content."
+      ? "Lesson content is up to date. Nothing to update here."
       : status === "edited"
-        ? "Topic content differs between DB and TS. Applying will overwrite the DB version."
+        ? "Lesson content has updates available. Applying will replace what students see now."
         : status === "ts-only"
-          ? "Topic doesn't exist in DB yet. Applying will create it."
+          ? "This topic isn't on the site yet. Applying will publish it."
           : status === "db-only"
-            ? "Topic exists in DB but not in the TS source. Apply does nothing for content."
-            : "Topic is soft-deleted in DB. Applying will resurrect it with TS content.";
+            ? "This topic only exists on the site (no new version). Nothing to update for content."
+            : "This topic was deleted from the site earlier. Applying will bring it back.";
 
   return (
     <div
@@ -830,7 +910,7 @@ function TopicStatusBanner({
           disabled={status === "unchanged" || status === "db-only"}
           className="w-4 h-4 accent-indigo-500"
         />
-        <span className="font-semibold text-zinc-200">Apply topic content</span>
+        <span className="font-semibold text-zinc-200">Update lesson content</span>
       </label>
     </div>
   );
@@ -923,7 +1003,7 @@ function QuestionDiffList({
   return (
     <div>
       <div className="text-xs font-bold tracking-widest uppercase text-zinc-500 mb-2">
-        Questions ({questions.length})
+        Tick the questions you want to update ({questions.length} total)
       </div>
       <div className="space-y-2">
         {questions.map((q) => {
@@ -980,7 +1060,7 @@ function QuestionDiffList({
                       className="grid md:grid-cols-2 gap-3 p-3"
                       style={{ borderTop: `1px solid ${meta.border}` }}
                     >
-                      <QPanel title="Current (DB)" data={q.db ? {
+                      <QPanel title="🎓 What students see now" data={q.db ? {
                         question: q.db.question,
                         options: q.db.options_json,
                         correct_index: q.db.correct_index,
@@ -988,7 +1068,7 @@ function QuestionDiffList({
                         explanation: q.db.explanation,
                         meta: q.db.deleted_at ? "🗑 trashed" : null,
                       } : null} ringColor="#60A5FA" />
-                      <QPanel title="Proposed (TS)" data={q.ts ? {
+                      <QPanel title="✨ New version" data={q.ts ? {
                         question: q.ts.question,
                         options: q.ts.options,
                         correct_index: q.ts.correct_index,
