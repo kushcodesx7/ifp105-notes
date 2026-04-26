@@ -69,65 +69,93 @@ interface LiveBlockEditorProps {
   password: string;
 }
 
-// Stable per-row keys. Reorder.Item tracks identity via `value`
-// (object reference), but React still needs stable string keys to
-// reconcile correctly across reorders. Index keys would cause the
-// wrong rows to remount on every reorder.
+// Stable per-row keys. Reorder.Item needs identity that survives
+// content edits (which replace block references) AND drag-reorders
+// (which permute block positions). Index alone fails on reorder.
+// Block-reference alone fails on edit (every commit creates a new
+// reference because the parent rebuilds the value array).
 //
-// We maintain a Map<block-ref, id>. Each new block reference gets a
-// fresh UUID on the next effect tick; existing references keep their
-// id. The map is rebuilt-by-replacement (not mutated in place) so
-// React sees structural change. There's a one-render window where a
-// brand-new block uses an "id-pending-{index}" placeholder before
-// the effect upgrades it to the stable UUID — Framer Motion's
-// Reorder.Item tracks by value, so the placeholder→UUID transition
-// just causes a single inner remount, not a misordered list.
-function useBlockIds(blocks: ContentBlock[]): string[] {
-  // Lazy init mints stable IDs for every block already in the
-  // initial value. This means the first effect tick is a no-op
-  // (every block already has an entry) and we don't trigger an
-  // unnecessary keys-changed → remount on first render.
-  const [registry, setRegistry] = useState<Map<ContentBlock, string>>(
-    () => {
-      const m = new Map<ContentBlock, string>();
-      for (const b of blocks) {
-        m.set(
-          b,
-          `b-${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`
-        );
-      }
-      return m;
-    }
-  );
+// Strategy:
+//   1. Maintain { blocks, ids } state alongside the prop value.
+//   2. SYNCHRONOUSLY compute ids on every render using the LATEST
+//      registry, with two fallbacks: ref-match wins; same-length
+//      index inheritance otherwise (the typical edit case where a
+//      block at position i was replaced by a new ref).
+//   3. Effect commits the new registry after the render so future
+//      renders see the upgraded mapping.
+//
+// Result: when the user edits a block (new ref at the same index),
+// the row's ID is preserved → React reconciles same key → no remount,
+// no flicker, no Reorder confusion. When the user drags to reorder
+// (refs unchanged, just permuted), ref-match preserves IDs across
+// positions. When a block is added/removed, only the new entries
+// get fresh UUIDs.
+function mintId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return `b-${crypto.randomUUID()}`;
+  }
+  return `b-${Math.random().toString(36).slice(2)}`;
+}
 
+function computeIds(
+  blocks: ContentBlock[],
+  prev: { blocks: ContentBlock[]; ids: string[] }
+): string[] {
+  const refToId = new Map<ContentBlock, string>();
+  prev.blocks.forEach((b, i) => refToId.set(b, prev.ids[i]));
+
+  return blocks.map((b, i) => {
+    // 1. Same reference → reuse the existing id (drag-reorder case).
+    const byRef = refToId.get(b);
+    if (byRef) return byRef;
+    // 2. Same length, ref differs → assume content edit; inherit
+    //    the old id at this index. (We could be wrong if the user
+    //    mutated *and* reordered in the same render, but the parent
+    //    can't do both — onChange is one-shot — so this is safe.)
+    if (blocks.length === prev.blocks.length && prev.ids[i]) {
+      return prev.ids[i];
+    }
+    // 3. Otherwise, new block → mint a fresh id.
+    return mintId();
+  });
+}
+
+function useBlockIds(blocks: ContentBlock[]): string[] {
+  // Lazy init mints ids for every block in the initial value so the
+  // first render returns real ids (not placeholders).
+  const [registry, setRegistry] = useState<{
+    blocks: ContentBlock[];
+    ids: string[];
+  }>(() => ({
+    blocks: [...blocks],
+    ids: blocks.map(() => mintId()),
+  }));
+
+  // Synchronous render-time id computation. This is what makes the
+  // edit case flicker-free: we don't wait for an effect to upgrade
+  // a placeholder. The registry only acts as the *source* for the
+  // next render's lookup; THIS render uses the latest known mapping
+  // applied to the current blocks.
+  const ids = computeIds(blocks, registry);
+
+  // Effect commits the (block, id) pairing back to state so the next
+  // render sees the upgraded registry. Returns the same reference
+  // when nothing actually changed → no infinite loops.
   useEffect(() => {
-    // Whitelisted — canonical "sync derived id-registry to a prop"
-    // pattern. The functional update returns the previous reference
-    // when nothing changed, so this can't loop. We need state (not
-    // a ref) so React re-renders with the upgraded ids when a new
-    // block is registered.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRegistry((prev) => {
-      const next = new Map<ContentBlock, string>();
-      let changed = false;
-      for (const b of blocks) {
-        const existing = prev.get(b);
-        if (existing) {
-          next.set(b, existing);
-        } else {
-          next.set(
-            b,
-            `b-${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`
-          );
-          changed = true;
-        }
+      if (
+        prev.blocks.length === blocks.length &&
+        prev.blocks.every((b, i) => b === blocks[i])
+      ) {
+        return prev;
       }
-      if (!changed && next.size === prev.size) return prev;
-      return next;
+      const newIds = computeIds(blocks, prev);
+      return { blocks: [...blocks], ids: newIds };
     });
   }, [blocks]);
 
-  return blocks.map((b, i) => registry.get(b) ?? `b-pending-${i}`);
+  return ids;
 }
 
 export default function LiveBlockEditor({
