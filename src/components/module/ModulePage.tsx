@@ -669,7 +669,11 @@ export default function ModulePage({
               }}>
                 {done.has(t.id) ? "✓" : t.id}
               </span>
-              {t.title.substring(0, 20)}{t.title.length > 20 ? '...' : ''}
+              {/* Tabs bar already scrolls horizontally — give titles
+                   28 chars before truncating (was 20, which cut "What
+                   is Social Media?" mid-word). Real-ellipsis character
+                   reads cleaner than three dots. */}
+              {t.title.length > 28 ? `${t.title.substring(0, 27)}…` : t.title}
             </button>
           ))}
           <button
