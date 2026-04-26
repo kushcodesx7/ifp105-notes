@@ -46,8 +46,8 @@ export default function Module4Client({ topics }: { topics: Topic[] }) {
     <ModulePage
       courseSlug={CURRENT_COURSE_SLUG}
       moduleNumber={4}
-      moduleTitle="HTML & Web"
-      moduleSubtitle="Development"
+      moduleTitle="HTML & Web Development"
+      moduleSubtitle="Build with code"
       moduleDescription="Build web pages from scratch. Tags, elements, attributes, tables, lists, links, images — with a live code editor."
       accentFrom="#06B6D4"
       accentTo="#0891B2"

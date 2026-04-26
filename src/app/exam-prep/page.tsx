@@ -250,7 +250,7 @@ export default function ExamPrepPage() {
               className="mt-4 rounded-xl p-3 text-[12px] text-zinc-300 text-center"
               style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.22)" }}
             >
-              ⏱ <strong>Time rule:</strong> 1 mark = 1 minute. A 6-mark question gets ~6 minutes max — don't write a thesis.
+              ⏱ <strong>Time rule:</strong> 1 mark = 1 minute. A 6-mark question gets ~6 minutes max — don&apos;t write a thesis.
             </div>
           </section>
 

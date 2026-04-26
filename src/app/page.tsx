@@ -139,8 +139,13 @@ const ICT_MODULE_OVERLAYS: Record<number, HomeModuleOverlay> = {
     icon: "\u{1F4CA}",
   },
   3: {
+    // Updated alongside the M3 self-study rewrite (PR #161). The old
+    // copy talked about marketing/advertising/management tools — none
+    // of which exist in the new module. New focus: what social media
+    // is, the risks worth knowing, and why LinkedIn matters for your
+    // first job.
     description:
-      "Social media platforms, modern tools & automation, measurement, advertising, LinkedIn, and personal branding.",
+      "What social media really is, the risks worth knowing, and why LinkedIn is the career tool you should set up in Year 1 — not after graduation.",
     icon: "\u{1F4F1}",
   },
   4: {
