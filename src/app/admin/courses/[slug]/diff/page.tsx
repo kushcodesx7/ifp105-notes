@@ -121,6 +121,64 @@ export default function DiffPage() {
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<string | null>(null);
 
+  // ─── Filter scope ─────────────────────────────────────────────
+  // Lets the admin narrow the picker to "only topics with content
+  // changes" or "only topics with question changes" — useful when
+  // they want to do a targeted pass (e.g., update all the lesson
+  // copy edits in one go without seeing question-only diffs).
+  type FilterScope = "all" | "content" | "questions";
+  const [filterScope, setFilterScope] = useState<FilterScope>("all");
+
+  // ─── Dismissed-topics persistence ─────────────────────────────
+  // Per-admin, per-device choice to hide a topic from the picker
+  // ("I've reviewed this and I don't want to apply"). Persisted in
+  // localStorage so it survives reloads. Keyed on
+  //   `${slug}::M${moduleNumber}::T${topicNumber}`
+  // so dismissals don't bleed across courses or modules.
+  const dismissKey = `ifp105_diff_dismissed_v1`;
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
+  const [showDismissed, setShowDismissed] = useState(false);
+
+  // Hydrate dismissals from localStorage on mount (client-only).
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined"
+        ? window.localStorage.getItem(dismissKey)
+        : null;
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setDismissed(new Set(parsed.filter((x): x is string => typeof x === "string")));
+      }
+    } catch {}
+  }, [dismissKey]);
+
+  function persistDismissed(next: Set<string>) {
+    try {
+      window.localStorage.setItem(dismissKey, JSON.stringify(Array.from(next)));
+    } catch {}
+  }
+  function dismissKeyFor(mod: number, top: number) {
+    return `${slug}::M${mod}::T${top}`;
+  }
+  function dismissTopic(mod: number, top: number) {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(dismissKeyFor(mod, top));
+      persistDismissed(next);
+      return next;
+    });
+  }
+  function undismissTopic(mod: number, top: number) {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.delete(dismissKeyFor(mod, top));
+      persistDismissed(next);
+      return next;
+    });
+  }
+
   const moduleMeta = MODULES.find((m) => m.id === moduleNumber);
   void moduleMeta; // reserved for future use (e.g., showing module accent in heading)
 
@@ -152,7 +210,15 @@ export default function DiffPage() {
           // something useful immediately. If everything is in sync,
           // leave topicNumber null and the page renders the empty
           // state instead of forcing a no-op diff fetch.
-          const firstDiverged = topics.find((t) => t.hasDivergence);
+          // Auto-select the first NON-DISMISSED diverged topic so a
+          // module switch lands on something useful. If everything
+          // is either in sync OR dismissed, leave topicNumber null
+          // and let the empty-state UI explain.
+          const firstDiverged = topics.find(
+            (t) =>
+              t.hasDivergence &&
+              !dismissed.has(dismissKeyFor(moduleNumber, t.topicNumber))
+          );
           setTopicNumber(firstDiverged ? firstDiverged.topicNumber : null);
         }
       } catch {
@@ -318,24 +384,79 @@ export default function DiffPage() {
           </Link>
         </div>
 
-        {/* ── Filtered topic buttons (only diverged ones) ── */}
-        {/* Summary-driven picker: instead of dumping all 11 topics into
-             a dropdown, we surface ONLY the topics that have something
-             to apply (edited / ts-only / trashed at the topic level OR
-             with diverged questions). Saves the admin from clicking
-             through 8 unchanged topics looking for the one that needs
-             attention. Empty state replaces the picker entirely when
-             nothing is out of sync. */}
+        {/* ── Filter scope selector ── */}
+        {/* Narrows the picker. The admin can choose "Content only"
+             when reviewing lesson edits in bulk, or "Questions only"
+             when triaging quiz changes. "All" is the default and
+             matches the previous behaviour. */}
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <label className="block text-[11px] font-bold tracking-widest uppercase text-zinc-500">
+            Show topics with:
+          </label>
+          {([
+            { id: "all", label: "Any change" },
+            { id: "content", label: "Content changes" },
+            { id: "questions", label: "Question changes" },
+          ] as const).map((opt) => {
+            const active = filterScope === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setFilterScope(opt.id)}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors"
+                style={{
+                  background: active
+                    ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
+                    : "rgba(255,255,255,0.04)",
+                  color: active ? "#fff" : "#A1A1AA",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Filtered topic buttons (only diverged ones, optionally
+              narrowed by scope, optionally including dismissed) ── */}
         <div className="mb-5">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
             <label className="block text-[11px] font-bold tracking-widest uppercase text-zinc-500">
               Topics with changes
             </label>
             {summary && (() => {
-              const divergedCount = summary.filter((s) => s.hasDivergence).length;
+              // Helper: does this topic match the current scope filter?
+              const inScope = (s: TopicSummary): boolean => {
+                if (filterScope === "all") return s.hasDivergence;
+                if (filterScope === "content") {
+                  return (
+                    s.topicStatus === "edited" ||
+                    s.topicStatus === "ts-only" ||
+                    s.topicStatus === "trashed"
+                  );
+                }
+                // questions
+                return s.questionsDiverged > 0;
+              };
+              const divergedAll = summary.filter(inScope);
+              const dismissedHere = divergedAll.filter((s) =>
+                dismissed.has(dismissKeyFor(moduleNumber, s.topicNumber))
+              ).length;
+              const visibleCount = divergedAll.length - dismissedHere;
               return (
-                <span className="text-[11px] text-zinc-500">
-                  {divergedCount} of {summary.length} need{divergedCount === 1 ? "s" : ""} review
+                <span className="text-[11px] text-zinc-500 flex items-center gap-2">
+                  <span>
+                    {visibleCount} of {summary.length} need{visibleCount === 1 ? "s" : ""} review
+                  </span>
+                  {dismissedHere > 0 && (
+                    <button
+                      onClick={() => setShowDismissed((v) => !v)}
+                      className="text-indigo-300 hover:text-indigo-200 underline underline-offset-2"
+                    >
+                      {showDismissed ? "Hide" : "Show"} {dismissedHere} dismissed
+                    </button>
+                  )}
                 </span>
               );
             })()}
@@ -347,8 +468,30 @@ export default function DiffPage() {
 
           {!summaryLoading && summary && (
             (() => {
-              const diverged = summary.filter((s) => s.hasDivergence);
-              if (diverged.length === 0) {
+              const inScope = (s: TopicSummary): boolean => {
+                if (filterScope === "all") return s.hasDivergence;
+                if (filterScope === "content") {
+                  return (
+                    s.topicStatus === "edited" ||
+                    s.topicStatus === "ts-only" ||
+                    s.topicStatus === "trashed"
+                  );
+                }
+                return s.questionsDiverged > 0;
+              };
+              const divergedAll = summary.filter(inScope);
+              const visible = divergedAll.filter((s) => {
+                const isDismissed = dismissed.has(
+                  dismissKeyFor(moduleNumber, s.topicNumber)
+                );
+                return showDismissed ? true : !isDismissed;
+              });
+
+              if (divergedAll.length === 0) {
+                const scopeLabel =
+                  filterScope === "content" ? "content" :
+                  filterScope === "questions" ? "question" :
+                  "any";
                 return (
                   <div
                     className="rounded-xl px-4 py-3 text-sm flex items-center gap-2"
@@ -358,20 +501,47 @@ export default function DiffPage() {
                       color: "#34D399",
                     }}
                   >
-                    ✓ <span><strong>All topics in sync</strong> — nothing to apply for Module {moduleNumber}.</span>
+                    ✓ <span><strong>All topics in sync</strong> — nothing to apply for Module {moduleNumber}{filterScope !== "all" ? ` (${scopeLabel} filter)` : ""}.</span>
+                  </div>
+                );
+              }
+              if (visible.length === 0) {
+                return (
+                  <div
+                    className="rounded-xl px-4 py-3 text-sm flex items-center gap-2"
+                    style={{
+                      background: "rgba(96,165,250,0.08)",
+                      border: "1px solid rgba(96,165,250,0.30)",
+                      color: "#60A5FA",
+                    }}
+                  >
+                    ✓ <span><strong>All visible topics dismissed.</strong> Click &ldquo;Show dismissed&rdquo; above to bring them back.</span>
                   </div>
                 );
               }
               return (
                 <div className="flex flex-wrap gap-2">
-                  {diverged.map((s) => {
+                  {visible.map((s) => {
                     const meta = STATUS_META[s.topicStatus];
                     const active = s.topicNumber === topicNumber;
                     return (
-                      <button
+                      // Use a div + role=button so we can nest a real
+                      // <button> for "Dismiss" inside without producing
+                      // invalid HTML (button-in-button). Keyboard
+                      // navigation preserved via tabIndex + Enter/Space
+                      // handler.
+                      <div
                         key={s.topicNumber}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setTopicNumber(s.topicNumber)}
-                        className="text-left rounded-xl px-3 py-2.5 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setTopicNumber(s.topicNumber);
+                          }
+                        }}
+                        className="text-left rounded-xl px-3 py-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
                         style={{
                           background: active
                             ? "rgba(99,102,241,0.18)"
@@ -460,7 +630,42 @@ export default function DiffPage() {
                             </span>
                           )}
                         </div>
-                      </button>
+                        {/* Dismiss / un-dismiss inline action. Click
+                             stops propagation so it doesn't also
+                             fire the parent button's setTopicNumber.
+                             Persists in localStorage per (slug,
+                             module, topic) so it survives reloads. */}
+                        {(() => {
+                          const k = dismissKeyFor(moduleNumber, s.topicNumber);
+                          const isDismissed = dismissed.has(k);
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isDismissed) {
+                                  undismissTopic(moduleNumber, s.topicNumber);
+                                } else {
+                                  dismissTopic(moduleNumber, s.topicNumber);
+                                  // If we just dismissed the currently-
+                                  // selected topic, clear it so the
+                                  // detail panel disappears.
+                                  if (topicNumber === s.topicNumber) {
+                                    setTopicNumber(null);
+                                  }
+                                }
+                              }}
+                              className="mt-2 text-[10px] font-semibold text-zinc-500 hover:text-zinc-300 transition-colors"
+                              title={
+                                isDismissed
+                                  ? "Bring this topic back into the picker"
+                                  : "I've reviewed this and don't want to apply — hide from picker"
+                              }
+                            >
+                              {isDismissed ? "↺ Restore" : "× Dismiss (don't apply)"}
+                            </button>
+                          );
+                        })()}
+                      </div>
                     );
                   })}
                 </div>
