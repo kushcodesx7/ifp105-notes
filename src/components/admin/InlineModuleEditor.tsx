@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import BlockEditor from "@/components/admin/BlockEditor";
+import LiveBlockEditor from "@/components/admin/live/LiveBlockEditor";
+import EditableHtml from "@/components/admin/live/EditableHtml";
 import FlashcardsEditor, { type Flashcard } from "@/components/admin/FlashcardsEditor";
 import SharedQuestionEditor from "@/components/admin/shared/QuestionEditor";
 import SharedNewQuestionForm from "@/components/admin/shared/NewQuestionForm";
@@ -339,6 +341,32 @@ function TopicEditor({
     credential
   );
 
+  // Editor mode — "live" = Notion-style WYSIWYG (LiveBlockEditor),
+  // "classic" = the original form-based BlockEditor. Stored in
+  // localStorage so the admin's preference survives reloads. Default
+  // is "live" because that's the new authoring surface; classic
+  // stays as a safety net for any edge case the live editor doesn't
+  // yet handle (PR 1 scope).
+  const [editorMode, setEditorMode] = useState<"live" | "classic">("live");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("editor:mode");
+      if (v === "classic" || v === "live") {
+        setEditorMode(v);
+      }
+    } catch {
+      // localStorage may throw in privacy modes — fall back to default.
+    }
+  }, []);
+  function changeEditorMode(next: "live" | "classic") {
+    setEditorMode(next);
+    try {
+      localStorage.setItem("editor:mode", next);
+    } catch {
+      // best-effort persistence
+    }
+  }
+
   // Local meta state (title / hook / timeMin) — seeded from server, diff-saved.
   const [title, setTitle] = useState(topicMeta.title);
   const [hook, setHook] = useState(topicMeta.hook || "");
@@ -555,6 +583,9 @@ function TopicEditor({
             {savingMeta ? "Saving…" : metaDirty ? "Save title/hook" : "Saved"}
           </button>
         </div>
+        {/* Title — always a plain input. The student page renders title
+             as plain text, so allowing rich text here would just leak
+             literal <strong>…</strong> into students' reading view. */}
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -562,13 +593,28 @@ function TopicEditor({
           className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-lg font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
         />
         <div className="grid md:grid-cols-[1fr_auto] gap-2">
-          <textarea
-            value={hook}
-            onChange={(e) => setHook(e.target.value)}
-            placeholder="Hook — the one-line opener that sits above the body"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
-          />
+          {editorMode === "live" ? (
+            <div
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08]"
+              data-live-editable="true"
+            >
+              <EditableHtml
+                value={hook}
+                onChange={setHook}
+                placeholder="Hook — the one-line opener that sits above the body"
+                className="text-sm text-zinc-300 leading-relaxed [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20 [&_mark]:text-white [&_mark]:font-semibold [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5 [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30"
+                ariaLabel="Topic hook"
+              />
+            </div>
+          ) : (
+            <textarea
+              value={hook}
+              onChange={(e) => setHook(e.target.value)}
+              placeholder="Hook — the one-line opener that sits above the body"
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+            />
+          )}
           <label className="text-[11px] text-zinc-500 block">
             <span className="block mb-1">Time (min)</span>
             <input
@@ -590,22 +636,37 @@ function TopicEditor({
           border: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold">Topic body</h3>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-bold">Topic body</h3>
+            <EditorModeToggle mode={editorMode} onChange={changeEditorMode} />
+          </div>
           <BlockSaveIndicator state={blockSaveState} dirty={blocksDirty} />
         </div>
         {blockSaveError && (
           <p className="text-[11px] text-red-400 mb-2">{blockSaveError}</p>
         )}
-        <BlockEditor
-          value={blocks}
-          onChange={handleBlocksChange}
-          courseSlug={slug}
-          moduleNumber={moduleNumber}
-          topicNumber={topicMeta.number}
-          idToken={idToken}
-          password=""
-        />
+        {editorMode === "live" ? (
+          <LiveBlockEditor
+            value={blocks}
+            onChange={handleBlocksChange}
+            courseSlug={slug}
+            moduleNumber={moduleNumber}
+            topicNumber={topicMeta.number}
+            idToken={idToken}
+            password=""
+          />
+        ) : (
+          <BlockEditor
+            value={blocks}
+            onChange={handleBlocksChange}
+            courseSlug={slug}
+            moduleNumber={moduleNumber}
+            topicNumber={topicMeta.number}
+            idToken={idToken}
+            password=""
+          />
+        )}
       </div>
 
       {/* Flashcards — same per-topic deck the /admin/courses page edits.
@@ -747,5 +808,69 @@ function BlockSaveIndicator({
     );
   }
   return null;
+}
+
+// ─── Editor mode toggle ─────────────────────────────────
+
+// Pill toggle between the new Notion-style live editor and the
+// original form-based BlockEditor. Persisted to localStorage by the
+// caller (TopicEditor → changeEditorMode). Default for new users is
+// "live" — that's the new authoring surface.
+function EditorModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: "live" | "classic";
+  onChange: (next: "live" | "classic") => void;
+}) {
+  return (
+    <div
+      className="inline-flex items-center rounded-full p-0.5 select-none"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}
+      role="tablist"
+      aria-label="Editor mode"
+    >
+      <ModeBtn active={mode === "live"} onClick={() => onChange("live")}>
+        ✏️ Live
+      </ModeBtn>
+      <ModeBtn active={mode === "classic"} onClick={() => onChange("classic")}>
+        📋 Classic
+      </ModeBtn>
+    </div>
+  );
+}
+
+function ModeBtn({
+  children,
+  active,
+  onClick,
+}: {
+  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="text-[11px] font-semibold px-3 py-1 rounded-full transition-all"
+      style={{
+        background: active
+          ? "linear-gradient(135deg, rgba(99,102,241,0.85), rgba(139,92,246,0.85))"
+          : "transparent",
+        color: active ? "#fff" : "#9CA3AF",
+        boxShadow: active
+          ? "0 4px 14px rgba(99,102,241,0.35)"
+          : "none",
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
