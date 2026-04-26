@@ -108,37 +108,55 @@ export const topics: Topic[] = [
         html: `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:20px;margin:8px 0;overflow-x:auto"><svg viewBox="0 0 720 230" style="width:100%;height:auto;min-width:560px;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shrinking computer journey: building-sized Mechanical era to pocket-sized Mobile era"><defs><marker id="m1t2arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA"/></marker></defs><text x="360" y="20" text-anchor="middle" fill="#71717A" font-size="11" font-family="system-ui" font-weight="700" letter-spacing="3">THE SHRINKING COMPUTER</text><rect x="20" y="50" width="130" height="130" rx="10" fill="rgba(167,139,250,0.10)" stroke="#A78BFA" stroke-width="2"/><text x="85" y="100" text-anchor="middle" font-size="46">🏛</text><text x="85" y="135" text-anchor="middle" fill="#A78BFA" font-size="13" font-family="system-ui" font-weight="700">BUILDING</text><text x="85" y="152" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">Mechanical</text><text x="85" y="166" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">Pre-1940s</text><text x="85" y="200" text-anchor="middle" fill="#F87171" font-size="10" font-family="system-ui" font-weight="600">too slow</text><line x1="160" y1="115" x2="195" y2="115" stroke="#A1A1AA" stroke-width="2" marker-end="url(#m1t2arr)"/><text x="177" y="105" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">+power</text><rect x="205" y="65" width="110" height="110" rx="9" fill="rgba(96,165,250,0.10)" stroke="#60A5FA" stroke-width="2"/><text x="260" y="110" text-anchor="middle" font-size="38">🏢</text><text x="260" y="138" text-anchor="middle" fill="#60A5FA" font-size="12" font-family="system-ui" font-weight="700">ROOM</text><text x="260" y="153" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">Electronic</text><text x="260" y="166" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">1940s–60s</text><text x="260" y="200" text-anchor="middle" fill="#F87171" font-size="10" font-family="system-ui" font-weight="600">too big</text><line x1="325" y1="115" x2="360" y2="115" stroke="#A1A1AA" stroke-width="2" marker-end="url(#m1t2arr)"/><text x="342" y="105" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">+chips</text><rect x="370" y="80" width="90" height="90" rx="8" fill="rgba(52,211,153,0.10)" stroke="#34D399" stroke-width="2"/><text x="415" y="120" text-anchor="middle" font-size="32">🖥</text><text x="415" y="142" text-anchor="middle" fill="#34D399" font-size="11" font-family="system-ui" font-weight="700">DESK</text><text x="415" y="156" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">PC</text><text x="415" y="167" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">1970s–90s</text><text x="415" y="200" text-anchor="middle" fill="#F87171" font-size="10" font-family="system-ui" font-weight="600">stuck at home</text><line x1="470" y1="115" x2="505" y2="115" stroke="#A1A1AA" stroke-width="2" marker-end="url(#m1t2arr)"/><text x="487" y="105" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">+wifi</text><rect x="515" y="95" width="65" height="75" rx="6" fill="rgba(251,191,36,0.10)" stroke="#FBBF24" stroke-width="2"/><text x="547" y="130" text-anchor="middle" font-size="26">📱</text><text x="547" y="148" text-anchor="middle" fill="#FBBF24" font-size="10" font-family="system-ui" font-weight="700">POCKET</text><text x="547" y="160" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">Mobile</text><text x="547" y="170" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">2000s–now</text><text x="547" y="200" text-anchor="middle" fill="#34D399" font-size="10" font-family="system-ui" font-weight="600">does it all ✓</text><text x="650" y="105" text-anchor="middle" fill="#71717A" font-size="9" font-family="system-ui" font-style="italic">+1000×</text><text x="650" y="120" text-anchor="middle" fill="#71717A" font-size="9" font-family="system-ui" font-style="italic">faster</text></svg><div style="text-align:center;color:#71717A;font-size:11px;margin-top:8px">Each era solved the last era\'s biggest problem.</div></div>`,
       },
 
-      // ─── Anchor pills: one word + one fact per era ───
+      // ─── 2 + 2 era cards: each card is a mini-lesson ───
+      // Layout split into two 2-column rows so each card has 2× the
+      // horizontal space. Per card: lead headline + concrete story
+      // sentence + 3 quick-fact bullets + "Why it mattered" line.
+      // Designed for 17-year-old self-study — every fact is a vivid
+      // comparison (size of a school, weight of 6 elephants, lights
+      // dimming in nearby buildings) instead of raw specs students
+      // can't picture (174,000W, 5,000 ops/sec, etc.).
+      // First row: the OLD eras (Mechanical, Electronic).
       {
         type: "cards",
-        columns: 4,
+        columns: 2,
         items: [
           {
             icon: "🏛",
             title: "Mechanical",
-            description: "Think wooden beads on a frame — that's the <strong>Abacus</strong>, the most famous one. No electricity, no buttons. You slid beads with your fingers to count. Slow, but worked for thousands of years.",
+            description: "<strong>Counting with wooden beads.</strong> For over <strong>2,500 years</strong>, shopkeepers, traders, and even astronomers did all their math on a frame of beads called the <strong>Abacus</strong> — still seen in some Chorsu shops today.<br><br>▸ <strong>How big?</strong> Fits in a small bag<br>▸ <strong>How fast?</strong> Quick at adding, but multiplying took minutes<br>▸ <strong>Famous:</strong> the Abacus · Pascal's calculating box (1642) · Babbage's brass machine (1830s)<br><br><strong>Why it mattered:</strong> Before this, every shop owner did math in their head or on paper — slow and full of mistakes. The Abacus made trade across countries possible.",
             tag: "Pre-1940s",
             tagColor: "purple",
           },
           {
             icon: "🏢",
             title: "Electronic",
-            description: "<strong>ENIAC, 1945</strong> — the first electric computer. As big as a small house and weighed 30 tons. Used vacuum tubes (like giant light bulbs) instead of beads. Suddenly 100× faster than any human.",
+            description: "<strong>A computer the size of a school.</strong> In 1945, the US Army built <strong>ENIAC</strong> — the first fully electric computer. As big as a small house, weighed as much as <strong>6 elephants</strong>, and when it switched on, lights in nearby buildings dimmed.<br><br>▸ <strong>How big?</strong> Filled an entire room<br>▸ <strong>How fast?</strong> Did in 1 second what took 100 humans a whole day<br>▸ <strong>Famous:</strong> ENIAC (1945) · UNIVAC (first one sold to a business, 1951)<br><br><strong>Why it mattered:</strong> Calculations that used to take weeks now took minutes. Weather forecasts, bank loans, and space missions all became possible. The \"digital age\" started here.",
             tag: "1940s–60s",
             tagColor: "blue",
           },
+        ],
+      },
+      // Second row: the MODERN eras (Personal, Mobile) — the ones
+      // students' parents lived through, and the one students live
+      // in now.
+      {
+        type: "cards",
+        columns: 2,
+        items: [
           {
             icon: "🖥️",
             title: "Personal",
-            description: "Microchips made computers small enough to sit on a <strong>desk at home</strong>. The Apple II and IBM PC arrived. For the first time, normal families could own one — not just universities or banks.",
+            description: "<strong>A computer on your desk at home.</strong> In 1977, the <strong>Apple II</strong> arrived — the first computer normal families could buy. Kids started typing essays, doing homework, and playing simple games. Your parents probably saw their first computer in this era.<br><br>▸ <strong>How big?</strong> Sat on a desk like a TV<br>▸ <strong>How fast?</strong> Ran word processors, simple games, early websites<br>▸ <strong>Famous:</strong> Apple II (1977) · IBM PC (1981) · Windows 95 (1995)<br><br><strong>Why it mattered:</strong> Computers stopped being only for governments and big companies. Schools, offices, and homes finally had one. Email and the early internet started here.",
             tag: "1970s–90s",
             tagColor: "green",
           },
           {
             icon: "📱",
             title: "Mobile",
-            description: "Your <strong>phone in your pocket</strong> has more power than every NASA computer used for the 1969 moon landing — combined. Touchscreens replaced keyboards, Wi-Fi replaced cables. Always on, always online, always with you.",
+            description: "<strong>A computer in your pocket.</strong> Look at your phone — it's more powerful than <strong>all the computers NASA used to send astronauts to the Moon in 1969, COMBINED</strong>. With Wi-Fi everywhere, you carry a supercomputer wherever you go.<br><br>▸ <strong>How big?</strong> Slides into your pocket<br>▸ <strong>How fast?</strong> Streams videos, plays games, runs hundreds of apps at once<br>▸ <strong>Famous:</strong> iPhone (2007) · Android phones (2008) · iPad (2010)<br><br><strong>Why it mattered:</strong> TikTok, Instagram, YouTube, Uber, and mobile banking exist <strong>ONLY</strong> because of this era. The whole world is connected — in everyone's pocket.",
             tag: "2000s–now",
+            tagColor: "pink",
           },
         ],
       },
