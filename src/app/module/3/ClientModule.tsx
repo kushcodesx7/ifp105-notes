@@ -28,7 +28,7 @@ export default function Module3Client({ topics }: { topics: Topic[] }) {
       moduleNumber={3}
       moduleTitle="Social Media"
       moduleSubtitle="Foundation"
-      moduleDescription="Social media platforms, modern tools & automation, metrics, advertising, and LinkedIn — your professional identity online."
+      moduleDescription="What social media is, how it helps you (and the risks to watch out for), and why LinkedIn is the most important career tool you should set up today."
       accentFrom="#3B82F6"
       accentTo="#2563EB"
       orbColor1="rgba(59,130,246,0.15)"
@@ -36,7 +36,7 @@ export default function Module3Client({ topics }: { topics: Topic[] }) {
       topics={topics}
       stats={[
         { n: "6", l: "Topics" },
-        { n: "~35", l: "Minutes" },
+        { n: "~20", l: "Minutes" },
         { n: String(_mcqCount3), l: "Practice Qs" },
       ]}
     />
