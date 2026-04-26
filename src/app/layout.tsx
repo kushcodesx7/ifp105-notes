@@ -101,8 +101,14 @@ export default function RootLayout({
               the Vercel dashboard at /speed-insights. ~3KB chunk,
               one beacon per pageview, no PII. Lets us see actual
               perf in Tashkent's network conditions vs. synthetic
-              Lighthouse scores. */}
-          <SpeedInsights />
+              Lighthouse scores.
+
+              Skipped in development: Vercel's debug script lives at
+              va.vercel-scripts.com which most ad-blockers (and
+              Next.js dev's CSP) reject — that triggers a red "1 Issue"
+              badge in the dev overlay every page load. Production
+              behaviour is unaffected. */}
+          {process.env.NODE_ENV === "production" && <SpeedInsights />}
         </AuthProvider>
       </body>
     </html>

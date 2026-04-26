@@ -143,7 +143,7 @@ export async function GET(
     hook: string;
     content: ContentBlock[];
   }> = [];
-  let tsMcq: Record<number, Array<{
+  const tsMcq: Record<number, Array<{
     question: string;
     options: string[];
     correct_index: number;
