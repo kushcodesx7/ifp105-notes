@@ -196,80 +196,64 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
     ],
   },
 
-  // ━━━ Module 3: Social Media ━━━
+  // ━━━ Module 3: Social Media (rewritten Apr 26 2026) ━━━
+  // 6 topics × 5 flashcards each = 30 cards. Aligned to the rewritten
+  // self-study topics and MCQs in module3-topics.ts and module3-mcq.ts.
+  // No more Facebook Marketing / X Marketing / management-tools content —
+  // those topics no longer exist in the new module structure.
   3: {
-    // Topic 1: Introduction to Social Media
+    // Topic 1: What is Social Media?
     1: [
-      { front: "What is social media, in simple words?", back: "Any app or website where normal users make their own posts AND can reply to each other. Instagram, TikTok, Telegram, YouTube, and Facebook are all social media. The 'two-way' part is what makes it different from old TV." },
-      { front: "Why is social media 'two-way' but TV is 'one-way'?", back: "On TV you can only watch -- you can't answer back. On social media you can post, comment, reply, and share. Both sides send messages, not just the broadcaster." },
-      { front: "Name 3 everyday things you already do that count as social media.", back: "Posting an Instagram Story of your lunch, replying in a Telegram group chat, and leaving a comment on a YouTube video. Every time you post or reply -- that's social media." },
-      { front: "Why is social media so useful for a small Tashkent shop?", back: "It's almost free -- a Chorsu samsa shop can post a fresh photo every morning for zero som. Customers also leave instant feedback in the comments ('tasty!' / 'too salty') the same day." },
-      { front: "Name 3 things to watch out for on social media.", back: "1) Not everything is true -- people lie online. 2) Apps are built to keep you scrolling, so 2 hours feel like 10 minutes. 3) What you post stays online, even if you delete it later." },
-      { front: "Is a YouTube comment section social media?", back: "Yes. You post (your comment), other users reply, the creator can heart it. That's a two-way conversation -- the key feature of social media." },
+      { front: "What is social media, in simple words?", back: "Any app or website where normal users post their own content AND others can reply. Instagram, TikTok, Telegram, YouTube — all social media. The two-way part is what makes it different from old TV." },
+      { front: "Why is social media 'two-way' but old TV is 'one-way'?", back: "On TV you only watch — you can't answer back. On social media you post, comment, reply, share. Both sides send messages, not just one broadcaster." },
+      { front: "Why is social media almost free for a small Tashkent shop?", back: "Making and posting a photo costs nothing. The shop only pays normal phone internet — no printing, no newspaper space, no TV ad money. That's why even a samsa shop can use it." },
+      { front: "Is an Instagram Story with friends tapping a heart emoji 'social media'?", back: "Yes. You posted, they replied — that's a two-way exchange. Stories disappear after 24 hours but they're still social media while they exist." },
+      { front: "Name 3 everyday things you already do that count as social media.", back: "Posting an Instagram Story of your lunch, replying in a Telegram group chat, leaving a comment on a YouTube video. Every time you post or reply — that's social media." },
     ],
 
-    // Topic 2: Types of Social Media Platforms
+    // Topic 2: Advantages of Social Media
     2: [
-      { front: "Match the app to what it's best for: Instagram, TikTok, YouTube, Telegram, LinkedIn.", back: "Instagram = photos and Reels. TikTok = short vertical videos. YouTube = longer videos and learning. Telegram = chat and news channels (#1 in Uzbekistan). LinkedIn = jobs and online CV." },
-      { front: "Why does my TikTok For You page feel so personal?", back: "TikTok's algorithm watches what you finish, like, and share. Then it shows MORE of the same type. Watch three football videos and your feed fills with football -- the app learned your taste." },
-      { front: "Which app is most popular in Uzbekistan for news and group chats?", back: "Telegram. @gazeta_uz, school groups, class groups, and most Tashkent news channels live there. Teens in Uzbekistan use it every day." },
-      { front: "Who mostly uses Facebook in Uzbekistan?", back: "Adults over 30 -- parents, teachers, small-business owners. Teens mostly prefer Instagram and TikTok. Knowing WHO is on each app helps a shop pick the right one." },
-      { front: "Can you post the exact same thing on Instagram and LinkedIn?", back: "Usually no. A LinkedIn-style post looks boring on TikTok; a TikTok dance looks unprofessional on LinkedIn. Each app has its own style and audience -- adapt the post." },
-      { front: "What's LinkedIn for?", back: "A professional app -- like an online CV. It's used to find internships and first jobs after university. No party photos, no memes. Not popular with teens, but useful when you start job-hunting." },
-      { front: "Why does Instagram trap you in one topic over time?", back: "The algorithm shows more of what you already watched. Only football clips in = only football out. To widen the feed, like a few new kinds of posts on purpose." },
+      { front: "What is a key BENEFIT of social media for normal users?", back: "Free communication with people in any country — chats, video calls, messages. Distance no longer matters. A student in Tashkent can message a friend in London for zero som." },
+      { front: "Why is YouTube so useful for students who want to learn new skills?", back: "Most lessons are completely free — IELTS, coding, drawing, music, makeup, English. Almost any skill has a free tutorial. No fees, no enrolment, just search and watch." },
+      { front: "Why does news on Telegram channels often beat the TV news to your phone?", back: "Anyone with a phone can post the second something happens — no editor, no studio, no scheduled show. TV needs all of that. The lack of middlemen is why social media is faster." },
+      { front: "How can a Tashkent home-baker run a whole business on Instagram with NO real shop?", back: "Free posts of cake photos → neighbours see them → DM to order → baker delivers. Zero rent, zero ads, just good photos and quick replies. Many real Tashkent bakers do this." },
+      { front: "Your aunt opens a small flower shop. What's the cheapest, fastest way to tell people?", back: "Post good flower photos on Instagram and share to a local Tashkent Telegram channel. Zero som, immediate reach to neighbours. TV ads cost millions and flyers are slow." },
     ],
 
-    // Topic 3: Social Media Management Tools
+    // Topic 3: Disadvantages of Social Media
     3: [
-      { front: "What is a 'social media management tool'?", back: "An app that lets you post and reply across many social apps from one place. Instead of opening Instagram, TikTok, and Telegram separately, you write in one dashboard and the tool posts for you." },
-      { front: "Name 3 tools a student or small shop might use.", back: "Buffer, Later, and Metricool -- all have free plans that can schedule posts to Instagram, TikTok, and Facebook. Canva is a separate helper for designing the post's picture." },
-      { front: "What does 'scheduling a post' mean?", back: "You write the post now, pick a future time, and the tool posts it automatically at that time. Example: on Sunday, line up 5 posts for Monday-Friday at 7 p.m., then forget about it." },
-      { front: "What is a 'unified inbox'?", back: "One screen that shows DMs and comments from every app you use -- Instagram, Facebook, Telegram. You reply without jumping between apps, so nothing gets missed." },
-      { front: "Does Canva do the same thing as Buffer?", back: "No -- different jobs. Canva DESIGNS the picture (templates, drag-and-drop). Buffer SCHEDULES when to post. Small pages often use both together -- design in Canva, schedule in Buffer." },
-      { front: "Does scheduling replace replying to followers?", back: "No. Scheduling handles POSTS. Replies, comments, and DMs are a separate daily job. If you schedule 50 posts and ignore every comment for a month, followers feel unheard and leave." },
-      { front: "What's a catch with free plans?", back: "Most have a limit (often 10-30 posts per month). Enough for a student-run page or one-person shop. A big chain with 4 branches usually needs a paid plan." },
+      { front: "What is the 4-word warning to remember about social media risks?", back: "TIME · TRUTH · PRIVACY · MIND. Apps steal your time. Posts can be lies. Privacy disappears once posted. Comparison hurts mental health. Stay alert in all four areas." },
+      { front: "Why are social media apps designed to be addictive?", back: "The longer you stay, the more ads you see, the more the company earns. So they hire psychologists to make 'just 5 minutes' turn into 2 hours. It's profit-driven by design." },
+      { front: "Why is fake news such a big problem on social media?", back: "Anyone can post anything — there's no editor or fact-checker. Shocking emotional posts (often false) spread faster than calm true ones. Always check the source before believing or sharing." },
+      { front: "Why is your privacy at risk every time you post?", back: "Once it's online, it can be screenshot, downloaded, shared — even after you delete it. Future employers, universities, and dates may find old posts. Never post anything you wouldn't show your future boss." },
+      { front: "Your friend posts a photo and only gets 5 likes. What's the smart way to think about it?", back: "Likes are a tiny tap most people skip — they don't measure your worth, talent, or friendships. Smart students don't tie self-esteem to like counts. Real life > like count." },
     ],
 
-    // Topic 4: Social Media Measurement & Reporting
+    // Topic 4: What is LinkedIn?
     4: [
-      { front: "What does 'reach' mean in plain English?", back: "How many DIFFERENT people saw your post. If your best friend looks three times, she still counts as one. Reach is 'how wide did it go.'" },
-      { front: "Which is stronger: a like, a comment, or a share?", back: "A share is strongest -- the person wanted their friends to see it too. A comment is next (real effort to type). A like is weakest -- one fast tap. Shares matter most, likes least." },
-      { front: "What's a 'save' and why does it matter?", back: "A save = the person bookmarked your post to come back later. Common for recipes, study tips, shopping lists. Saves are a quiet sign that the post was USEFUL." },
-      { front: "Is 10,000 followers always better than 500?", back: "Not really. 10,000 silent or fake followers are worth less than 500 real ones who like, comment, and share. Follower count alone is a weak number -- look at engagement too." },
-      { front: "How often should I check my page's numbers?", back: "About once a week is enough. Every 5 minutes is stressful and useless. Compare this week to last week to spot trends, not one bad day." },
-      { front: "Post A got 300 likes, 3 comments. Post B got 150 likes, 80 comments, 40 saves. Which is better?", back: "Post B. Fewer likes but real conversation (80 comments) and many saves (40) -- people kept the recipe. Depth beats easy taps." },
+      { front: "What is LinkedIn, in simple words?", back: "A professional social network — your online CV. Where you find jobs, internships, mentors, and connections. Instagram is for friends; LinkedIn is for your future career." },
+      { front: "What kind of content goes on LinkedIn (and what does NOT)?", back: "GO: course certificates, project photos, skill lists, what you learned at a tech event. NOT: birthday party selfies, dance videos, food photos. LinkedIn = career proof only." },
+      { front: "Why is LinkedIn called your '24/7 business card'?", back: "A paper card has your name and number — you hope someone calls. LinkedIn is a card that works while you sleep. Recruiters search 'CS student Tashkent' at 3 a.m. and your profile shows up." },
+      { front: "Why does LinkedIn matter even while you're sleeping?", back: "Recruiters in different timezones search at all hours. Microsoft, Google, EPAM Tashkent. A clear profile with the right keywords is your advert that runs 24/7 — even while you sleep." },
+      { front: "A recruiter searches 'CS student Tashkent interested in AI'. What makes YOUR profile appear?", back: "A clear headline ('CS Student | Interested in AI & Web Development') + matching skills (Python, AI, HTML). LinkedIn search uses keywords. Spam-connecting random people does NOT help — searchable text does." },
     ],
 
-    // Topic 5: Social Advertising
+    // Topic 5: LinkedIn vs Instagram
     5: [
-      { front: "What is a social media ad, in simple words?", back: "A normal-looking post that a shop PAID the app to show to people who don't follow them yet. You can tell it's an ad by the small 'Sponsored' label under the shop's name." },
-      { front: "Free post vs paid post -- what's the difference?", back: "Free: only your followers and some friends-of-friends see it (small reach). Paid: the shop pays the app to push the post to many more people, including total strangers the shop chose." },
-      { front: "How does a shop pick who sees its ad?", back: "Three simple filters: age, city, and interests. Example: 'people aged 16-25 in Tashkent who like food.' The app already knows all this from your taps." },
-      { front: "How does a daily budget protect a small shop?", back: "The shop sets a daily cap (say 20,000 som). Once it's spent, the app stops showing the ad until tomorrow. No surprise bills at the end of the month." },
-      { front: "Does a paid ad fix a bad product?", back: "No. If the photo is blurry and the cafe is dirty, paying more money just means more people see the bad cafe. Fix the product first, then advertise." },
-      { front: "Give 3 places you see social ads every day.", back: "1) Instagram 'Sponsored' posts between friends' posts. 2) TikTok ad clips on your For You page. 3) YouTube 'Skip Ad' 5-15 seconds before your video." },
+      { front: "Same person, two apps — why post DIFFERENT things on Instagram and LinkedIn?", back: "Different audiences. Instagram = friends who want to see your real life. LinkedIn = recruiters who want to see your career growth. Two stages, two performances. Smart students separate the two." },
+      { front: "Which app is for PROFESSIONAL (career) purposes — Instagram, TikTok, or LinkedIn?", back: "LinkedIn. Always. Instagram and TikTok are personal/social. Before posting, ask: 'who's the audience here — friends, or recruiters?' Pick the app that matches the audience." },
+      { front: "Why doesn't a TikTok dance video fit on LinkedIn — even though both are social media?", back: "Wrong audience. LinkedIn audience is recruiters and professionals; a dance video looks unserious there and hurts your career image. Same idea (post + follow), totally different rooms." },
+      { front: "Which is NOT a typical LinkedIn post — birthday party photo, course certificate, project photo, or tech event recap?", back: "Birthday party photo. That belongs on Instagram. Course certificates, project photos, tech event recaps are all career proof and perfect for LinkedIn." },
+      { front: "You finished an HTML certificate course. Where should you post it for your career?", back: "LinkedIn — recruiters and alumni see it as proof of skill, and one of them might offer an internship. Instagram likes don't = job offers. WhatsApp status disappears in 24 hours." },
     ],
 
-    // Topic 6: Facebook Marketing
+    // Topic 6: Why Focus on LinkedIn for Career Growth
     6: [
-      { front: "Who mostly uses Facebook in Uzbekistan?", back: "Adults over 30 -- parents, aunties, teachers, small-business owners. Teens mostly skip Facebook and live on Instagram and TikTok instead. Knowing this picks the right app for the customer." },
-      { front: "What is a Facebook 'Page'?", back: "A free public profile for a business -- shop name, address, hours, photos, phone. Customers can follow it without becoming 'friends.' Different from a personal profile." },
-      { front: "What does it mean to 'boost a post' on Facebook?", back: "Take a good post (like a photo of the new menu) and pay Facebook a small amount so MORE adults see it. The easiest first ad anyone can run." },
-      { front: "Why can one tool post to both Facebook and Instagram at once?", back: "Because Meta owns both apps. Meta's 'Business Suite' lets you write one post and send it to both Facebook and Instagram together -- two apps, one click." },
-      { front: "How can a home-baker use a Facebook group to get customers?", back: "Join local groups like 'Tashkent food lovers' or 'Chilanzar mums.' Share a useful post (photo + price) and real local adults see it -- for free, no ad money needed." },
-      { front: "Should a home bread-baker use Facebook or Instagram?", back: "Facebook -- her customers are adult neighbours, and adults in Uzbekistan mostly use Facebook. A teen cafe near a school would be the opposite -- Instagram fits better." },
-      { front: "What's a simple first-week Facebook plan for a small shop?", back: "Create a free Page (name, phone, address, photos, hours), join 2 local groups, and post one helpful post. Don't spend on ads yet -- grow the free Page first." },
-    ],
-
-    // Topic 7: X (formerly Twitter) Marketing
-    7: [
-      { front: "What is X (the app formerly called Twitter)?", back: "A social app mainly for very short posts -- usually under 280 letters. Like a public SMS board: anyone can post, anyone can reply. Big in the USA, UK, India, Japan." },
-      { front: "Is X popular in Uzbekistan?", back: "No -- X is blocked in Uzbekistan. Most Uzbek users get short news updates on Telegram channels instead (@gazeta_uz, @uzinfocom, football teams, singers)." },
-      { front: "What's a retweet (or repost)?", back: "Sharing someone else's post with your own followers. Like forwarding a message in Telegram -- the original writer gets more reach, and your followers see the post." },
-      { front: "What does a hashtag do?", back: "A word with # in front, like #Tashkent or #IFP105. Anyone who clicks it sees every post using the same hashtag -- it groups posts into one topic page." },
-      { front: "Why should an Uzbek student still learn the basics of X?", back: "You may travel or study abroad where X works. Breaking world news (sports, elections, earthquakes) often hits X first. Knowing tweet / retweet / hashtag is useful when you go." },
-      { front: "Should a Tashkent bookshop open an X account or a Telegram channel?", back: "Telegram channel. X is blocked in Uzbekistan, so local customers can't easily see X posts. Telegram is where the audience is, and it does the same 'short updates' job." },
-      { front: "Why do big Western companies reply fast to X complaints?", back: "Because X complaints are PUBLIC -- everyone watching. Silence looks bad, so companies answer quickly. That's why many US/UK brands handle customer service on X first." },
+      { front: "Why should a student start LinkedIn in YEAR 1 — not after graduation?", back: "Networks need TIME to grow. Year 1 = 3 years to build connections before any company asks for your CV. Year 4 starters apply with zero connections. Compounding only works with time." },
+      { front: "What does 'compounding network' mean for your career?", back: "Each connection unlocks more connections (their friends). 50 → 500 → 5,000 over years. A small network becomes a big one — but only if you start early and add a few people every month." },
+      { front: "Where are MANY top internships at Microsoft, Google, EPAM Tashkent posted?", back: "LinkedIn — sometimes EXCLUSIVELY there. Without a profile, you literally don't see the listings. Newspapers and shop windows don't list these jobs. LinkedIn is where modern recruiting happens." },
+      { front: "Why does adding your LinkedIn URL to /profile/edit on IFS Connect matter?", back: "Cards with LinkedIn rank HIGHER on /connect — classmates and juniors find you faster. It's a free visibility boost on the platform you already use every day for class." },
+      { front: "You finished a small Python calculator project. What's the smartest LinkedIn move?", back: "Three steps: 1) Add 'Python' to Skills (so search finds you). 2) Write a short post about what you built. 3) Pin it in Featured (so recruiters notice). Skill + story + proof = career grow move." },
     ],
   },
 
