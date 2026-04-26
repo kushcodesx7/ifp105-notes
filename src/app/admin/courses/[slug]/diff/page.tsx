@@ -69,6 +69,15 @@ interface DiffResponse {
   questions: QuestionDiff[];
 }
 
+interface TopicSummary {
+  topicNumber: number;
+  title: string;
+  topicStatus: QStatus;
+  questionsTotal: number;
+  questionsDiverged: number;
+  hasDivergence: boolean;
+}
+
 const STATUS_META: Record<
   QStatus,
   { label: string; color: string; bg: string; border: string }
@@ -86,10 +95,16 @@ export default function DiffPage() {
   const slug = rawSlug || "ict";
 
   const [moduleNumber, setModuleNumber] = useState<number>(1);
-  const [topicNumber, setTopicNumber] = useState<number>(1);
+  const [topicNumber, setTopicNumber] = useState<number | null>(null);
   const [data, setData] = useState<DiffResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Per-module topic divergence summary — drives the filtered topic
+  // picker so the admin only sees buttons for topics that actually
+  // need attention, not all 11.
+  const [summary, setSummary] = useState<TopicSummary[] | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Apply controls
   const [applyContent, setApplyContent] = useState(true);
@@ -98,7 +113,7 @@ export default function DiffPage() {
   const [applyResult, setApplyResult] = useState<string | null>(null);
 
   const moduleMeta = MODULES.find((m) => m.id === moduleNumber);
-  const topicCount = moduleMeta?.topicCount ?? 1;
+  void moduleMeta; // reserved for future use (e.g., showing module accent in heading)
 
   const fetchHeaders = useMemo(() => {
     const h: Record<string, string> = { "content-type": "application/json" };
@@ -106,9 +121,49 @@ export default function DiffPage() {
     return h;
   }, [idToken]);
 
-  // Fetch diff whenever module/topic/token changes
+  // Fetch per-module SUMMARY whenever module/token changes. Drives the
+  // filtered topic picker (we only render buttons for topics that
+  // actually differ — no point clicking through 11 unchanged ones).
   useEffect(() => {
     if (!ready || !idToken) return;
+    let alive = true;
+    (async () => {
+      setSummaryLoading(true);
+      try {
+        const res = await fetch(
+          `/api/admin/courses/${slug}/diff/summary?module=${moduleNumber}`,
+          { headers: fetchHeaders, cache: "no-store" }
+        );
+        const json = await res.json();
+        if (!alive) return;
+        if (res.ok) {
+          const topics = (json.topics ?? []) as TopicSummary[];
+          setSummary(topics);
+          // Auto-select the first DIVERGED topic so the page lands on
+          // something useful immediately. If everything is in sync,
+          // leave topicNumber null and the page renders the empty
+          // state instead of forcing a no-op diff fetch.
+          const firstDiverged = topics.find((t) => t.hasDivergence);
+          setTopicNumber(firstDiverged ? firstDiverged.topicNumber : null);
+        }
+      } catch {
+        /* surface via main error state */
+      } finally {
+        if (alive) setSummaryLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [slug, moduleNumber, idToken, ready, fetchHeaders]);
+
+  // Fetch diff whenever topic/token changes
+  useEffect(() => {
+    if (!ready || !idToken) return;
+    if (topicNumber == null) {
+      setData(null);
+      return;
+    }
     let alive = true;
     (async () => {
       setLoading(true);
@@ -227,15 +282,15 @@ export default function DiffPage() {
           </p>
         </div>
 
-        {/* ── Module + Topic pickers ── */}
-        <div className="mb-5 flex items-end gap-3 flex-wrap">
+        {/* ── Module picker ── */}
+        <div className="mb-4 flex items-end gap-3 flex-wrap">
           <div>
             <label className="block text-[11px] font-bold tracking-widest uppercase text-zinc-500 mb-1">Module</label>
             <select
               value={moduleNumber}
               onChange={(e) => {
                 setModuleNumber(parseInt(e.target.value, 10));
-                setTopicNumber(1);
+                setTopicNumber(null); // summary effect will pick first diverged
               }}
               className="px-3 py-2 rounded-lg text-sm text-white bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-indigo-500/50"
             >
@@ -246,26 +301,116 @@ export default function DiffPage() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-[11px] font-bold tracking-widest uppercase text-zinc-500 mb-1">Topic</label>
-            <select
-              value={topicNumber}
-              onChange={(e) => setTopicNumber(parseInt(e.target.value, 10))}
-              className="px-3 py-2 rounded-lg text-sm text-white bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-indigo-500/50"
-            >
-              {Array.from({ length: topicCount }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  Topic {n}
-                </option>
-              ))}
-            </select>
-          </div>
           <Link
             href={`/admin/courses/${slug}`}
             className="ml-auto text-xs text-indigo-300 hover:text-indigo-200 underline underline-offset-4"
           >
             ← Back to course
           </Link>
+        </div>
+
+        {/* ── Filtered topic buttons (only diverged ones) ── */}
+        {/* Summary-driven picker: instead of dumping all 11 topics into
+             a dropdown, we surface ONLY the topics that have something
+             to apply (edited / ts-only / trashed at the topic level OR
+             with diverged questions). Saves the admin from clicking
+             through 8 unchanged topics looking for the one that needs
+             attention. Empty state replaces the picker entirely when
+             nothing is out of sync. */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+            <label className="block text-[11px] font-bold tracking-widest uppercase text-zinc-500">
+              Topics with changes
+            </label>
+            {summary && (() => {
+              const divergedCount = summary.filter((s) => s.hasDivergence).length;
+              return (
+                <span className="text-[11px] text-zinc-500">
+                  {divergedCount} of {summary.length} need{divergedCount === 1 ? "s" : ""} review
+                </span>
+              );
+            })()}
+          </div>
+
+          {summaryLoading && (
+            <div className="text-xs text-zinc-500 italic">Scanning topics…</div>
+          )}
+
+          {!summaryLoading && summary && (
+            (() => {
+              const diverged = summary.filter((s) => s.hasDivergence);
+              if (diverged.length === 0) {
+                return (
+                  <div
+                    className="rounded-xl px-4 py-3 text-sm flex items-center gap-2"
+                    style={{
+                      background: "rgba(52,211,153,0.08)",
+                      border: "1px solid rgba(52,211,153,0.30)",
+                      color: "#34D399",
+                    }}
+                  >
+                    ✓ <span><strong>All topics in sync</strong> — nothing to apply for Module {moduleNumber}.</span>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex flex-wrap gap-2">
+                  {diverged.map((s) => {
+                    const meta = STATUS_META[s.topicStatus];
+                    const active = s.topicNumber === topicNumber;
+                    return (
+                      <button
+                        key={s.topicNumber}
+                        onClick={() => setTopicNumber(s.topicNumber)}
+                        className="text-left rounded-xl px-3 py-2.5 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                        style={{
+                          background: active
+                            ? "rgba(99,102,241,0.18)"
+                            : "rgba(255,255,255,0.03)",
+                          border: active
+                            ? "2px solid rgba(99,102,241,0.6)"
+                            : `1px solid ${meta.border}`,
+                          minWidth: "180px",
+                          maxWidth: "260px",
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span
+                            className="inline-block w-7 h-7 rounded-md text-center leading-7 text-[12px] font-bold"
+                            style={{
+                              background: active
+                                ? "rgba(99,102,241,0.30)"
+                                : "rgba(255,255,255,0.06)",
+                              color: active ? "#FFFFFF" : "#D4D4D8",
+                            }}
+                          >
+                            {s.topicNumber}
+                          </span>
+                          <span
+                            className="inline-block px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase"
+                            style={{
+                              background: meta.bg,
+                              color: meta.color,
+                            }}
+                          >
+                            {meta.label.split(" (")[0]}
+                          </span>
+                        </div>
+                        <div className="text-[12px] text-zinc-200 font-medium leading-snug truncate">
+                          {s.title}
+                        </div>
+                        {s.questionsDiverged > 0 && (
+                          <div className="text-[10px] text-amber-400 mt-1">
+                            {s.questionsDiverged} question{s.questionsDiverged === 1 ? "" : "s"} diverged
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          )}
         </div>
 
         {error && (
