@@ -75,6 +75,15 @@ interface TopicSummary {
   topicStatus: QStatus;
   questionsTotal: number;
   questionsDiverged: number;
+  questionsInDb: number;
+  questionsInTs: number;
+  breakdown: {
+    unchanged: number;
+    edited: number;
+    tsOnly: number;
+    dbOnly: number;
+    trashed: number;
+  };
   hasDivergence: boolean;
 }
 
@@ -399,11 +408,58 @@ export default function DiffPage() {
                         <div className="text-[12px] text-zinc-200 font-medium leading-snug truncate">
                           {s.title}
                         </div>
-                        {s.questionsDiverged > 0 && (
-                          <div className="text-[10px] text-amber-400 mt-1">
-                            {s.questionsDiverged} question{s.questionsDiverged === 1 ? "" : "s"} diverged
+                        {/* Question count line: "3 in DB · 8 in TS"
+                             so the admin sees at a glance that they
+                             trimmed a topic. Only shown when counts
+                             differ (otherwise noise). */}
+                        {s.questionsInDb !== s.questionsInTs && (
+                          <div className="text-[10px] text-zinc-400 mt-1">
+                            <span className="text-blue-300">{s.questionsInDb} in DB</span>
+                            <span className="text-zinc-600"> · </span>
+                            <span className="text-violet-300">{s.questionsInTs} in TS</span>
                           </div>
                         )}
+                        {/* Per-status mini-breakdown chips. Each chip
+                             only renders if its count > 0, so the
+                             button stays clean when nothing applies. */}
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {s.breakdown.tsOnly > 0 && (
+                            <span
+                              className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
+                              style={{ background: "rgba(52,211,153,0.15)", color: "#34D399" }}
+                              title="Questions in TS but not in DB — would be ADDED on apply"
+                            >
+                              + {s.breakdown.tsOnly} new
+                            </span>
+                          )}
+                          {s.breakdown.edited > 0 && (
+                            <span
+                              className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
+                              style={{ background: "rgba(251,191,36,0.15)", color: "#FBBF24" }}
+                              title="Questions whose text/options/answer differ between DB and TS"
+                            >
+                              ~ {s.breakdown.edited} edited
+                            </span>
+                          )}
+                          {s.breakdown.trashed > 0 && (
+                            <span
+                              className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
+                              style={{ background: "rgba(248,113,113,0.15)", color: "#F87171" }}
+                              title="Questions soft-deleted in DB — would be RESURRECTED on apply"
+                            >
+                              ↺ {s.breakdown.trashed} trashed
+                            </span>
+                          )}
+                          {s.breakdown.dbOnly > 0 && (
+                            <span
+                              className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold"
+                              style={{ background: "rgba(96,165,250,0.15)", color: "#60A5FA" }}
+                              title="Questions in DB but not in TS — apply leaves these alone (you've kept them deleted from TS)"
+                            >
+                              ✕ {s.breakdown.dbOnly} only-DB
+                            </span>
+                          )}
+                        </div>
                       </button>
                     );
                   })}

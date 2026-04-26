@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { loadModuleData } from "@/lib/seed-source";
+import { jsonEqualNormalised } from "@/lib/json-equal";
 import type { ContentBlock } from "@/types/content";
 
 // GET /api/admin/courses/[slug]/diff?module=N&topic=M
@@ -170,15 +171,16 @@ export async function GET(
       else if (db && ts) {
         if (db.deleted_at) status = "trashed";
         else {
-          const sameOpts =
-            Array.isArray(db.options_json) &&
-            db.options_json.length === ts.options.length &&
-            db.options_json.every((v, i) => v === ts.options[i]);
+          // jsonEqualNormalised handles options_json key-order +
+          // null/undefined drift introduced by Postgres JSONB
+          // round-trip — was producing false "edited" reports on
+          // questions that rendered identically on both sides.
+          const sameOpts = jsonEqualNormalised(db.options_json ?? [], ts.options);
           const differs =
-            db.question !== ts.question ||
+            (db.question ?? "").trim() !== (ts.question ?? "").trim() ||
             db.correct_index !== ts.correct_index ||
             (db.bloom ?? null) !== (ts.bloom ?? null) ||
-            (db.explanation ?? null) !== (ts.explanation ?? null) ||
+            (db.explanation ?? "").trim() !== (ts.explanation ?? "").trim() ||
             !sameOpts;
           status = differs ? "edited" : "unchanged";
         }
@@ -196,12 +198,16 @@ export async function GET(
   else if (dbTopic && tsTopic) {
     if (dbTopic.deleted_at) topicStatus = "trashed";
     else {
-      const sameContent =
-        JSON.stringify(dbTopic.content_json ?? []) ===
-        JSON.stringify(tsTopic.content);
+      // Use the normalised deep-equal so JSONB round-trip doesn't
+      // produce ghost "edited" status on topics that render
+      // identically on both sides.
+      const sameContent = jsonEqualNormalised(
+        dbTopic.content_json ?? [],
+        tsTopic.content
+      );
       const differs =
-        dbTopic.title !== tsTopic.title ||
-        (dbTopic.hook ?? "") !== (tsTopic.hook ?? "") ||
+        (dbTopic.title ?? "").trim() !== (tsTopic.title ?? "").trim() ||
+        (dbTopic.hook ?? "").trim() !== (tsTopic.hook ?? "").trim() ||
         !sameContent;
       topicStatus = differs ? "edited" : "unchanged";
     }
