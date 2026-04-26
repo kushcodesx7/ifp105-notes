@@ -737,27 +737,8 @@ function IctSeedPrompt({
         border: "1px solid rgba(99,102,241,0.3)",
       }}
     >
-      <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2 flex-wrap">
-        <span>{isEmpty ? "📥 Port ICT into the database" : "♻️ Re-seed ICT from TS files"}</span>
-        {/* New granular alternative — links to the per-topic diff page
-             that lets the teacher preview each topic's DB vs TS side
-             by side and tick exactly what to apply (content +
-             specific questions). Solves the "M5 questions I deleted
-             will come back" worry by letting them keep questions
-             unchecked. */}
-        {/* IctSeedPrompt is only shown when slug === "ict", so hard-
-             linking to /admin/courses/ict/diff is correct here. */}
-        <Link
-          href="/admin/courses/ict/diff"
-          className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full transition-colors hover:opacity-90"
-          style={{
-            background: "rgba(167,139,250,0.16)",
-            color: "#C4B5FD",
-            border: "1px solid rgba(167,139,250,0.30)",
-          }}
-        >
-          🔍 Per-topic diff &amp; apply
-        </Link>
+      <h3 className="text-sm font-bold text-white mb-1">
+        {isEmpty ? "📥 Port ICT into the database" : "♻️ Re-seed ICT from TS files"}
       </h3>
       <p className="text-[12px] text-zinc-400 mb-3 leading-relaxed">
         {isEmpty ? (
@@ -959,6 +940,38 @@ function IctSeedPrompt({
                 />
               )}
             </div>
+          )}
+
+          {/* Granular alternative — prominent CTA above the bulk
+               re-seed button so the teacher sees the per-topic flow
+               BEFORE clicking the destructive "overwrite everything"
+               action. The pill in the title was too easy to miss. */}
+          {!isEmpty && (
+            <Link
+              href="/admin/courses/ict/diff"
+              className="block mb-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.99]"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(167,139,250,0.20), rgba(139,92,246,0.12))",
+                border: "1px solid rgba(167,139,250,0.40)",
+                color: "#E4E4E7",
+              }}
+            >
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xl shrink-0" aria-hidden="true">🔍</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-bold text-white">
+                    Compare topic-by-topic before re-seeding
+                  </div>
+                  <div className="text-[11px] text-zinc-300 mt-0.5">
+                    See current DB vs new TS side-by-side. Tick exactly which content + questions to update. Keeps your manual edits safe.
+                  </div>
+                </div>
+                <span className="shrink-0 text-[12px] font-bold text-violet-300">
+                  Open →
+                </span>
+              </div>
+            </Link>
           )}
 
           <button
