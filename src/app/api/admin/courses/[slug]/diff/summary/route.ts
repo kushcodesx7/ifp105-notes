@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/verify-google-token";
 import { loadModuleData } from "@/lib/seed-source";
+import { jsonEqualNormalised } from "@/lib/json-equal";
 import type { ContentBlock } from "@/types/content";
 
 // GET /api/admin/courses/[slug]/diff/summary?module=N
@@ -50,11 +51,12 @@ function classifyTopic(
   if (db && !ts) return "db-only";
   if (!db || !ts) return "unchanged";
   if (db.deleted_at) return "trashed";
-  const sameContent =
-    JSON.stringify(db.content_json ?? []) === JSON.stringify(ts.content);
+  // Normalised deep-equal (sorts keys, drops undefined) so JSONB
+  // round-trip doesn't produce ghost-diff false positives.
+  const sameContent = jsonEqualNormalised(db.content_json ?? [], ts.content);
   const differs =
-    db.title !== ts.title ||
-    (db.hook ?? "") !== (ts.hook ?? "") ||
+    (db.title ?? "").trim() !== (ts.title ?? "").trim() ||
+    (db.hook ?? "").trim() !== (ts.hook ?? "").trim() ||
     !sameContent;
   return differs ? "edited" : "unchanged";
 }
@@ -75,15 +77,12 @@ function classifyQuestion(
   if (db && !ts) return "db-only";
   if (!db || !ts) return "unchanged";
   if (db.deleted_at) return "trashed";
-  const sameOpts =
-    Array.isArray(db.options_json) &&
-    db.options_json.length === ts.options.length &&
-    db.options_json.every((v, i) => v === ts.options[i]);
+  const sameOpts = jsonEqualNormalised(db.options_json ?? [], ts.options);
   const differs =
-    db.question !== ts.question ||
+    (db.question ?? "").trim() !== (ts.question ?? "").trim() ||
     db.correct_index !== ts.correct_index ||
     (db.bloom ?? null) !== (ts.bloom ?? null) ||
-    (db.explanation ?? null) !== (ts.explanation ?? null) ||
+    (db.explanation ?? "").trim() !== (ts.explanation ?? "").trim() ||
     !sameOpts;
   return differs ? "edited" : "unchanged";
 }
@@ -194,11 +193,28 @@ export async function GET(
         ...dbQs.map((q) => q.number),
         ...tsQs.map((_q, i) => i + 1),
       ]);
+      // Per-status breakdown so the topic button can render an
+      // at-a-glance summary like "5 added · 3 unchanged · 2 trashed"
+      // — saves the admin from drilling into every topic to see what
+      // would actually change. Especially useful for topics where the
+      // teacher hand-deleted DB questions and TS still has them all.
+      const breakdown = {
+        unchanged: 0,
+        edited: 0,
+        tsOnly: 0,
+        dbOnly: 0,
+        trashed: 0,
+      };
       let questionsDiverged = 0;
       for (const n of qNumbers) {
         const dbQ = dbQs.find((q) => q.number === n);
         const tsQ = tsQs[n - 1];
         const s = classifyQuestion(dbQ, tsQ);
+        if (s === "edited") breakdown.edited++;
+        else if (s === "ts-only") breakdown.tsOnly++;
+        else if (s === "db-only") breakdown.dbOnly++;
+        else if (s === "trashed") breakdown.trashed++;
+        else breakdown.unchanged++;
         if (s === "edited" || s === "ts-only" || s === "trashed") {
           questionsDiverged++;
         }
@@ -210,12 +226,20 @@ export async function GET(
         topicStatus === "trashed" ||
         questionsDiverged > 0;
 
+      // Also report DB-vs-TS counts so the UI can show "3/8 in DB"
+      // for topics where the teacher trimmed the question bank.
+      const dbCount = dbQs.filter((q) => !q.deleted_at).length;
+      const tsCount = tsQs.length;
+
       return {
         topicNumber: tNum,
         title: tsT?.title ?? dbT?.title ?? `Topic ${tNum}`,
         topicStatus,
         questionsTotal: qNumbers.size,
         questionsDiverged,
+        questionsInDb: dbCount,
+        questionsInTs: tsCount,
+        breakdown,
         hasDivergence,
       };
     });
