@@ -38,6 +38,37 @@ interface ToolbarRect {
   flipped: boolean;
 }
 
+interface ActiveFormats {
+  bold: boolean;
+  italic: boolean;
+  highlight: boolean;
+}
+
+function readActiveFormats(): ActiveFormats {
+  // execCommand-state is the cheapest way to read the bold/italic
+  // status of the current selection. queryCommandState is also
+  // deprecated, but in lockstep with execCommand: if execCommand
+  // ever stops working we lose B/I anyway. For highlight, we walk
+  // up from the selection's anchorNode looking for a <mark>.
+  let bold = false;
+  let italic = false;
+  try {
+    bold = document.queryCommandState("bold");
+    italic = document.queryCommandState("italic");
+  } catch {
+    // queryCommandState can throw in some browsers without an
+    // active selection — fall through with defaults.
+  }
+  let highlight = false;
+  const sel = window.getSelection();
+  if (sel && sel.anchorNode) {
+    let node: Node | null = sel.anchorNode;
+    while (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentNode;
+    highlight = !!(node && (node as HTMLElement).closest("mark"));
+  }
+  return { bold, italic, highlight };
+}
+
 function getEditableAncestor(node: Node | null): HTMLElement | null {
   let cur: Node | null = node;
   while (cur && cur.nodeType !== Node.ELEMENT_NODE) cur = cur.parentNode;
@@ -46,6 +77,11 @@ function getEditableAncestor(node: Node | null): HTMLElement | null {
 
 export default function SelectionToolbar() {
   const [rect, setRect] = useState<ToolbarRect | null>(null);
+  const [active, setActive] = useState<ActiveFormats>({
+    bold: false,
+    italic: false,
+    highlight: false,
+  });
   // We re-read selection state on every selectionchange. To avoid
   // stale closures, we use a ref for the bar element so handlers can
   // measure its width without the toolbar mounting causing a state
@@ -93,6 +129,7 @@ export default function SelectionToolbar() {
       left = Math.max(8, Math.min(left, window.innerWidth - barWidth - 8));
 
       setRect({ top, left, width: barWidth, flipped });
+      setActive(readActiveFormats());
     }
 
     document.addEventListener("selectionchange", update);
@@ -196,6 +233,7 @@ export default function SelectionToolbar() {
             label="Bold (⌘B)"
             onClick={withSelection(bold)}
             className="font-bold"
+            active={active.bold}
           >
             B
           </ToolbarBtn>
@@ -203,6 +241,7 @@ export default function SelectionToolbar() {
             label="Italic (⌘I)"
             onClick={withSelection(italic)}
             className="italic font-serif"
+            active={active.italic}
           >
             I
           </ToolbarBtn>
@@ -215,6 +254,7 @@ export default function SelectionToolbar() {
             label="Highlight (⌘E)"
             onClick={withSelection(highlight)}
             accent
+            active={active.highlight}
           >
             <span
               style={{
@@ -240,12 +280,15 @@ function ToolbarBtn({
   onClick,
   label,
   className,
-  accent,
+  active,
 }: {
   children: React.ReactNode;
   onClick: (e: React.MouseEvent) => void;
   label: string;
   className?: string;
+  /** When true, button renders in "pressed" state — selection is
+   *  already inside the format this button would toggle. */
+  active?: boolean;
   accent?: boolean;
 }) {
   return (
@@ -255,15 +298,21 @@ function ToolbarBtn({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`min-w-[28px] h-7 px-2 text-[12px] rounded-full text-zinc-200 hover:text-white transition-colors ${className ?? ""}`}
+      aria-pressed={active}
+      className={`min-w-[28px] h-7 px-2 text-[12px] rounded-full transition-colors ${
+        active ? "text-white" : "text-zinc-200 hover:text-white"
+      } ${className ?? ""}`}
       style={{
-        background: accent ? "transparent" : "transparent",
+        background: active ? "rgba(99,102,241,0.28)" : "transparent",
+        boxShadow: active
+          ? "inset 0 0 0 1px rgba(99,102,241,0.4)"
+          : "none",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = "rgba(99,102,241,0.18)";
+        if (!active) e.currentTarget.style.background = "rgba(99,102,241,0.18)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = "transparent";
+        if (!active) e.currentTarget.style.background = "transparent";
       }}
     >
       {children}
