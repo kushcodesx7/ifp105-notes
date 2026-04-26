@@ -194,7 +194,7 @@ const featureIcons = {
 
 const features = [
   { icon: "brain" as keyof typeof featureIcons, title: "Analogies That Stick", desc: "Every concept explained with real-world analogies. Pizza = IPO cycle. Kitchen counter = RAM." },
-  { icon: "check" as keyof typeof featureIcons, title: "10 Qs Per Topic", desc: "Instant feedback on every answer. Know what you got wrong and why — before the exam." },
+  { icon: "check" as keyof typeof featureIcons, title: "Quizzes That Teach", desc: "Instant feedback on every answer. Know what you got wrong and why — before the exam." },
   { icon: "chart" as keyof typeof featureIcons, title: "Track Progress", desc: "Your progress is saved locally. Pick up where you left off, anytime." },
   { icon: "clipboard" as keyof typeof featureIcons, title: "Cheat Sheets", desc: "One-page summary of every module. Perfect for last-minute revision." },
   { icon: "zap" as keyof typeof featureIcons, title: "Mobile First", desc: "Study on your phone, tablet, or laptop. The layout adapts perfectly." },
