@@ -78,60 +78,83 @@ export const topics: Topic[] = [
   },
 
   // ─── Topic 2 ───
+  //
+  // Redesigned Apr 24 2026 from 4 dense era-cards (~50 words each)
+  // to a memorable visual journey + 1 anchor word per era + 1 story
+  // sentence students can repeat. The original 4-card grid asked
+  // students to memorise 4 isolated paragraphs. The new layout
+  // teaches the WHOLE topic as a connected story:
+  //
+  //   Building → Room → Desk → Pocket
+  //
+  // The inline SVG shows the literal shrinking of computers across
+  // eras, so the visual itself encodes the answer to "how did
+  // computers evolve?" One picture + one sentence + 4 anchor words
+  // = the whole topic, recallable in 30 seconds.
   {
     id: 2,
     title: "How Computers Grew Up",
-    time: "~5 mins",
+    time: "~3 mins",
     badges: [],
-    hook: `Your phone is more powerful than <strong>all the computers NASA used to send men to the moon in 1969 \u2014 combined.</strong> But computers didn't start that way. They started as wooden bead frames. Here's the glow-up story \u2014 and why it matters.`,
+    hook: `Your phone is more powerful than <strong>all the computers NASA used to send men to the moon in 1969 — combined.</strong> Here's the whole story in one picture: <mark>Building → Room → Desk → Pocket.</mark>`,
     content: [
+      // ─── Hero visual: the shrinking-computer journey ───
+      // Inline SVG inside a `text` block (which renders via
+      // dangerouslySetInnerHTML). Four boxes shrinking left-to-right,
+      // each labelled with era + the one-word problem its successor
+      // fixed. One picture = the whole topic.
       {
         type: "text",
-        html: `Every era fixed the <strong>biggest problem</strong> of the previous one. Think of it like iPhone generations \u2014 each version solved the last one's biggest complaint.`,
+        html: `<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:20px;margin:8px 0;overflow-x:auto"><svg viewBox="0 0 720 230" style="width:100%;height:auto;min-width:560px;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shrinking computer journey: building-sized Mechanical era to pocket-sized Mobile era"><defs><marker id="m1t2arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA"/></marker></defs><text x="360" y="20" text-anchor="middle" fill="#71717A" font-size="11" font-family="system-ui" font-weight="700" letter-spacing="3">THE SHRINKING COMPUTER</text><rect x="20" y="50" width="130" height="130" rx="10" fill="rgba(167,139,250,0.10)" stroke="#A78BFA" stroke-width="2"/><text x="85" y="100" text-anchor="middle" font-size="46">🏛</text><text x="85" y="135" text-anchor="middle" fill="#A78BFA" font-size="13" font-family="system-ui" font-weight="700">BUILDING</text><text x="85" y="152" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">Mechanical</text><text x="85" y="166" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">Pre-1940s</text><text x="85" y="200" text-anchor="middle" fill="#F87171" font-size="10" font-family="system-ui" font-weight="600">too slow</text><line x1="160" y1="115" x2="195" y2="115" stroke="#A1A1AA" stroke-width="2" marker-end="url(#m1t2arr)"/><text x="177" y="105" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">+power</text><rect x="205" y="65" width="110" height="110" rx="9" fill="rgba(96,165,250,0.10)" stroke="#60A5FA" stroke-width="2"/><text x="260" y="110" text-anchor="middle" font-size="38">🏢</text><text x="260" y="138" text-anchor="middle" fill="#60A5FA" font-size="12" font-family="system-ui" font-weight="700">ROOM</text><text x="260" y="153" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">Electronic</text><text x="260" y="166" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">1940s–60s</text><text x="260" y="200" text-anchor="middle" fill="#F87171" font-size="10" font-family="system-ui" font-weight="600">too big</text><line x1="325" y1="115" x2="360" y2="115" stroke="#A1A1AA" stroke-width="2" marker-end="url(#m1t2arr)"/><text x="342" y="105" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">+chips</text><rect x="370" y="80" width="90" height="90" rx="8" fill="rgba(52,211,153,0.10)" stroke="#34D399" stroke-width="2"/><text x="415" y="120" text-anchor="middle" font-size="32">🖥</text><text x="415" y="142" text-anchor="middle" fill="#34D399" font-size="11" font-family="system-ui" font-weight="700">DESK</text><text x="415" y="156" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">PC</text><text x="415" y="167" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">1970s–90s</text><text x="415" y="200" text-anchor="middle" fill="#F87171" font-size="10" font-family="system-ui" font-weight="600">stuck at home</text><line x1="470" y1="115" x2="505" y2="115" stroke="#A1A1AA" stroke-width="2" marker-end="url(#m1t2arr)"/><text x="487" y="105" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">+wifi</text><rect x="515" y="95" width="65" height="75" rx="6" fill="rgba(251,191,36,0.10)" stroke="#FBBF24" stroke-width="2"/><text x="547" y="130" text-anchor="middle" font-size="26">📱</text><text x="547" y="148" text-anchor="middle" fill="#FBBF24" font-size="10" font-family="system-ui" font-weight="700">POCKET</text><text x="547" y="160" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">Mobile</text><text x="547" y="170" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="system-ui">2000s–now</text><text x="547" y="200" text-anchor="middle" fill="#34D399" font-size="10" font-family="system-ui" font-weight="600">does it all ✓</text><text x="650" y="105" text-anchor="middle" fill="#71717A" font-size="9" font-family="system-ui" font-style="italic">+1000×</text><text x="650" y="120" text-anchor="middle" fill="#71717A" font-size="9" font-family="system-ui" font-style="italic">faster</text></svg><div style="text-align:center;color:#71717A;font-size:11px;margin-top:8px">Each era solved the last era\'s biggest problem.</div></div>`,
       },
+
+      // ─── Anchor pills: one word + one fact per era ───
       {
-        type: "image",
-        src: "/images/m1/evolution-timeline.webp",
-        description: "Evolution timeline: Abacus \u2192 ENIAC \u2192 Desktop \u2192 Smartphone",
-      },
-      {
-        type: "era-cards",
+        type: "cards",
         columns: 4,
         items: [
           {
-            icon: "\ud83d\udd28",
-            period: "Era 1 \u00b7 Before Electricity",
-            title: "Mechanical Era",
-            description: "Gears, wheels, beads. The Abacus. No electricity. You physically moved things to calculate. Painfully slow.",
-            limitation: "\u274c Too slow \u00b7 No memory",
+            icon: "🏛",
+            title: "Mechanical",
+            description: "<strong>Anchor: gears.</strong> Beads + wheels. The Abacus. No electricity. You moved parts by hand.",
+            tag: "Pre-1940s",
+            tagColor: "purple",
           },
           {
-            icon: "\u26a1",
-            period: "Era 2 \u00b7 1940s\u20131950s",
-            title: "Electronic Era",
-            description: "First electric computers. ENIAC used vacuum tubes \u2014 faster than humans, but filled entire buildings.",
-            limitation: "\u274c Room-sized \u00b7 Cost millions",
+            icon: "🏢",
+            title: "Electronic",
+            description: "<strong>Anchor: ENIAC.</strong> Vacuum tubes. First electric computers. Filled entire buildings.",
+            tag: "1940s–60s",
+            tagColor: "blue",
           },
           {
-            icon: "\ud83d\udda5\ufe0f",
-            period: "Era 3 \u00b7 1970s\u20131990s",
-            title: "Personal Computer",
-            description: "Computers shrank to fit on a desk. Regular people could finally buy and use them.",
-            limitation: "\u274c Not portable \u00b7 Mostly offline",
+            icon: "🖥️",
+            title: "Personal",
+            description: "<strong>Anchor: desk.</strong> Microchips made computers small + cheap. Normal people could own one.",
+            tag: "1970s–90s",
+            tagColor: "green",
           },
           {
-            icon: "\ud83d\udcf1",
-            period: "Era 4 \u00b7 2000s\u2013Now",
-            title: "Mobile + Internet",
-            description: "Supercomputers in your pocket. Wi-Fi. Touchscreens. Always connected. Your phone era.",
-            limitation: "\u2705 Portable \u00b7 Connected \u00b7 Affordable",
+            icon: "📱",
+            title: "Mobile",
+            description: "<strong>Anchor: pocket.</strong> Phones with Wi-Fi + touchscreens. Always-on, always-connected.",
+            tag: "2000s–now",
           },
         ],
       },
+
+      // ─── The story sentence — the ONE thing to memorise ───
       {
         type: "callout",
         variant: "blue",
-        html: `<strong>The pattern:</strong> Mechanical (too slow) \u2192 Electronic (too big) \u2192 PC (not portable) \u2192 Mobile (does it all). Each era solved the last era's biggest problem. This chain is the whole story.`,
+        html: `<strong>📌 Memorise this one sentence:</strong> &ldquo;Computers went from <mark>Building → Room → Desk → Pocket</mark>. Each step fixed the last era\'s biggest problem.&rdquo; If you remember this sentence, you can rebuild the whole topic in your head.`,
+      },
+
+      // ─── Test yourself ───
+      {
+        type: "callout",
+        variant: "purple",
+        html: `<strong>🤔 Think it through:</strong> Pick one era. Name its biggest problem in 2 words. Now name the era that fixed it. <em>(Try: PC era → stuck at home → fixed by Mobile era.)</em>`,
       },
     ],
   },
