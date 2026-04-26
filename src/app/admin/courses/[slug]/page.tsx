@@ -961,10 +961,10 @@ function IctSeedPrompt({
                 <span className="text-xl shrink-0" aria-hidden="true">🔍</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14px] font-bold text-white">
-                    Compare topic-by-topic before re-seeding
+                    Update lessons & questions, one topic at a time
                   </div>
                   <div className="text-[11px] text-zinc-300 mt-0.5">
-                    See current DB vs new TS side-by-side. Tick exactly which content + questions to update. Keeps your manual edits safe.
+                    See what students see now next to the new version. Pick exactly what to update — lesson content and/or specific questions. Your manual edits stay untouched.
                   </div>
                 </div>
                 <span className="shrink-0 text-[12px] font-bold text-violet-300">
