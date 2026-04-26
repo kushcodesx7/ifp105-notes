@@ -828,6 +828,59 @@ export default function Home() {
       {/* Practice Zone CTA removed in Phase 1 (route + bank deleted). Future
            per-course practice will be re-introduced via the course editor. */}
 
+      {/* ─── EXAM PREP TEASER ─── */}
+      {/* Belt-and-braces card linking to /exam-prep — the long-answer
+           technique guide with the D-E-E-D recipe + 10 worked examples.
+           Lives between the modules grid and the features section so a
+           student who finished the modules sees "now learn how to
+           ANSWER" before they bounce. */}
+      <section className="relative px-6 pb-4">
+        <div className="max-w-5xl mx-auto">
+          <Link
+            href="/exam-prep"
+            className="block rounded-2xl p-5 sm:p-6 transition-all hover:scale-[1.005] active:scale-[0.995]"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(99,102,241,0.10), rgba(139,92,246,0.06))",
+              border: "1px solid rgba(99,102,241,0.30)",
+            }}
+          >
+            <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
+              <div
+                className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                style={{
+                  background: "rgba(99,102,241,0.18)",
+                  border: "1px solid rgba(99,102,241,0.30)",
+                }}
+                aria-hidden="true"
+              >
+                📝
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full mb-1.5"
+                  style={{
+                    background: "rgba(99,102,241,0.16)",
+                    color: "#A5B4FC",
+                  }}
+                >
+                  New · Exam Technique
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+                  Score full marks on every long-answer question
+                </h3>
+                <p className="text-[13px] sm:text-sm text-zinc-400 leading-relaxed">
+                  One simple recipe (<strong className="text-zinc-200">D · E · E · D</strong>) for 4, 6, and 10-mark answers. Includes a worked example with examiner&apos;s notes + 10 sample questions covering Modules 1, 3, and 5.
+                </p>
+              </div>
+              <span className="shrink-0 self-center text-indigo-300 text-sm font-semibold">
+                Open guide →
+              </span>
+            </div>
+          </Link>
+        </div>
+      </section>
+
       {/* ─── FEATURES ─── */}
       <section className="relative py-20 px-6 border-t border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
