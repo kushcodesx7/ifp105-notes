@@ -737,8 +737,27 @@ function IctSeedPrompt({
         border: "1px solid rgba(99,102,241,0.3)",
       }}
     >
-      <h3 className="text-sm font-bold text-white mb-1">
-        {isEmpty ? "📥 Port ICT into the database" : "♻️ Re-seed ICT from TS files"}
+      <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2 flex-wrap">
+        <span>{isEmpty ? "📥 Port ICT into the database" : "♻️ Re-seed ICT from TS files"}</span>
+        {/* New granular alternative — links to the per-topic diff page
+             that lets the teacher preview each topic's DB vs TS side
+             by side and tick exactly what to apply (content +
+             specific questions). Solves the "M5 questions I deleted
+             will come back" worry by letting them keep questions
+             unchecked. */}
+        {/* IctSeedPrompt is only shown when slug === "ict", so hard-
+             linking to /admin/courses/ict/diff is correct here. */}
+        <Link
+          href="/admin/courses/ict/diff"
+          className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full transition-colors hover:opacity-90"
+          style={{
+            background: "rgba(167,139,250,0.16)",
+            color: "#C4B5FD",
+            border: "1px solid rgba(167,139,250,0.30)",
+          }}
+        >
+          🔍 Per-topic diff &amp; apply
+        </Link>
       </h3>
       <p className="text-[12px] text-zinc-400 mb-3 leading-relaxed">
         {isEmpty ? (
