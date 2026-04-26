@@ -147,6 +147,10 @@ export default function DiffPage() {
   // Apply controls
   const [applyContent, setApplyContent] = useState(true);
   const [applyQs, setApplyQs] = useState<Set<number>>(new Set());
+  // Question NUMBERS the admin wants to soft-delete. Lets us shrink
+  // a topic's bank — e.g., M3 trimmed from 10 questions to 5, the
+  // teacher needs to clear out 6-10.
+  const [trashQs, setTrashQs] = useState<Set<number>>(new Set());
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<string | null>(null);
 
@@ -293,6 +297,11 @@ export default function DiffPage() {
             }
           }
           setApplyQs(next);
+          // Reset trash selection when the diff data refreshes — the
+          // db-only question numbers may have shifted after a previous
+          // apply and we don't want stale selections to delete the
+          // wrong rows.
+          setTrashQs(new Set());
           // Default content checkbox: ON if topic differs, OFF otherwise
           setApplyContent(
             (json as DiffResponse).topicStatus === "edited" ||
@@ -311,6 +320,14 @@ export default function DiffPage() {
     };
   }, [slug, moduleNumber, topicNumber, idToken, ready, fetchHeaders]);
 
+  function toggleTrashQ(n: number) {
+    setTrashQs((prev) => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n);
+      else next.add(n);
+      return next;
+    });
+  }
   function toggleQ(n: number) {
     setApplyQs((prev) => {
       const next = new Set(prev);
@@ -321,8 +338,8 @@ export default function DiffPage() {
   }
 
   async function applyDiff() {
-    if (!applyContent && applyQs.size === 0) {
-      setError("Pick at least one thing to apply (content or a question).");
+    if (!applyContent && applyQs.size === 0 && trashQs.size === 0) {
+      setError("Pick at least one thing to apply (content, a question, or a question to remove).");
       return;
     }
     setApplying(true);
@@ -337,14 +354,16 @@ export default function DiffPage() {
           topic: topicNumber,
           applyContent,
           applyQuestionNumbers: Array.from(applyQs).sort((a, z) => a - z),
+          trashQuestionNumbers: Array.from(trashQs).sort((a, z) => a - z),
         }),
       });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error || `Failed (${res.status})`);
       } else {
+        const trashed = (json.questionsTrashed as number | undefined) ?? 0;
         setApplyResult(
-          `Applied. Content: ${json.appliedContent ? "yes" : "no"} · Questions updated: ${json.questionsApplied}${json.warnings?.length ? ` · ${json.warnings.length} warning(s)` : ""}.`
+          `Updated! Lesson content: ${json.appliedContent ? "yes" : "no"} · ${json.questionsApplied} questions added/updated${trashed > 0 ? ` · ${trashed} questions removed` : ""}${json.warnings?.length ? ` · ${json.warnings.length} warning(s)` : ""}.`
         );
         // Refetch so the diff now shows everything as "unchanged"
         setTimeout(() => {
@@ -774,6 +793,9 @@ export default function DiffPage() {
               questions={data.questions}
               applyQs={applyQs}
               toggleQ={toggleQ}
+              trashQs={trashQs}
+              toggleTrashQ={toggleTrashQ}
+              setTrashQs={setTrashQs}
             />
 
             {/* ── Apply bar ── */}
@@ -798,7 +820,12 @@ export default function DiffPage() {
                     if (applyContent) parts.push("lesson content");
                     if (applyQs.size > 0) {
                       parts.push(
-                        `${applyQs.size} question${applyQs.size === 1 ? "" : "s"}`
+                        `${applyQs.size} question${applyQs.size === 1 ? "" : "s"} added/updated`
+                      );
+                    }
+                    if (trashQs.size > 0) {
+                      parts.push(
+                        `${trashQs.size} question${trashQs.size === 1 ? "" : "s"} removed`
                       );
                     }
                     if (parts.length === 0) {
@@ -820,7 +847,7 @@ export default function DiffPage() {
                 </div>
                 <button
                   onClick={applyDiff}
-                  disabled={applying || (!applyContent && applyQs.size === 0)}
+                  disabled={applying || (!applyContent && applyQs.size === 0 && trashQs.size === 0)}
                   className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.98]"
                   style={{
                     background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
@@ -976,10 +1003,16 @@ function QuestionDiffList({
   questions,
   applyQs,
   toggleQ,
+  trashQs,
+  toggleTrashQ,
+  setTrashQs,
 }: {
   questions: QuestionDiff[];
   applyQs: Set<number>;
   toggleQ: (n: number) => void;
+  trashQs: Set<number>;
+  toggleTrashQ: (n: number) => void;
+  setTrashQs: (s: Set<number>) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   function toggleExp(n: number) {
@@ -1000,21 +1033,76 @@ function QuestionDiffList({
     );
   }
 
+  // List of "kept as-is" question numbers (only on the site, not in
+  // the new TS source). These are the candidates for removal.
+  const dbOnlyNumbers = questions
+    .filter((q) => q.status === "db-only")
+    .map((q) => q.number);
+  const allDbOnlyTicked =
+    dbOnlyNumbers.length > 0 &&
+    dbOnlyNumbers.every((n) => trashQs.has(n));
+
   return (
     <div>
       <div className="text-xs font-bold tracking-widest uppercase text-zinc-500 mb-2">
         Tick the questions you want to update ({questions.length} total)
       </div>
+
+      {/* Master "remove extras" toggle — visible only when there are
+           db-only questions that could be removed. One click ticks
+           them all for soft-deletion. Common for module trims (e.g.,
+           M3 from 10 questions to 5). */}
+      {dbOnlyNumbers.length > 0 && (
+        <div
+          className="rounded-xl p-3 mb-3 flex items-start gap-3 flex-wrap"
+          style={{
+            background: "rgba(248,113,113,0.06)",
+            border: "1px solid rgba(248,113,113,0.22)",
+          }}
+        >
+          <span className="text-base shrink-0" aria-hidden="true">🗑️</span>
+          <label className="flex-1 min-w-0 flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={allDbOnlyTicked}
+              onChange={() => {
+                const next = new Set(trashQs);
+                if (allDbOnlyTicked) {
+                  for (const n of dbOnlyNumbers) next.delete(n);
+                } else {
+                  for (const n of dbOnlyNumbers) next.add(n);
+                }
+                setTrashQs(next);
+              }}
+              className="w-4 h-4 accent-red-500 shrink-0 mt-0.5"
+            />
+            <div>
+              <div className="text-sm font-semibold text-red-300">
+                Also remove the {dbOnlyNumbers.length} extra question{dbOnlyNumbers.length === 1 ? "" : "s"} not in the new version
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-0.5">
+                Recoverable via /admin/tools/trash. Use this when the new version has fewer questions than the site (e.g., trimmed from 10 to 5).
+              </div>
+            </div>
+          </label>
+        </div>
+      )}
+
       <div className="space-y-2">
         {questions.map((q) => {
           const meta = STATUS_META[q.status];
           const isOpen = expanded.has(q.number);
           const dbDisabled = q.status === "db-only" || q.status === "unchanged";
+          const isDbOnly = q.status === "db-only";
+          const willTrash = trashQs.has(q.number);
           return (
             <div
               key={q.number}
               className="rounded-xl overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${meta.border}` }}
+              style={{
+                background: willTrash ? "rgba(248,113,113,0.04)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${willTrash ? "rgba(248,113,113,0.30)" : meta.border}`,
+              }}
             >
               <div className="flex items-center gap-3 px-3 py-2.5">
                 <input
@@ -1023,7 +1111,7 @@ function QuestionDiffList({
                   onChange={() => toggleQ(q.number)}
                   disabled={dbDisabled}
                   className="w-4 h-4 accent-indigo-500 shrink-0 disabled:opacity-30"
-                  title={dbDisabled ? "No TS version to apply" : "Tick to overwrite DB with TS version"}
+                  title={dbDisabled ? "No new version to apply for this question" : "Tick to update with the new version"}
                 />
                 <span
                   className="shrink-0 inline-block w-7 h-7 rounded-md text-center leading-7 text-[11px] font-bold"
@@ -1035,11 +1123,35 @@ function QuestionDiffList({
                   className="shrink-0 inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase"
                   style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
                 >
-                  {meta.label}
+                  {willTrash ? "Will be removed" : meta.label}
                 </span>
-                <span className="text-[13px] text-zinc-200 flex-1 min-w-0 truncate">
+                <span
+                  className={`text-[13px] flex-1 min-w-0 truncate ${willTrash ? "line-through text-zinc-500" : "text-zinc-200"}`}
+                >
                   {(q.ts?.question || q.db?.question || "").slice(0, 100)}
                 </span>
+                {/* Per-question Trash toggle — only for db-only
+                     questions, since you can't "remove" something
+                     that isn't already in the DB. */}
+                {isDbOnly && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTrashQ(q.number);
+                    }}
+                    className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full transition-colors"
+                    style={{
+                      background: willTrash
+                        ? "rgba(248,113,113,0.18)"
+                        : "rgba(255,255,255,0.04)",
+                      color: willTrash ? "#F87171" : "#A1A1AA",
+                      border: `1px solid ${willTrash ? "rgba(248,113,113,0.40)" : "rgba(255,255,255,0.10)"}`,
+                    }}
+                    title={willTrash ? "Click to keep this question" : "Remove this question (soft-delete, recoverable)"}
+                  >
+                    {willTrash ? "↺ keep" : "× remove"}
+                  </button>
+                )}
                 <button
                   onClick={() => toggleExp(q.number)}
                   className="shrink-0 text-[11px] text-indigo-300 hover:text-indigo-200 underline underline-offset-2"
