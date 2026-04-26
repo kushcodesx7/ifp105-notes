@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  Reorder,
+  useDragControls,
+} from "framer-motion";
 import type { ContentBlock } from "@/types/content";
 import { BLOCK_META, makeEmpty, type BlockType } from "../blocks/types";
-import { CardsEditor } from "../blocks/CardsEditor";
-import { EraCardsEditor } from "../blocks/EraCardsEditor";
-import { StepsEditor } from "../blocks/StepsEditor";
-import { TableEditor } from "../blocks/TableEditor";
 import { ImageEditor } from "../blocks/ImageEditor";
 import { TextEditor } from "../blocks/TextEditor";
 import EditableHtml, { isComplexHtml } from "./EditableHtml";
@@ -16,41 +17,47 @@ import SelectionToolbar from "./SelectionToolbar";
 import SlashMenu from "./SlashMenu";
 import BlockModal from "./BlockModal";
 
-// LiveBlockEditor — Notion-style WYSIWYG sibling of BlockEditor.tsx.
+// LiveBlockEditor — Notion-style WYSIWYG editor for the topic body.
 //
-// Drop-in props compatibility with BlockEditor: same `value`,
-// `onChange`, `courseSlug`, `moduleNumber`, `topicNumber`, `idToken`,
-// `password`. The parent (InlineModuleEditor) toggles between this
-// and BlockEditor based on a localStorage preference.
+// PR 2 expands PR 1's "edit text inline, structural blocks via modal"
+// into full inline editing for every block type:
 //
-// Render strategy per block type:
+//   text | callout | analogy   → contentEditable surface that mirrors
+//                                 the student render exactly. Selection
+//                                 toolbar (B/I/H), slash command (/) for
+//                                 inserting blocks, complex-HTML guard
+//                                 keeps inline-SVG heroes safe.
 //
-//   • text | callout | analogy
-//        → render an EditableHtml that mirrors the EXACT styles used
-//          by TopicRenderer.tsx (same Tailwind classes incl. the
-//          [&_strong] / [&_mark] selectors). Click → cursor lands.
-//          Type → student render updates live. Slash command → opens
-//          SlashMenu. Selection → SelectionToolbar floats above.
+//   cards | era-cards          → each card's icon, title, description,
+//                                 tag are individually editable. Per-card
+//                                 × delete + grid-level + add card. The
+//                                 column count flips via a hover chip.
 //
-//        If the existing HTML contains complex markup (inline SVG,
-//        iframe, styled wrappers — see isComplexHtml()), the block
-//        is rendered LOCKED with an "Edit raw HTML" badge that opens
-//        BlockModal hosting the existing TextEditor form. This is
-//        how the Topic-3 hero stays intact.
+//   steps                       → numbered card per step, title +
+//                                 description editable inline, hover ×
+//                                 delete, + add step.
 //
-//   • cards | era-cards | steps | table | image
-//        → render the student-view (visually identical to
-//          TopicRenderer) wrapped in a click-zone. Click anywhere in
-//          the rendered block → BlockModal opens with the existing
-//          form sub-editor. PR 2 will add inline editing for these.
+//   table                       → each header + cell is its own
+//                                 EditableHtml instance, hover-revealed
+//                                 row/col add buttons.
 //
-// Hover affordances on every row: subtle ring, top-right delete,
-// drag-handle gutter visible (drag itself is a PR 2 feature).
+//   image                       → alt text inline. Source upload still
+//                                 routes through the existing ImageEditor
+//                                 form (file upload to /api/admin/upload
+//                                 needs the form pipeline) shown in a
+//                                 BlockModal — click the rendered image
+//                                 to open it.
+//
+// Row chrome (hover): a -8px-left gutter with a drag handle (Framer
+// Motion's Reorder.Item, no extra deps), a duplicate button, a type
+// pill that cycles compatible types (text ↔ callout ↔ analogy), and
+// a delete button. The drag handle uses a per-row useDragControls()
+// so dragging is only triggered by the handle, never by accidental
+// click-and-drag inside the editing surface.
 //
 // Save model: pure controlled component. Every change goes through
-// onChange. The parent InlineModuleEditor is already running a 2s
-// debounced autosave on the value prop — we add zero new save
-// machinery here.
+// onChange. The parent InlineModuleEditor's existing 2s autosave on
+// contentJson handles persistence — no new save machinery here.
 
 interface LiveBlockEditorProps {
   value: ContentBlock[];
@@ -62,6 +69,67 @@ interface LiveBlockEditorProps {
   password: string;
 }
 
+// Stable per-row keys. Reorder.Item tracks identity via `value`
+// (object reference), but React still needs stable string keys to
+// reconcile correctly across reorders. Index keys would cause the
+// wrong rows to remount on every reorder.
+//
+// We maintain a Map<block-ref, id>. Each new block reference gets a
+// fresh UUID on the next effect tick; existing references keep their
+// id. The map is rebuilt-by-replacement (not mutated in place) so
+// React sees structural change. There's a one-render window where a
+// brand-new block uses an "id-pending-{index}" placeholder before
+// the effect upgrades it to the stable UUID — Framer Motion's
+// Reorder.Item tracks by value, so the placeholder→UUID transition
+// just causes a single inner remount, not a misordered list.
+function useBlockIds(blocks: ContentBlock[]): string[] {
+  // Lazy init mints stable IDs for every block already in the
+  // initial value. This means the first effect tick is a no-op
+  // (every block already has an entry) and we don't trigger an
+  // unnecessary keys-changed → remount on first render.
+  const [registry, setRegistry] = useState<Map<ContentBlock, string>>(
+    () => {
+      const m = new Map<ContentBlock, string>();
+      for (const b of blocks) {
+        m.set(
+          b,
+          `b-${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`
+        );
+      }
+      return m;
+    }
+  );
+
+  useEffect(() => {
+    // Whitelisted — canonical "sync derived id-registry to a prop"
+    // pattern. The functional update returns the previous reference
+    // when nothing changed, so this can't loop. We need state (not
+    // a ref) so React re-renders with the upgraded ids when a new
+    // block is registered.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRegistry((prev) => {
+      const next = new Map<ContentBlock, string>();
+      let changed = false;
+      for (const b of blocks) {
+        const existing = prev.get(b);
+        if (existing) {
+          next.set(b, existing);
+        } else {
+          next.set(
+            b,
+            `b-${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`
+          );
+          changed = true;
+        }
+      }
+      if (!changed && next.size === prev.size) return prev;
+      return next;
+    });
+  }, [blocks]);
+
+  return blocks.map((b, i) => registry.get(b) ?? `b-pending-${i}`);
+}
+
 export default function LiveBlockEditor({
   value,
   onChange,
@@ -71,21 +139,16 @@ export default function LiveBlockEditor({
   idToken,
   password,
 }: LiveBlockEditorProps) {
-  // Slash menu state — anchored at a caret rect when open.
+  const stableKeys = useBlockIds(value);
+
+  // Slash-menu state.
   const [slashAnchor, setSlashAnchor] = useState<DOMRect | null>(null);
-  // The block index whose slash trigger fired — needed so when a
-  // type is picked we can replace that block with a fresh one of the
-  // chosen type (instead of inserting a new empty block at the end).
   const [slashSourceIndex, setSlashSourceIndex] = useState<number | null>(
     null
   );
-
-  // Modal state — when a structural block (or a complex-HTML text
-  // block) is opened for editing.
+  // Modal state for image upload + complex-HTML editing.
   const [modalIndex, setModalIndex] = useState<number | null>(null);
-
-  // Local hover index so only one row at a time renders the action
-  // chrome — pure visual, no state-of-record consequences.
+  // Hover index for chrome — visual only.
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   function update(i: number, patch: ContentBlock) {
@@ -96,6 +159,11 @@ export default function LiveBlockEditor({
   function remove(i: number) {
     onChange(value.filter((_, idx) => idx !== i));
   }
+  function duplicate(i: number) {
+    const next = [...value];
+    next.splice(i + 1, 0, structuredClone(value[i]));
+    onChange(next);
+  }
   function insertAfter(i: number, type: BlockType) {
     const next = [...value];
     next.splice(i + 1, 0, makeEmpty(type));
@@ -105,9 +173,22 @@ export default function LiveBlockEditor({
     onChange([...value, makeEmpty(type)]);
   }
 
-  // Slash-menu handler — fired from any EditableHtml whose line is
-  // empty when the user types `/`. We open the menu anchored at the
-  // caret rect.
+  // Drag-reorder. Framer Motion's Reorder works best with values that
+  // are stable across content edits — using the block object itself
+  // means every keystroke that creates a new block reference would
+  // unnecessarily remount the row. So we drive Reorder with the ID
+  // array (stable strings) and map back to blocks on commit.
+  function onReorder(reorderedIds: string[]) {
+    const idToBlock = new Map<string, ContentBlock>();
+    stableKeys.forEach((id, i) => idToBlock.set(id, value[i]));
+    const nextBlocks: ContentBlock[] = [];
+    for (const id of reorderedIds) {
+      const b = idToBlock.get(id);
+      if (b) nextBlocks.push(b);
+    }
+    if (nextBlocks.length === value.length) onChange(nextBlocks);
+  }
+
   const onSlash = useCallback(
     (sourceIndex: number) => (caretRect: DOMRect) => {
       setSlashSourceIndex(sourceIndex);
@@ -116,11 +197,6 @@ export default function LiveBlockEditor({
     []
   );
 
-  // When the user picks a block from the slash menu:
-  //   • if the source block is empty (its slash was triggered on an
-  //     empty line — which is the trigger condition), REPLACE that
-  //     block in place with a fresh one of the chosen type.
-  //   • otherwise insert after.
   function handleSlashSelect(type: BlockType) {
     const idx = slashSourceIndex;
     setSlashAnchor(null);
@@ -143,25 +219,32 @@ export default function LiveBlockEditor({
 
   return (
     <div className="space-y-2 relative">
-      {value.map((block, i) => (
-        <LiveRow
-          key={i}
-          block={block}
-          first={i === 0}
-          last={i === value.length - 1}
-          hovered={hoverIndex === i}
-          onMouseEnter={() => setHoverIndex(i)}
-          onMouseLeave={() => setHoverIndex((cur) => (cur === i ? null : cur))}
-          onChange={(next) => update(i, next)}
-          onDelete={() => remove(i)}
-          onSlash={(rect) => onSlash(i)(rect)}
-          onOpenModal={() => setModalIndex(i)}
-        />
-      ))}
+      <Reorder.Group
+        axis="y"
+        values={stableKeys}
+        onReorder={onReorder}
+        className="space-y-2"
+      >
+        {value.map((block, i) => (
+          <LiveRow
+            key={stableKeys[i]}
+            id={stableKeys[i]}
+            block={block}
+            hovered={hoverIndex === i}
+            onMouseEnter={() => setHoverIndex(i)}
+            onMouseLeave={() =>
+              setHoverIndex((cur) => (cur === i ? null : cur))
+            }
+            onChange={(next) => update(i, next)}
+            onDelete={() => remove(i)}
+            onDuplicate={() => duplicate(i)}
+            onSlash={(rect) => onSlash(i)(rect)}
+            onOpenModal={() => setModalIndex(i)}
+          />
+        ))}
+      </Reorder.Group>
 
-      {/* Empty-state CTA. Identical-feel to BlockEditor's empty state
-           so the toggle between Live and Classic doesn't visually
-           shock. */}
+      {/* Empty state */}
       {value.length === 0 && (
         <div
           className="text-center py-8 rounded-2xl"
@@ -193,7 +276,7 @@ export default function LiveBlockEditor({
         </div>
       )}
 
-      {/* Quiet "type / for commands" footer when there are blocks. */}
+      {/* Add-paragraph footer */}
       {value.length > 0 && (
         <button
           onClick={() => appendNew("text")}
@@ -228,8 +311,6 @@ export default function LiveBlockEditor({
         </button>
       )}
 
-      {/* Floating UI surfaces. Both are no-ops when their state is
-           closed/empty so they're cheap to keep mounted. */}
       <SelectionToolbar />
       <SlashMenu
         anchor={slashAnchor}
@@ -240,9 +321,8 @@ export default function LiveBlockEditor({
         onSelect={handleSlashSelect}
       />
 
-      {/* Modal — opens for structural blocks (cards/table/steps/etc.)
-           AND for complex-HTML text blocks. Hosts the existing form
-           sub-editor so we never lose authoring power. */}
+      {/* Modal — only for image upload + complex-HTML text editing.
+           Structural blocks now edit inline. */}
       {modalIndex != null && value[modalIndex] && (
         <ModalForBlock
           block={value[modalIndex]}
@@ -259,70 +339,98 @@ export default function LiveBlockEditor({
   );
 }
 
-// ─── Per-block renderer + row chrome ──────────────────────────
+// ─── Row + chrome ─────────────────────────────────────────
 
 interface LiveRowProps {
+  /** Stable string id used by Reorder.Item. */
+  id: string;
   block: ContentBlock;
-  first: boolean;
-  last: boolean;
   hovered: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onChange: (next: ContentBlock) => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onSlash: (rect: DOMRect) => void;
   onOpenModal: () => void;
 }
 
 function LiveRow({
+  id,
   block,
   hovered,
   onMouseEnter,
   onMouseLeave,
   onChange,
   onDelete,
+  onDuplicate,
   onSlash,
   onOpenModal,
 }: LiveRowProps) {
   const meta = BLOCK_META[block.type];
+  const dragControls = useDragControls();
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
-      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+    <Reorder.Item
+      value={id}
+      dragListener={false}
+      dragControls={dragControls}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="relative group"
+      whileDrag={{
+        scale: 1.01,
+        boxShadow: "0 24px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(99,102,241,0.4)",
+        background: "rgba(15,15,25,0.85)",
+      }}
+      transition={{ type: "spring", stiffness: 360, damping: 30 }}
+      className="relative group rounded-lg"
+      style={{ touchAction: "none" }}
     >
-      {/* Hover ring + drag-handle gutter. The gutter is purely visual
-           in PR 1 — drag-to-reorder lands in PR 2. */}
-      <div
-        className="absolute -left-7 top-2 flex flex-col items-center gap-0.5 transition-opacity"
-        style={{ opacity: hovered ? 0.7 : 0 }}
-        aria-hidden
-      >
-        <button
-          type="button"
-          title="Drag to reorder (coming in PR 2)"
-          className="w-5 h-5 flex items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] cursor-grab"
-        >
-          ⋮⋮
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          title="Delete block"
-          className="w-5 h-5 flex items-center justify-center rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-        >
-          ×
-        </button>
-      </div>
+      {/* Hover gutter — drag, duplicate, type-convert, delete. */}
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute -left-9 top-1.5 flex flex-col items-center gap-0.5 z-10"
+            aria-hidden
+          >
+            <button
+              type="button"
+              onPointerDown={(e) => dragControls.start(e)}
+              title="Drag to reorder"
+              className="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] cursor-grab active:cursor-grabbing"
+              // Don't blur the editable while initiating a drag.
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              ⋮⋮
+            </button>
+            <ConvertBtn block={block} onChange={onChange} />
+            <button
+              type="button"
+              onClick={onDuplicate}
+              title="Duplicate block"
+              className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-indigo-300 hover:bg-indigo-500/10"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              ⎘
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              title="Delete block"
+              className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Hover frame. Subtle — we don't want the editor to fight
-           with the rendered content for visual weight. */}
+      {/* Hover frame */}
       <div
         className="rounded-lg transition-all"
         style={{
@@ -347,11 +455,61 @@ function LiveRow({
           />
         </div>
       </div>
-    </motion.div>
+    </Reorder.Item>
   );
 }
 
-// ─── BlockBody — student-view render + inline editing ─────────
+// Type-convert pill — only enabled for the inline-text family
+// (text ↔ callout ↔ analogy) where the html payload is portable.
+// Other block types have incompatible shapes, so we hide the chip.
+function ConvertBtn({
+  block,
+  onChange,
+}: {
+  block: ContentBlock;
+  onChange: (next: ContentBlock) => void;
+}) {
+  if (block.type !== "text" && block.type !== "callout" && block.type !== "analogy") {
+    return null;
+  }
+  function nextType(): "text" | "callout" | "analogy" {
+    if (block.type === "text") return "callout";
+    if (block.type === "callout") return "analogy";
+    return "text";
+  }
+  function convert() {
+    const t = nextType();
+    if (block.type === "analogy" && t === "text") {
+      onChange({ type: "text", html: block.html });
+      return;
+    }
+    if (block.type === "text" && t === "callout") {
+      onChange({ type: "callout", variant: "blue", html: block.html });
+      return;
+    }
+    if (block.type === "callout" && t === "analogy") {
+      onChange({
+        type: "analogy",
+        label: "Real-world parallel",
+        html: block.html,
+      });
+      return;
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={convert}
+      title={`Convert to ${nextType()}`}
+      className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      ⇄
+    </button>
+  );
+}
+
+// ─── BlockBody dispatcher ─────────────────────────────────
 
 function BlockBody({
   block,
@@ -390,26 +548,31 @@ function BlockBody({
         <AnalogyBody block={block} onChange={onChange} onSlash={onSlash} />
       );
     case "cards":
-      return <CardsBody block={block} onOpenModal={onOpenModal} hovered={hovered} />;
+      return <CardsInlineBody block={block} onChange={onChange} hovered={hovered} />;
     case "era-cards":
       return (
-        <EraCardsBody block={block} onOpenModal={onOpenModal} hovered={hovered} />
+        <EraCardsInlineBody block={block} onChange={onChange} hovered={hovered} />
       );
     case "steps":
-      return <StepsBody block={block} onOpenModal={onOpenModal} hovered={hovered} />;
+      return <StepsInlineBody block={block} onChange={onChange} hovered={hovered} />;
     case "table":
-      return <TableBody block={block} onOpenModal={onOpenModal} hovered={hovered} />;
+      return <TableInlineBody block={block} onChange={onChange} hovered={hovered} />;
     case "image":
-      return <ImageBody block={block} onOpenModal={onOpenModal} hovered={hovered} />;
+      return (
+        <ImageInlineBody
+          block={block}
+          onChange={onChange}
+          onOpenModal={onOpenModal}
+          hovered={hovered}
+        />
+      );
     default:
       return null;
   }
 }
 
-// ─── Inline-editable: text / callout / analogy ────────────────
+// ─── Inline-editable: text / callout / analogy (unchanged from PR 1) ───
 
-// Tailwind classes copied verbatim from TopicRenderer.tsx so the live
-// editor surface looks pixel-identical to the student render.
 const TEXT_CLASSES = [
   "text-[14px] text-zinc-400 leading-[1.9] my-3",
   "[&_strong]:text-zinc-200 [&_strong]:font-semibold",
@@ -453,6 +616,17 @@ const calloutColors: Record<
 const ANALOGY_BODY_CLASSES = [
   "text-[13px] text-zinc-400 leading-[1.85] pl-3",
   "[&_strong]:text-zinc-200 [&_strong]:font-semibold",
+  "[&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20",
+  "[&_mark]:text-white [&_mark]:font-semibold",
+  "[&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5",
+  "[&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30",
+  "[&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]",
+].join(" ");
+
+const CARD_DESC_CLASSES = [
+  "text-xs text-zinc-400 leading-relaxed",
+  "[&_strong]:text-zinc-200 [&_strong]:font-semibold",
+  "[&_em]:text-zinc-300",
   "[&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20",
   "[&_mark]:text-white [&_mark]:font-semibold",
   "[&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5",
@@ -538,7 +712,6 @@ function CalloutBody({
     <div
       className="my-4 group/callout"
       style={{
-        // Visual frame matches TopicRenderer's callout rendering.
         background: colors.bg,
         borderLeft: `3px solid ${colors.border}`,
         color: block.variant === "dark" ? "rgba(255,255,255,0.8)" : colors.text,
@@ -568,8 +741,6 @@ function CalloutBody({
           />
         )}
       </div>
-      {/* Variant chip row, only on hover. Lets the admin recolor
-           without leaving the page. */}
       <CalloutVariantChips block={block} onChange={onChange} />
     </div>
   );
@@ -660,32 +831,54 @@ function AnalogyBody({
   );
 }
 
-// ─── Structural blocks: render student view, click → modal ────
+// ─── Cards (inline) ───────────────────────────────────────
 
-function StructuralWrapper({
-  children,
+const TAG_COLOR_CYCLE = ["default", "amber", "blue", "grn"] as const;
+const tagColorMap: Record<string, { bg: string; color: string }> = {
+  default: { bg: "rgba(99,102,241,0.12)", color: "#818CF8" },
+  amber: { bg: "rgba(124,58,237,0.12)", color: "#A78BFA" },
+  blue: { bg: "rgba(37,99,235,0.12)", color: "#60A5FA" },
+  grn: { bg: "rgba(34,197,94,0.12)", color: "#4ADE80" },
+};
+
+function CardsInlineBody({
+  block,
+  onChange,
   hovered,
-  onOpenModal,
-  ariaLabel,
 }: {
-  children: React.ReactNode;
+  block: Extract<ContentBlock, { type: "cards" }>;
+  onChange: (next: ContentBlock) => void;
   hovered: boolean;
-  onOpenModal: () => void;
-  ariaLabel: string;
 }) {
+  function patchCard(i: number, patch: Partial<(typeof block.items)[number]>) {
+    const items = [...block.items];
+    items[i] = { ...items[i], ...patch };
+    onChange({ ...block, items });
+  }
+  function removeCard(i: number) {
+    onChange({ ...block, items: block.items.filter((_, idx) => idx !== i) });
+  }
+  function addCard() {
+    onChange({
+      ...block,
+      items: [
+        ...block.items,
+        { icon: "✨", title: "", description: "", tag: undefined },
+      ],
+    });
+  }
+  function cycleTagColor(i: number) {
+    const cur = block.items[i].tagColor || "default";
+    const idx = TAG_COLOR_CYCLE.indexOf(
+      cur as (typeof TAG_COLOR_CYCLE)[number]
+    );
+    const next = TAG_COLOR_CYCLE[(idx + 1) % TAG_COLOR_CYCLE.length];
+    patchCard(i, { tagColor: next });
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onOpenModal}
-      aria-label={ariaLabel}
-      className="block w-full text-left rounded-xl transition-shadow"
-      style={{
-        boxShadow: hovered
-          ? "0 0 0 1.5px rgba(99,102,241,0.45), 0 8px 24px rgba(0,0,0,0.3)"
-          : "0 0 0 1px transparent",
-      }}
-    >
-      {children}
+    <div className="my-4 group/cards">
+      {/* Column-count chips on hover. */}
       <AnimatePresence>
         {hovered && (
           <motion.div
@@ -693,30 +886,33 @@ function StructuralWrapper({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -2 }}
             transition={{ duration: 0.12 }}
-            className="flex items-center justify-center gap-1.5 -mt-1 mb-1 text-[10px] font-semibold text-indigo-300"
+            className="flex items-center gap-1.5 mb-2"
           >
-            <span aria-hidden>✏️</span>
-            Click to edit
+            <span className="text-[10px] text-zinc-500">Columns:</span>
+            {([2, 3, 4] as const).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onChange({ ...block, columns: n })}
+                className="text-[10px] px-2 py-0.5 rounded-full transition-all"
+                style={{
+                  background:
+                    block.columns === n
+                      ? "rgba(99,102,241,0.18)"
+                      : "rgba(255,255,255,0.04)",
+                  color: block.columns === n ? "#A5B4FC" : "#9CA3AF",
+                  border: `1px solid ${block.columns === n ? "rgba(99,102,241,0.45)" : "rgba(255,255,255,0.08)"}`,
+                }}
+              >
+                {n}
+              </button>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
-    </button>
-  );
-}
 
-function CardsBody({
-  block,
-  hovered,
-  onOpenModal,
-}: {
-  block: Extract<ContentBlock, { type: "cards" }>;
-  hovered: boolean;
-  onOpenModal: () => void;
-}) {
-  return (
-    <StructuralWrapper hovered={hovered} onOpenModal={onOpenModal} ariaLabel="Edit cards">
       <div
-        className={`grid gap-3 my-4 ${
+        className={`grid gap-3 ${
           block.columns === 4
             ? "grid-cols-2 md:grid-cols-4"
             : block.columns === 3
@@ -725,142 +921,411 @@ function CardsBody({
         }`}
       >
         {block.items.map((card, i) => (
-          <div key={i} className="card-glass p-4 rounded-xl">
-            <span className="text-xl mb-2 block">{card.icon}</span>
-            <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title || "(no title)"}</h4>
-            <p
-              className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold [&_em]:text-zinc-300 [&_mark]:bg-gradient-to-r [&_mark]:from-violet-500/20 [&_mark]:to-indigo-500/20 [&_mark]:text-white [&_mark]:font-semibold [&_mark]:px-1.5 [&_mark]:py-0.5 [&_mark]:mx-0.5 [&_mark]:rounded-md [&_mark]:ring-1 [&_mark]:ring-violet-400/30 [&_mark]:shadow-[0_0_8px_rgba(139,92,246,0.15)]"
-              dangerouslySetInnerHTML={{ __html: card.description }}
-            />
-            {card.tag && (
-              <span
-                className="inline-block mt-2 text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
-                style={{
-                  background: "rgba(99,102,241,0.12)",
-                  color: "#818CF8",
-                }}
-              >
-                {card.tag}
-              </span>
-            )}
-          </div>
-        ))}
-        {block.items.length === 0 && (
-          <div className="col-span-full text-[12px] text-zinc-500 text-center py-6 border border-dashed border-white/[0.08] rounded-xl">
-            Empty cards block — click to add cards
-          </div>
-        )}
-      </div>
-    </StructuralWrapper>
-  );
-}
-
-function EraCardsBody({
-  block,
-  hovered,
-  onOpenModal,
-}: {
-  block: Extract<ContentBlock, { type: "era-cards" }>;
-  hovered: boolean;
-  onOpenModal: () => void;
-}) {
-  return (
-    <StructuralWrapper hovered={hovered} onOpenModal={onOpenModal} ariaLabel="Edit timeline">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-4">
-        {block.items.map((card, i) => (
-          <div key={i} className="card-glass p-4 rounded-xl relative overflow-hidden">
-            <div
-              className="absolute top-0 left-0 right-0 h-[3px]"
-              style={{ background: "linear-gradient(90deg, #6366F1, #8B5CF6)" }}
-            />
-            <span className="text-xl mb-2 block">{card.icon}</span>
-            <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1">
-              {card.period}
-            </div>
-            <h4 className="text-sm font-bold text-zinc-200 mb-1">{card.title}</h4>
-            <p
-              className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold"
-              dangerouslySetInnerHTML={{ __html: card.description }}
-            />
-            <div
-              className="text-xs font-semibold mt-2 pt-2 text-zinc-500"
-              style={{ borderTop: "1px solid #2a2a33" }}
-            >
-              {card.limitation}
-            </div>
-          </div>
-        ))}
-        {block.items.length === 0 && (
-          <div className="col-span-full text-[12px] text-zinc-500 text-center py-6 border border-dashed border-white/[0.08] rounded-xl">
-            Empty timeline — click to add eras
-          </div>
-        )}
-      </div>
-    </StructuralWrapper>
-  );
-}
-
-function StepsBody({
-  block,
-  hovered,
-  onOpenModal,
-}: {
-  block: Extract<ContentBlock, { type: "steps" }>;
-  hovered: boolean;
-  onOpenModal: () => void;
-}) {
-  return (
-    <StructuralWrapper hovered={hovered} onOpenModal={onOpenModal} ariaLabel="Edit steps">
-      <div className="my-4 space-y-2">
-        {block.items.map((step, i) => (
           <div
             key={i}
-            className="flex gap-3.5 items-start p-4 rounded-xl card-glass"
+            className="card-glass p-4 rounded-xl relative group/card"
+          >
+            <button
+              type="button"
+              onClick={() => removeCard(i)}
+              title="Remove card"
+              aria-label="Remove card"
+              className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover/card:opacity-100 transition-opacity"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              ×
+            </button>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.icon}
+                onChange={(v) => patchCard(i, { icon: v })}
+                placeholder="✨"
+                className="text-xl mb-2 block min-h-[1.6em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel={`Card ${i + 1} icon`}
+              />
+            </div>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.title}
+                onChange={(v) => patchCard(i, { title: v })}
+                placeholder="Card title"
+                className="text-sm font-bold text-zinc-200 mb-1 min-h-[1.4em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel={`Card ${i + 1} title`}
+              />
+            </div>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.description}
+                onChange={(v) => patchCard(i, { description: v })}
+                placeholder="Card description — supports bold, highlight"
+                className={`${CARD_DESC_CLASSES} min-h-[2.4em]`}
+                ariaLabel={`Card ${i + 1} description`}
+              />
+            </div>
+            {/* Tag — clickable for color, contenteditable for text. If
+                 the value is empty we show a "+ tag" affordance on
+                 hover. */}
+            <CardTagEditor
+              card={card}
+              onChange={(patch) => patchCard(i, patch)}
+              cycleColor={() => cycleTagColor(i)}
+            />
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={addCard}
+        className="mt-3 w-full py-2 rounded-xl flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500 hover:text-white transition-all opacity-0 group-hover/cards:opacity-100"
+        style={{
+          background: "transparent",
+          border: "1px dashed rgba(255,255,255,0.08)",
+        }}
+      >
+        <span aria-hidden>+</span> Add card
+      </button>
+    </div>
+  );
+}
+
+function CardTagEditor({
+  card,
+  onChange,
+  cycleColor,
+}: {
+  card: Extract<ContentBlock, { type: "cards" }>["items"][number];
+  onChange: (patch: Partial<typeof card>) => void;
+  cycleColor: () => void;
+}) {
+  const tagColor = card.tagColor || "default";
+  const c = tagColorMap[tagColor];
+  const has = (card.tag ?? "").trim().length > 0;
+  return (
+    <div className="mt-2 flex items-center gap-1 group/tag">
+      <span
+        className="inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all"
+        style={{
+          background: has ? c.bg : "rgba(255,255,255,0.04)",
+          color: has ? c.color : "#71717A",
+          border: `1px solid ${has ? "transparent" : "rgba(255,255,255,0.08)"}`,
+        }}
+        data-live-editable="true"
+      >
+        <EditableHtml
+          value={card.tag ?? ""}
+          onChange={(v) => onChange({ tag: v.trim() ? v : undefined })}
+          placeholder="+ tag"
+          className="inline-block min-w-[2em]"
+          singleLine
+          plainTextPaste
+          forceEditable
+          ariaLabel="Card tag"
+        />
+      </span>
+      {has && (
+        <button
+          type="button"
+          onClick={cycleColor}
+          title="Cycle tag colour"
+          className="text-[9px] text-zinc-500 hover:text-white opacity-0 group-hover/tag:opacity-100 transition-opacity"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          🎨
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Era cards (inline) ───────────────────────────────────
+
+function EraCardsInlineBody({
+  block,
+  onChange,
+  hovered,
+}: {
+  block: Extract<ContentBlock, { type: "era-cards" }>;
+  onChange: (next: ContentBlock) => void;
+  hovered: boolean;
+}) {
+  function patch(i: number, p: Partial<(typeof block.items)[number]>) {
+    const items = [...block.items];
+    items[i] = { ...items[i], ...p };
+    onChange({ ...block, items });
+  }
+  function removeEra(i: number) {
+    onChange({ ...block, items: block.items.filter((_, idx) => idx !== i) });
+  }
+  function addEra() {
+    onChange({
+      ...block,
+      items: [
+        ...block.items,
+        {
+          icon: "📜",
+          period: "1800s",
+          title: "New era",
+          description: "",
+          limitation: "",
+        },
+      ],
+    });
+  }
+
+  return (
+    <div className="my-4 group/era">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {block.items.map((card, i) => (
+          <div
+            key={i}
+            className="card-glass p-4 rounded-xl relative overflow-hidden group/erac"
           >
             <div
-              className="w-8 h-8 rounded-lg text-xs font-bold flex items-center justify-center shrink-0"
+              className="absolute top-0 left-0 right-0 h-[3px]"
               style={{
-                background: "linear-gradient(135deg, #1a1a2e, #2a2a44)",
-                color: "#818CF8",
-                border: "1px solid #333350",
+                background: "linear-gradient(90deg, #6366F1, #8B5CF6)",
               }}
+            />
+            <button
+              type="button"
+              onClick={() => removeEra(i)}
+              title="Remove era"
+              className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover/erac:opacity-100 transition-opacity"
+              onMouseDown={(e) => e.preventDefault()}
             >
-              {i + 1}
+              ×
+            </button>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.icon}
+                onChange={(v) => patch(i, { icon: v })}
+                placeholder="📜"
+                className="text-xl mb-2 block min-h-[1.6em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel="Era icon"
+              />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-zinc-200 mb-0.5">
-                {step.title || "(step)"}
-              </h4>
-              <p
-                className="text-xs text-zinc-400 leading-relaxed [&_strong]:text-zinc-200 [&_strong]:font-semibold"
-                dangerouslySetInnerHTML={{ __html: step.description }}
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.period}
+                onChange={(v) => patch(i, { period: v })}
+                placeholder="1800s"
+                className="text-[9px] font-bold tracking-widest uppercase text-zinc-500 mb-1 min-h-[1.2em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel="Era period"
+              />
+            </div>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.title}
+                onChange={(v) => patch(i, { title: v })}
+                placeholder="Era name"
+                className="text-sm font-bold text-zinc-200 mb-1 min-h-[1.4em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel="Era title"
+              />
+            </div>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={card.description}
+                onChange={(v) => patch(i, { description: v })}
+                placeholder="What happened? (supports bold)"
+                className={`${CARD_DESC_CLASSES} min-h-[2.4em]`}
+                ariaLabel="Era description"
+              />
+            </div>
+            <div
+              className="mt-2 pt-2"
+              style={{ borderTop: "1px solid #2a2a33" }}
+              data-live-editable="true"
+            >
+              <EditableHtml
+                value={card.limitation}
+                onChange={(v) => patch(i, { limitation: v })}
+                placeholder="Limitation / why it ended"
+                className="text-xs font-semibold text-zinc-500 min-h-[1.4em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel="Era limitation"
               />
             </div>
           </div>
         ))}
-        {block.items.length === 0 && (
-          <div className="text-[12px] text-zinc-500 text-center py-6 border border-dashed border-white/[0.08] rounded-xl">
-            Empty steps block — click to add a step
-          </div>
-        )}
       </div>
-    </StructuralWrapper>
+      {hovered && (
+        <button
+          type="button"
+          onClick={addEra}
+          className="mt-3 w-full py-2 rounded-xl flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500 hover:text-white transition-all"
+          style={{
+            background: "transparent",
+            border: "1px dashed rgba(255,255,255,0.08)",
+          }}
+        >
+          <span aria-hidden>+</span> Add era
+        </button>
+      )}
+    </div>
   );
 }
 
-function TableBody({
+// ─── Steps (inline) ───────────────────────────────────────
+
+function StepsInlineBody({
   block,
+  onChange,
   hovered,
-  onOpenModal,
+}: {
+  block: Extract<ContentBlock, { type: "steps" }>;
+  onChange: (next: ContentBlock) => void;
+  hovered: boolean;
+}) {
+  function patch(i: number, p: Partial<(typeof block.items)[number]>) {
+    const items = [...block.items];
+    items[i] = { ...items[i], ...p };
+    onChange({ ...block, items });
+  }
+  function removeStep(i: number) {
+    onChange({ ...block, items: block.items.filter((_, idx) => idx !== i) });
+  }
+  function addStep() {
+    onChange({
+      ...block,
+      items: [...block.items, { title: "", description: "" }],
+    });
+  }
+  return (
+    <div className="my-4 space-y-2 group/steps">
+      {block.items.map((step, i) => (
+        <div
+          key={i}
+          className="flex gap-3.5 items-start p-4 rounded-xl card-glass relative group/step"
+        >
+          <div
+            className="w-8 h-8 rounded-lg text-xs font-bold flex items-center justify-center shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #1a1a2e, #2a2a44)",
+              color: "#818CF8",
+              border: "1px solid #333350",
+            }}
+          >
+            {i + 1}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div data-live-editable="true">
+              <EditableHtml
+                value={step.title}
+                onChange={(v) => patch(i, { title: v })}
+                placeholder="Step title"
+                className="text-sm font-bold text-zinc-200 mb-0.5 min-h-[1.4em]"
+                singleLine
+                plainTextPaste
+                forceEditable
+                ariaLabel={`Step ${i + 1} title`}
+              />
+            </div>
+            <div data-live-editable="true">
+              <EditableHtml
+                value={step.description}
+                onChange={(v) => patch(i, { description: v })}
+                placeholder="What happens in this step"
+                className={`${CARD_DESC_CLASSES} min-h-[1.4em]`}
+                ariaLabel={`Step ${i + 1} description`}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => removeStep(i)}
+            title="Remove step"
+            className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      {hovered && (
+        <button
+          type="button"
+          onClick={addStep}
+          className="w-full py-2 rounded-xl flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500 hover:text-white transition-all"
+          style={{
+            background: "transparent",
+            border: "1px dashed rgba(255,255,255,0.08)",
+          }}
+        >
+          <span aria-hidden>+</span> Add step
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Table (inline) ───────────────────────────────────────
+
+function TableInlineBody({
+  block,
+  onChange,
+  hovered,
 }: {
   block: Extract<ContentBlock, { type: "table" }>;
+  onChange: (next: ContentBlock) => void;
   hovered: boolean;
-  onOpenModal: () => void;
 }) {
+  function setHeader(i: number, v: string) {
+    const headers = [...block.headers];
+    headers[i] = v;
+    onChange({ ...block, headers });
+  }
+  function setCell(ri: number, ci: number, v: string) {
+    const rows = block.rows.map((r, idx) =>
+      idx === ri ? { cells: r.cells.map((c, cidx) => (cidx === ci ? v : c)) } : r
+    );
+    onChange({ ...block, rows });
+  }
+  function addRow() {
+    const empty = block.headers.map(() => "");
+    onChange({ ...block, rows: [...block.rows, { cells: empty }] });
+  }
+  function removeRow(i: number) {
+    onChange({ ...block, rows: block.rows.filter((_, idx) => idx !== i) });
+  }
+  function addCol() {
+    onChange({
+      ...block,
+      headers: [...block.headers, `Column ${block.headers.length + 1}`],
+      rows: block.rows.map((r) => ({ cells: [...r.cells, ""] })),
+    });
+  }
+  function removeCol(i: number) {
+    if (block.headers.length <= 1) return;
+    onChange({
+      ...block,
+      headers: block.headers.filter((_, idx) => idx !== i),
+      rows: block.rows.map((r) => ({
+        cells: r.cells.filter((_, idx) => idx !== i),
+      })),
+    });
+  }
   return (
-    <StructuralWrapper hovered={hovered} onOpenModal={onOpenModal} ariaLabel="Edit table">
+    <div className="my-4 group/table">
       <div
-        className="my-4 rounded-xl overflow-hidden inner-glow"
+        className="rounded-xl overflow-hidden inner-glow"
         style={{ border: "1px solid #2a2a33" }}
       >
         <div className="overflow-x-auto">
@@ -874,25 +1339,67 @@ function TableBody({
                 {block.headers.map((h, i) => (
                   <th
                     key={i}
-                    className="px-4 py-2.5 text-left font-semibold text-white/90 tracking-wide whitespace-nowrap"
+                    className="px-4 py-2.5 text-left font-semibold text-white/90 tracking-wide whitespace-nowrap relative group/th"
+                    data-live-editable="true"
                   >
-                    {h}
+                    <EditableHtml
+                      value={h}
+                      onChange={(v) => setHeader(i, v)}
+                      placeholder={`Column ${i + 1}`}
+                      className="min-w-[60px] inline-block"
+                      singleLine
+                      plainTextPaste
+                      forceEditable
+                      ariaLabel={`Header ${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCol(i)}
+                      title="Remove column"
+                      className="ml-2 text-white/60 hover:text-red-300 opacity-0 group-hover/th:opacity-100 transition-opacity"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      ×
+                    </button>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {block.rows.map((row, ri) => (
-                <tr key={ri} style={{ borderTop: "1px solid #1e1e28" }}>
+                <tr
+                  key={ri}
+                  style={{ borderTop: "1px solid #1e1e28" }}
+                  className="group/tr"
+                >
                   {row.cells.map((cell, ci) => (
                     <td
                       key={ci}
-                      className="px-4 py-2.5 text-zinc-400 align-top"
+                      className="px-4 py-2.5 text-zinc-400 align-top relative"
                       style={{
                         background: ri % 2 ? "#111116" : "transparent",
                       }}
-                      dangerouslySetInnerHTML={{ __html: cell }}
-                    />
+                      data-live-editable="true"
+                    >
+                      <EditableHtml
+                        value={cell}
+                        onChange={(v) => setCell(ri, ci, v)}
+                        placeholder="—"
+                        className="min-w-[40px]"
+                        ariaLabel={`Row ${ri + 1} cell ${ci + 1}`}
+                      />
+                      {ci === row.cells.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(ri)}
+                          title="Remove row"
+                          className="absolute top-1 right-1 text-zinc-500 hover:text-red-400 opacity-0 group-hover/tr:opacity-100 transition-opacity"
+                          onMouseDown={(e) => e.preventDefault()}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -900,30 +1407,65 @@ function TableBody({
           </table>
         </div>
       </div>
-    </StructuralWrapper>
+      {hovered && (
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={addRow}
+            className="flex-1 py-1.5 rounded-lg text-[11px] text-zinc-500 hover:text-white transition-all"
+            style={{
+              background: "transparent",
+              border: "1px dashed rgba(255,255,255,0.08)",
+            }}
+          >
+            + Add row
+          </button>
+          <button
+            type="button"
+            onClick={addCol}
+            className="flex-1 py-1.5 rounded-lg text-[11px] text-zinc-500 hover:text-white transition-all"
+            style={{
+              background: "transparent",
+              border: "1px dashed rgba(255,255,255,0.08)",
+            }}
+          >
+            + Add column
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
-function ImageBody({
+// ─── Image (inline alt-text; src via modal) ───────────────
+
+function ImageInlineBody({
   block,
-  hovered,
+  onChange,
   onOpenModal,
+  hovered,
 }: {
   block: Extract<ContentBlock, { type: "image" }>;
-  hovered: boolean;
+  onChange: (next: ContentBlock) => void;
   onOpenModal: () => void;
+  hovered: boolean;
 }) {
   return (
-    <StructuralWrapper hovered={hovered} onOpenModal={onOpenModal} ariaLabel="Edit image">
-      <div
-        className="my-5 rounded-2xl overflow-hidden"
-        style={{
-          background: "#111116",
-          border: "1px solid #2a2a33",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
-        }}
-      >
-        {block.src ? (
+    <div
+      className="my-5 rounded-2xl overflow-hidden relative"
+      style={{
+        background: "#111116",
+        border: "1px solid #2a2a33",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+      }}
+    >
+      {block.src ? (
+        <button
+          type="button"
+          onClick={onOpenModal}
+          className="block w-full"
+          title="Click to change image"
+        >
           <Image
             src={block.src}
             alt={block.description}
@@ -935,17 +1477,54 @@ function ImageBody({
             sizes="(max-width: 768px) 100vw, 800px"
             placeholder="empty"
           />
-        ) : (
-          <div className="p-6 text-center text-xs text-zinc-500">
-            {block.description || "(no image — click to upload)"}
-          </div>
-        )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpenModal}
+          className="block w-full p-8 text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          📷 No image — click to upload
+        </button>
+      )}
+
+      {/* Inline alt-text caption — editable. */}
+      <div
+        className="px-4 py-2"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
+        data-live-editable="true"
+      >
+        <EditableHtml
+          value={block.description}
+          onChange={(v) => onChange({ ...block, description: v })}
+          placeholder="Alt text — describes the image for accessibility"
+          className="text-[11px] text-zinc-500 italic min-h-[1.4em]"
+          singleLine
+          plainTextPaste
+          forceEditable
+          ariaLabel="Image alt text"
+        />
       </div>
-    </StructuralWrapper>
+
+      {hovered && block.src && (
+        <button
+          type="button"
+          onClick={onOpenModal}
+          className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-1 rounded-full text-white"
+          style={{
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,0.12)",
+          }}
+        >
+          Replace
+        </button>
+      )}
+    </div>
   );
 }
 
-// ─── ModalForBlock — picks the right form sub-editor ──────────
+// ─── Modal — image upload + complex-HTML escape hatch ─────
 
 function ModalForBlock({
   block,
@@ -967,36 +1546,21 @@ function ModalForBlock({
   password: string;
 }) {
   const meta = BLOCK_META[block.type];
-  const titleByType: Record<BlockType, string> = {
+  const titleByType: Partial<Record<BlockType, string>> = {
     text: "Paragraph (raw HTML)",
     callout: "Callout (raw HTML)",
-    analogy: "Analogy",
+    analogy: "Analogy (raw HTML)",
     image: "Image",
-    steps: "Steps",
-    table: "Table",
-    cards: "Cards grid",
-    "era-cards": "Era cards (timeline)",
   };
+  const title = titleByType[block.type] ?? `Edit ${block.type}`;
   return (
     <BlockModal
       open
       onClose={onClose}
-      title={titleByType[block.type]}
+      title={title}
       icon={meta.icon}
       accent={meta.accent}
     >
-      {block.type === "cards" && (
-        <CardsEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "era-cards" && (
-        <EraCardsEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "steps" && (
-        <StepsEditor block={block} onChange={onChange} />
-      )}
-      {block.type === "table" && (
-        <TableEditor block={block} onChange={onChange} />
-      )}
       {block.type === "image" && (
         <ImageEditor
           block={block}
@@ -1021,10 +1585,6 @@ function ModalForBlock({
   );
 }
 
-// Tiny raw-HTML fallback editors for the two block types that the
-// existing form-editor folder doesn't expose a dedicated component
-// for (callout and analogy). We re-implement minimal HTML textareas
-// here so the modal still works for the rare complex-HTML case.
 function RawHtmlFallback({
   block,
   onChange,
