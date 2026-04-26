@@ -35,6 +35,13 @@ interface ApplyBody {
   topic?: number;
   applyContent?: boolean;
   applyQuestionNumbers?: number[];
+  /** Question NUMBERS to soft-delete (deleted_at = now()).
+   *  Lets the teacher remove DB-only questions that were left over
+   *  from a previous bigger bank — e.g. Module 3 was trimmed from
+   *  10 MCQs/topic to 5, and the diff page needs a way to clear
+   *  out questions 6-10 from the DB to match the new TS shape.
+   *  Soft-delete (not hard) so /admin/tools/trash can recover. */
+  trashQuestionNumbers?: number[];
 }
 
 export async function POST(
@@ -72,6 +79,11 @@ export async function POST(
         (n): n is number => typeof n === "number" && n >= 1
       )
     : [];
+  const trashQs = Array.isArray(body.trashQuestionNumbers)
+    ? body.trashQuestionNumbers.filter(
+        (n): n is number => typeof n === "number" && n >= 1
+      )
+    : [];
 
   if (moduleNumber == null || topicNumber == null) {
     return Response.json(
@@ -79,7 +91,7 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (!applyContent && applyQs.length === 0) {
+  if (!applyContent && applyQs.length === 0 && trashQs.length === 0) {
     return Response.json(
       { error: "Nothing to apply — pick content and/or at least one question" },
       { status: 400 }
@@ -214,6 +226,29 @@ export async function POST(
     questionsApplied += 1;
   }
 
+  // ─── 3. Soft-delete the trash list ───
+  // Sets deleted_at = now() on each ticked question. Recoverable
+  // via /admin/tools/trash (Restore button) within the usual window.
+  // Used by the "remove extras" toggle on the diff page so the
+  // teacher can shrink a question bank — e.g., M3 trimmed from 10
+  // questions/topic down to 5.
+  let questionsTrashed = 0;
+  if (trashQs.length > 0) {
+    const nowIso = new Date().toISOString();
+    for (const qNum of trashQs) {
+      const { error: tErr } = await supabase
+        .from("questions")
+        .update({ deleted_at: nowIso })
+        .eq("topic_id", topicId)
+        .eq("number", qNum);
+      if (tErr) {
+        questionWarnings.push(`Q${qNum} (trash): ${tErr.message}`);
+        continue;
+      }
+      questionsTrashed += 1;
+    }
+  }
+
   // Audit log — each apply is one row so the trail shows which
   // teacher applied what to which topic.
   await logAdminAction({
@@ -227,7 +262,9 @@ export async function POST(
       topicNumber,
       appliedContent: applyContent,
       appliedQuestionNumbers: applyQs,
+      trashedQuestionNumbers: trashQs,
       questionsApplied,
+      questionsTrashed,
       warnings: questionWarnings,
     },
   });
@@ -242,6 +279,7 @@ export async function POST(
     ok: true,
     appliedContent: applyContent,
     questionsApplied,
+    questionsTrashed,
     warnings: questionWarnings,
   });
 }
