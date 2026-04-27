@@ -12,20 +12,32 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateStreak } from "@/lib/gamification";
 
-// Mount-time work — bump the streak counter and capture both
-// the new count + whether to show the celebratory toast. Done up
-// here (lazy useState) instead of inside an effect so the React
-// Compiler doesn't flag a setState-in-effect that's actually fine
-// (this fires exactly once per mount and the only "external system"
-// is localStorage, which lazy useState reads natively).
-function readMountState(): { count: number; isNew: boolean } {
-  if (typeof window === "undefined") return { count: 0, isNew: false };
-  return updateStreak();
-}
-
 export default function XpBar() {
-  const [{ count: streakCount, isNew: streakIsNew }] = useState(readMountState);
-  const [streakToast, setStreakToast] = useState<string | null>(streakIsNew && streakCount > 1 ? `🔥 ${streakCount}-day streak!` : null);
+  // Streak state is read from localStorage on mount via an effect
+  // rather than lazy useState so SSR and the first client render
+  // produce identical output (null). Reading localStorage in lazy
+  // useState would diverge — server returns 0, client returns the
+  // real count — and React's hydration check flags that as a
+  // recoverable mismatch. Two-pass mount keeps the tree quiet.
+  const [streakCount, setStreakCount] = useState(0);
+  const [streakToast, setStreakToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const { count, isNew } = updateStreak();
+    // Whitelisted setStates — these run exactly once on mount to
+    // hydrate from localStorage (an external system). Doing this in
+    // lazy useState would diverge between SSR (window undefined → 0)
+    // and client first render (real count from storage), tripping a
+    // hydration mismatch. The effect path runs after hydration, so
+    // it's the right place — even though set-state-in-effect normally
+    // warns against this pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStreakCount(count);
+    if (isNew && count > 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStreakToast(`🔥 ${count}-day streak!`);
+    }
+  }, []);
 
   // Auto-dismiss the celebratory toast after 3s. Effect now has zero
   // setState in its body — only schedules + cleans up a timer.

@@ -22,6 +22,10 @@ const tagColors: Record<string, { bg: string; color: string }> = {
   amber: { bg: 'rgba(124,58,237,0.12)', color: '#A78BFA' },
   blue: { bg: 'rgba(37,99,235,0.12)', color: '#60A5FA' },
   grn: { bg: 'rgba(34,197,94,0.12)', color: '#4ADE80' },
+  green: { bg: 'rgba(34,197,94,0.12)', color: '#4ADE80' },
+  pink: { bg: 'rgba(236,72,153,0.12)', color: '#F472B6' },
+  purple: { bg: 'rgba(124,58,237,0.12)', color: '#A78BFA' },
+  red: { bg: 'rgba(239,68,68,0.12)', color: '#F87171' },
 };
 
 const vp = { once: true, margin: "-60px" as const };
@@ -88,7 +92,7 @@ function RenderBlock({ block }: { block: ContentBlock }) {
               {card.tag && (
                 <span
                   className="inline-block mt-2 text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
-                  style={tagColors[card.tagColor || 'default']}
+                  style={tagColors[card.tagColor || 'default'] ?? tagColors.default}
                 >
                   {card.tag}
                 </span>

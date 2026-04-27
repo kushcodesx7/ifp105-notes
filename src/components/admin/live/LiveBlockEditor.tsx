@@ -862,11 +862,21 @@ function AnalogyBody({
 // ─── Cards (inline) ───────────────────────────────────────
 
 const TAG_COLOR_CYCLE = ["default", "amber", "blue", "grn"] as const;
+// Tag colours used by `cards` blocks. Keys match `card.tagColor` values
+// in the content data. Note: `amber` is a legacy alias that renders
+// purple — kept for back-compat with existing data. `grn` is the
+// short form historically used by the form-based editor; `green` is
+// the long form found in module data files. Any value not in this
+// map falls back to `default` (see CardTagEditor).
 const tagColorMap: Record<string, { bg: string; color: string }> = {
   default: { bg: "rgba(99,102,241,0.12)", color: "#818CF8" },
   amber: { bg: "rgba(124,58,237,0.12)", color: "#A78BFA" },
   blue: { bg: "rgba(37,99,235,0.12)", color: "#60A5FA" },
   grn: { bg: "rgba(34,197,94,0.12)", color: "#4ADE80" },
+  green: { bg: "rgba(34,197,94,0.12)", color: "#4ADE80" },
+  pink: { bg: "rgba(236,72,153,0.12)", color: "#F472B6" },
+  purple: { bg: "rgba(124,58,237,0.12)", color: "#A78BFA" },
+  red: { bg: "rgba(239,68,68,0.12)", color: "#F87171" },
 };
 
 function CardsInlineBody({
@@ -1033,7 +1043,11 @@ function CardTagEditor({
   cycleColor: () => void;
 }) {
   const tagColor = card.tagColor || "default";
-  const c = tagColorMap[tagColor];
+  // Defensive: any unknown tagColor value falls back to default. Without
+  // this, an unknown value (e.g. older content authored before a colour
+  // was renamed) used to crash CardTagEditor with `Cannot read 'bg' of
+  // undefined`, which the ErrorBoundary caught as "Something broke".
+  const c = tagColorMap[tagColor] ?? tagColorMap.default;
   const has = (card.tag ?? "").trim().length > 0;
   return (
     <div className="mt-2 flex items-center gap-1 group/tag">
