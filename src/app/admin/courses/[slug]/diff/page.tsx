@@ -181,7 +181,6 @@ export default function DiffPage() {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDismissed(new Set(parsed.filter((x): x is string => typeof x === "string")));
       }
     } catch {}
@@ -263,6 +262,10 @@ export default function DiffPage() {
     return () => {
       alive = false;
     };
+    // `dismissed` and `dismissKeyFor` are read non-reactively at
+    // fetch time — re-running this effect when a dismiss toggles
+    // would clobber the teacher's current topic selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, moduleNumber, idToken, ready, fetchHeaders]);
 
   // Fetch diff whenever topic/token changes

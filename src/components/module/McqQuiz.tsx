@@ -546,15 +546,10 @@ export default function McqQuiz({
     const nowAllAnswered =
       fingerprints.length > 0 && newAnswers.every((a) => a !== null);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnswered(newAnswers);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfidences(newConfidences);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setScore(newScore);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompleted(nowAllAnswered);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentQ((c) => {
       if (fingerprints.length === 0) return 0;
       // Prefer the first unanswered slot so the student lands on a
@@ -565,9 +560,7 @@ export default function McqQuiz({
       return Math.min(c, fingerprints.length - 1);
     });
     if (nowAllAnswered) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowResult(true);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewMode("review");
     }
 

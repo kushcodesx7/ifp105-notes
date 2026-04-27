@@ -86,16 +86,12 @@ export async function GET(
   let dbQuestions: DbQuestion[] = [];
   if (moduleRow) {
     const modId = (moduleRow as { id: string }).id;
-    const [tRes, qRes] = await Promise.all([
-      supabase
-        .from("topics")
-        .select("id, number, title, time_min, hook, content_json, deleted_at")
-        .eq("module_id", modId)
-        .eq("number", topicNumber)
-        .maybeSingle(),
-      // Questions joined via topic.id once we know it
-      Promise.resolve(null),
-    ]);
+    const tRes = await supabase
+      .from("topics")
+      .select("id, number, title, time_min, hook, content_json, deleted_at")
+      .eq("module_id", modId)
+      .eq("number", topicNumber)
+      .maybeSingle();
     dbTopic = (tRes.data ?? null) as DbTopic | null;
     if (dbTopic) {
       const { data: qData } = await supabase

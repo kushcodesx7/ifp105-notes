@@ -77,7 +77,7 @@ export default function HomeConnectGlimpse() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [getIdToken]);
 
   // Keep the section present even while loading — skeleton avoids layout shift
   if (loading) {

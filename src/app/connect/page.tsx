@@ -123,7 +123,7 @@ export default function IFSConnectPage() {
       clearInterval(tick);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, []);
+  }, [getIdToken]);
 
   // Unique sections for filter pills (natural sort) + precomputed
   // per-section registered counts. Single pass over `students` so the

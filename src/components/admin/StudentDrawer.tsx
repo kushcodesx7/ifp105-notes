@@ -81,8 +81,11 @@ export default function StudentDrawer({
   // on the drawer) would replay the slide-in animation every time the
   // teacher clicks a different student.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (student) setTab("overview");
+    // Re-runs only when a different student opens — don't react to
+    // every prop-identity churn from the parent. Whitelisted by the
+    // doc comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.email]);
 
   // Esc to close

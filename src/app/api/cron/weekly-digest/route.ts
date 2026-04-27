@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isHiddenSection } from "@/lib/hidden-sections";
-import { TOTAL_TOPICS } from "@/lib/course-registry";
 import { moduleWeightedPct } from "@/lib/modules";
 
 // GET /api/cron/weekly-digest

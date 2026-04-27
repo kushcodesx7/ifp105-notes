@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       // strip it from the payload and retry once without.
       if (/course_id.*does not exist|PGRST204|PGRST102/i.test(upErr.message)) {
         const trimmed = chunk.map(
-          ({ course_id: _c, ...rest }) => rest // eslint-disable-line @typescript-eslint/no-unused-vars
+          ({ course_id: _c, ...rest }) => rest
         );
         const { error: retryErr } = await supabase
           .from("student_progress")

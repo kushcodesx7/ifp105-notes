@@ -304,7 +304,7 @@ export default function ModulePage({
       cache: "no-store",
       body: JSON.stringify({ currentPath }),
     }).catch(() => {});
-  }, [isLoggedIn, user, getIdToken]);
+  }, [isLoggedIn, user, getIdToken, setNeedsReauth]);
 
   // Reading progress bar — rAF-throttled so setState fires at most once per frame
   useEffect(() => {
@@ -334,6 +334,23 @@ export default function ModulePage({
     setScrollProgress(0);
   }, [activeTab]);
 
+  const switchTab = useCallback(
+    (n: number) => {
+      setDirection(n > activeTab ? 1 : -1);
+      setIsCheatSheet(false);
+      setActiveTab(n);
+      // Scroll to top of content area (just below the tab bar)
+      setTimeout(() => {
+        const tabBar = document.querySelector('[role="tablist"]');
+        if (tabBar) {
+          const top = tabBar.getBoundingClientRect().bottom + window.scrollY - 56;
+          window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+        }
+      }, 50);
+    },
+    [activeTab]
+  );
+
   // Keyboard navigation: left/right arrows to switch tabs
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -354,7 +371,7 @@ export default function ModulePage({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab, TOTAL_TOPICS]);
+  }, [activeTab, TOTAL_TOPICS, switchTab]);
 
   // (saveToSupabase moved into useStudentProgress hook.)
 
@@ -514,20 +531,6 @@ export default function ModulePage({
       setBookmarkedTopics((prev) => new Set([...prev, topicId]));
       setToast("Topic saved!");
     }
-  }
-
-  function switchTab(n: number) {
-    setDirection(n > activeTab ? 1 : -1);
-    setIsCheatSheet(false);
-    setActiveTab(n);
-    // Scroll to top of content area (just below the tab bar)
-    setTimeout(() => {
-      const tabBar = document.querySelector('[role="tablist"]');
-      if (tabBar) {
-        const top = tabBar.getBoundingClientRect().bottom + window.scrollY - 56;
-        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
-      }
-    }, 50);
   }
 
   const progressPct = (done.size / TOTAL_TOPICS) * 100;

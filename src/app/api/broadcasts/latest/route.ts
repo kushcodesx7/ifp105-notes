@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 // GET /api/broadcasts/latest
@@ -30,7 +29,7 @@ import { supabase } from "@/lib/supabase";
 // reason this endpoint is fast at poll-every-15s. A "leaked" message
 // in a non-targeted browser is harmless — it just never paints.
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   // Pull recent broadcast rows. Order newest-first so the top hit is
   // the latest live one. Filter out cancelled + expired client-side
   // (JSONB filters are awkward in PostgREST; the row count is tiny).
