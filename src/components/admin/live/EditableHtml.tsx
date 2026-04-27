@@ -29,13 +29,22 @@ import {
 // (bold/italic/highlight + plain paragraphs + line breaks) and the
 // existing inline-HTML escape hatch is already what authors use today.
 
+// Tags that contentEditable genuinely cannot handle: SVG / iframe /
+// scriptable embeds. Editing these as text destroys their structure
+// (SVG path data turns to garbage, iframes lose their src attribute
+// after a Backspace, etc.). When any of these are present the editor
+// renders a locked preview with an "Edit raw HTML" escape hatch.
 const COMPLEX_HTML_PATTERN =
   /<(svg|iframe|script|style|video|audio|canvas|math|object|embed)\b/i;
-// Also flag <div> / <span> with inline style or class — these are
-// usually layout wrappers (the Topic 3 hero is one) that contentEditable
-// will mangle by collapsing whitespace and re-flowing children.
+// Inline-style wrappers signal a hand-tuned layout that contentEditable
+// will mangle by collapsing whitespace and re-parenting children. The
+// pre-2026-04-27 version of this regex also caught any element with a
+// `class=` attribute, which over-locked nearly every prose block (every
+// data-driven block has Tailwind classes). Now we only lock when an
+// inline `style=` attribute is present — that's the genuine signal of
+// a custom layout the author wants preserved byte-for-byte.
 const COMPLEX_LAYOUT_PATTERN =
-  /<(div|span|figure|table|ul|ol)\b[^>]*\b(style|class)=/i;
+  /<(div|span|figure|table|ul|ol)\b[^>]*\bstyle=/i;
 
 export function isComplexHtml(html: string): boolean {
   if (!html) return false;
@@ -95,6 +104,13 @@ const EditableHtml = forwardRef<EditableHtmlHandle, EditableHtmlProps>(
     // Tracks the last value we wrote to the DOM so React re-renders
     // with the same `value` don't trigger a redundant innerHTML wipe.
     const lastWritten = useRef<string>("");
+    // Debounce timer for typing-time commits. We fire onChange ~500ms
+    // after the user stops typing so the parent autosave (2s further
+    // debounce in InlineModuleEditor) actually starts before the user
+    // clicks away. Without this, autosave only happened on blur — an
+    // admin who typed for three minutes and never blurred saw nothing
+    // saved despite the "Saved within ~30s" copy.
+    const inputDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const complex = !forceEditable && isComplexHtml(value);
 
@@ -127,6 +143,20 @@ const EditableHtml = forwardRef<EditableHtmlHandle, EditableHtmlProps>(
       el.innerHTML = value || "";
       lastWritten.current = value || "";
     }, [value]);
+
+    // Cancel any pending typing-time commit on unmount so a stale
+    // setTimeout doesn't fire onChange after the host has been torn
+    // down (would no-op but creates a console warning under strict
+    // mode).
+    useEffect(
+      () => () => {
+        if (inputDebounce.current) {
+          clearTimeout(inputDebounce.current);
+          inputDebounce.current = null;
+        }
+      },
+      []
+    );
 
     function commit() {
       const el = ref.current;
@@ -256,12 +286,28 @@ const EditableHtml = forwardRef<EditableHtmlHandle, EditableHtmlProps>(
           }}
           onBlur={() => {
             focused.current = false;
+            // Cancel any pending typing-time commit; the blur commit
+            // covers it and writes through immediately.
+            if (inputDebounce.current) {
+              clearTimeout(inputDebounce.current);
+              inputDebounce.current = null;
+            }
             commit();
           }}
           onInput={() => {
-            // No-op — we commit on blur to avoid React reconciling on
-            // every keystroke and wiping the caret. The parent is the
-            // owner of the array; it just gets a slightly delayed value.
+            // Debounced typing-time commit. The cursor-preservation
+            // useEffect above bails when `focused.current === true`,
+            // so even though the parent will re-render with a new
+            // `value` prop after we call onChange, the DOM is never
+            // reset → caret stays put. The 500ms here is short enough
+            // that students see edits propagate quickly via the
+            // parent's 2s save debounce, but long enough to coalesce
+            // a normal typing burst into one onChange fire.
+            if (inputDebounce.current) clearTimeout(inputDebounce.current);
+            inputDebounce.current = setTimeout(() => {
+              inputDebounce.current = null;
+              commit();
+            }, 500);
           }}
           onKeyDown={handleKey}
           onPaste={handlePaste}

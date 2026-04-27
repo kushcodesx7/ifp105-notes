@@ -128,7 +128,17 @@ function InlineModuleEditorInner({
 }) {
   const { isLoggedIn, getIdToken } = useAuth();
   const idToken = isLoggedIn ? getIdToken() : null;
-  const credential = idToken ? { idToken } : null;
+  // Memoised so the SWR keys derived from `credential` keep object
+  // identity across renders. Without this, a parent re-render created
+  // a fresh `{ idToken }` object every time, which combined with
+  // the legacy 3s deduping interval and a 2s server response time
+  // could spiral into a self-sustaining refetch loop on the three
+  // useAdminFetch hooks below. Now the credential is a stable
+  // reference unless the token itself changes.
+  const credential = useMemo(
+    () => (idToken ? { idToken } : null),
+    [idToken]
+  );
 
   const router = useRouter();
   const searchParams = useSearchParams();
