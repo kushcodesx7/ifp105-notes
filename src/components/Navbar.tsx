@@ -82,6 +82,23 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   const isRegistered = !!(user?.enrollmentNo && user?.batchId && user?.section);
   const isAdmin = isAdminEmail(user?.email);
 
+  // Auth state from useAuth() is `false` during SSR (Firebase only
+  // resolves in the browser), then flips to `true` on the client once
+  // the persisted session restores. Rendering the post-auth UI on the
+  // first client pass diverges from the SSR HTML and trips React's
+  // hydration check. Gate every auth-dependent branch behind `mounted`
+  // so the SSR tree and first client render are byte-identical (the
+  // signed-out view), then swap in the signed-in view on the second
+  // pass.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // Whitelisted — one-shot mounted flag so SSR and the first client
+    // render are byte-identical (signed-out shape). Runs exactly once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+  const showAuthedUI = mounted && isLoggedIn && !!user;
+
   // Focus trap for the sign-in modal (Tab / Shift+Tab cycles inside the
   // dialog instead of escaping to content behind the backdrop).
   const signInDialogRef = useRef<HTMLDivElement>(null);
@@ -392,7 +409,7 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
           {/* Practice Zone removed in Phase 1 architecture cleanup (route + data
                file gone). Future courses will add their own practice bank via the
                course editor; re-enable with a new component when that lands. */}
-          {isLoggedIn && user ? (
+          {showAuthedUI ? (
             <>
               {isAdmin ? (
                 <Link
