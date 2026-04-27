@@ -68,9 +68,22 @@ export function useAdminFetch<T>(
     adminFetcher,
     {
       refreshInterval: options?.refreshInterval,
-      revalidateOnFocus: true,
+      // 2026-04-27: revalidateOnFocus disabled because every focus
+      // event (including the implicit ones browsers fire when devtools
+      // are open or when iframes mount) was firing a fresh fetch. The
+      // editor opens 3 useAdminFetch hooks per topic — three refetches
+      // per focus is cheap to avoid. Admins still get fresh data on
+      // route change (SWR refetches on key change) and after every
+      // save (we call mutate() in saveBlocks).
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 3000,
+      // Bumped from 3s to 30s. Admin content doesn't change that
+      // fast, and the prior interval was tight enough that any
+      // accidental render loop in a parent component (object-identity
+      // credential, key churn) would cause a self-sustaining refetch
+      // cycle once each request took >3s. 30s caps the worst case at
+      // 3 polls/min instead of 30/min for the same misbehaviour.
+      dedupingInterval: 30_000,
       keepPreviousData: true,
     }
   );

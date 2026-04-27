@@ -9,6 +9,7 @@ import { isAdminEmail } from "@/lib/admins";
 import { useViewAsStudent, setViewAsStudent } from "@/lib/view-as-student";
 import {
   useEditSaveStatus,
+  useLastSavedAgo,
   type SaveStatus,
 } from "@/lib/edit-save-status";
 
@@ -145,6 +146,7 @@ export default function AdminBar() {
   const router = useRouter();
   const viewAsStudent = useViewAsStudent();
   const saveStatus = useEditSaveStatus();
+  const lastSavedAgo = useLastSavedAgo();
 
   const isAdmin = isLoggedIn && isAdminEmail(user?.email);
 
@@ -291,6 +293,20 @@ export default function AdminBar() {
               <SaveStatusChip status={saveStatus} />
             )}
           </AnimatePresence>
+
+          {/* "Saved Xs ago" — shown when no in-flight save chip is up
+              and we have a successful save in this session. Gives the
+              admin continuous reassurance during long edits, since the
+              "Saved" pill auto-hides after 2s and otherwise the bar
+              would look idle even though autosave is working. */}
+          {editMode && saveStatus === "idle" && lastSavedAgo && (
+            <span
+              className="text-[11px] text-zinc-500 whitespace-nowrap"
+              title={`Last saved ${lastSavedAgo}`}
+            >
+              Saved {lastSavedAgo}
+            </span>
+          )}
 
           {/* Separator — only when the left side has content */}
           {(editMode || moduleNumber !== null) && (
