@@ -102,98 +102,16 @@ export const flashcardData: Record<number, Record<number, Flashcard[]>> = {
     ],
   },
 
-  // ━━━ Module 2: Office Automation ━━━
+  // ━━━ Module 2: Office Automation (rewritten Apr 27 2026) ━━━
+  // Refocused on AI tools (Gamma, NotebookLM) + Excel basics. The
+  // teacher chose to drop flashcards + MCQs for this module — these
+  // topics are exposure-based and self-read, not exam-tested.
+  // Empty arrays kept so the API shape stays valid.
   2: {
-    // Topic 1: Editing vs Word Processing
-    1: [
-      { front: "What's the difference between a text editor and a word processor?", back: "Text editor (like Notepad) types plain letters only -- no bold, no colour, no pictures. Word processor (like MS Word or Google Docs) does all that PLUS formatting, images, tables, and spell-check." },
-      { front: "Does word processing include editing?", back: "Yes. Word processing is editing (typing and deleting) PLUS a lot more -- bold, colour, pictures, tables. So editing is one small part of word processing, not the other way round." },
-      { front: "What file type comes from Notepad vs MS Word?", back: "Notepad saves as .txt (plain letters only, very small file). MS Word saves as .docx (keeps all your bold, fonts, pictures, and layout)." },
-      { front: "When should I use Notepad instead of MS Word?", back: "Use Notepad for quick plain notes -- a phone number, a shopping list, or a line of code. It opens instantly and the file is tiny. For anything you'll print or submit, use MS Word." },
-      { front: "Name two real word-processor apps.", back: "MS Word (part of Microsoft Office, saves as .docx) and Google Docs (free, works in the browser, saves to Google Drive). Both handle formatting, pictures, and tables." },
-      { front: "My teacher says 'submit a word-processed document.' What file should I send?", back: "A .docx file from MS Word or Google Docs -- with proper formatting, headings, and paragraphs. NOT a .txt file from Notepad." },
-    ],
-
-    // Topic 2: MS Word -- Text Editing & Formatting
-    2: [
-      { front: "What is the Ribbon in MS Word?", back: "The strip of tabs and buttons at the top of the window. The Home tab has the buttons you use most -- Bold, Italic, Underline, font name, font size, colour, alignment." },
-      { front: "Why do I always have to SELECT text before making it bold?", back: "Word needs to know WHICH text to change. If nothing is selected, pressing Ctrl+B does nothing -- Word has no target. Always drag the mouse over the word first so it turns blue, then press B." },
-      { front: "Name 5 keyboard shortcuts I should know.", back: "Ctrl+B = Bold, Ctrl+I = Italic, Ctrl+U = Underline, Ctrl+S = Save, Ctrl+Z = Undo. The letter is always a hint for what it does." },
-      { front: "What are the 4 alignments in MS Word?", back: "Left (Ctrl+L, the normal one), Centre (Ctrl+E, for titles), Right (Ctrl+R, for dates), and Justify (Ctrl+J, makes both sides straight like a newspaper)." },
-      { front: "What does the Format Painter do?", back: "The little paintbrush on the Home tab. Click a nicely-formatted word, click the paintbrush, then drag across other text -- the second text gets the same look (font, size, colour, bold). Fast way to copy formatting." },
-      { front: "Why shouldn't I make every word bold?", back: "If EVERYTHING is bold, then nothing stands out. Bold is for the important words -- like headings or key names. If the whole page is bold, your reader's eye has nowhere to rest." },
-    ],
-
-    // Topic 3: MS Word -- Images & Tables
-    3: [
-      { front: "Where do I add a picture or a table in MS Word?", back: "Both live on the Insert tab of the Ribbon. Think of Insert as the 'add stuff' tab -- pictures, tables, shapes, charts, page numbers all live there." },
-      { front: "How do I resize a picture without squashing it?", back: "Drag from the CORNER dots, not the side dots. Corners keep the width-to-height ratio (the picture just gets bigger or smaller). Side dots stretch one way and make faces look weird." },
-      { front: "What does 'Square' text wrapping do?", back: "Text flows around the picture in a neat box shape. Great for a photo inside a school report paragraph -- the words go around the image instead of under it. This is the most common choice." },
-      { front: "How do I add a 3x4 table fast?", back: "Click Insert tab > Table. A grid pops up. Hover to pick 3 columns and 4 rows, then click. A blank table appears. Click inside a cell to type. Press Tab to jump to the next cell." },
-      { front: "What's the difference between Merge Cells and Split Cells?", back: "Merge joins several cells into one big cell (nice for a table heading that spans all columns). Split breaks one cell into smaller cells. They are opposites -- don't mix them up." },
-      { front: "My picture is in the wrong place. How do I fix it?", back: "Click the picture, then choose a wrapping option like 'Square' so text flows around it. Then drag the picture where you want it on the page. With Square wrapping the paragraph neatly rewraps around the new position." },
-    ],
-
-    // Topic 4: MS Excel -- Creating Worksheets
-    4: [
-      { front: "What is a cell in Excel?", back: "One little box in the Excel grid. Every cell has a unique address like A1, B3, or D12 -- the column letter comes first, then the row number. Think of it like a seat number in a cinema." },
-      { front: "What does 'cell B3' mean?", back: "The box where column B (the second column) meets row 3 (the third row). Always column letter first, then row number." },
-      { front: "Worksheet vs Workbook -- what's the difference?", back: "A Worksheet is one tab (one page of cells). A Workbook is the whole Excel file (the .xlsx), which can contain many Worksheets. Like one notebook with many pages." },
-      { front: "What 4 kinds of things can a cell hold?", back: "A number (5000), text (Samsa), a date (21/04/2026), or a formula (=A1+B1). Excel guesses which one from what you type." },
-      { front: "Why is my number stuck to the LEFT of the cell?", back: "Left-aligned numbers mean Excel thinks it's text, not a real number. Fix: right-click > Format Cells > Number. Or retype the value in a fresh cell. Real numbers sit on the RIGHT." },
-      { front: "How do I add the heading row for a shopping list?", back: "In row 1: type 'Item' in A1, press Tab, type 'Price (UZS)' in B1. Tab moves you right. Now fill items and prices from row 2 downwards. Row 1 is always for headings." },
-    ],
-
-    // Topic 5: MS Excel -- Formulas & Functions
-    5: [
-      { front: "What character does every Excel formula start with?", back: "The equals sign (=). Without it, Excel shows your text as plain writing. With it, Excel calculates. Forgetting = is the #1 Excel mistake students make." },
-      { front: "What does =SUM(A1:A10) do?", back: "Adds every number from cell A1 down to cell A10 and shows the total. The colon (:) means 'every cell from-to'. Great for getting the total of a shopping list." },
-      { front: "What does =AVERAGE(B1:B5) give me?", back: "The average (mean) of the numbers in B1 to B5. If those are your 5 test marks, this is your term average. Excel adds them all and divides by how many there are." },
-      { front: "What does MAX do vs MIN?", back: "=MAX(C1:C30) finds the BIGGEST number in that range -- top score, most expensive item. =MIN(C1:C30) finds the SMALLEST -- lowest mark, cheapest item. Opposites." },
-      { front: "4 non at 3000 UZS each -- which formula?", back: "=3000*4 (uses * for times). Gives 12000 UZS. The * symbol is the multiply sign in Excel, not x. Always start with =." },
-      { front: "My cell shows ##### instead of a number. What's wrong?", back: "The column is too narrow to show the number. Double-click the right edge of the column letter (like the line between B and C) and Excel auto-widens it. The number comes back." },
-      { front: "Why are Excel formulas called 'alive'?", back: "If you write =A1+B1 and later change A1 from 10 to 50, the answer in the formula cell updates by itself. You build the formula once and it keeps working whenever the numbers change. That's the magic of Excel." },
-    ],
-
-    // Topic 6: MS Excel -- Data Management
-    6: [
-      { front: "What's the difference between sorting and filtering?", back: "Sorting rearranges the ORDER of rows (A to Z, smallest to biggest). Filtering HIDES rows that don't match a rule (like 'only show scores above 80'). Sorting keeps every row visible; filtering hides some, but doesn't delete them." },
-      { front: "How do I filter to see only high scores?", back: "Click any cell in your data > Data tab > Filter. Small arrows appear on each column. Click the arrow on the Marks column > Number Filters > Greater Than > 80. Only rows above 80 remain visible." },
-      { front: "My aunt's birthday list has 40 people. How do I see who's next?", back: "Sort the list by the Birthday column, oldest date first -- the next upcoming birthday floats to the top. Data tab > Sort. Sorting by date is faster than filtering because 'next month' might miss someone early in the month after." },
-      { front: "Where do I find Sort and Filter in Excel?", back: "Both are on the Data tab of the Ribbon. Click any cell inside your table, then click Sort or Filter. Filter adds little arrows to each column heading that open a menu of options." },
-      { front: "How do I pull a value from another sheet?", back: "Write =SheetName!CellAddress. Example: =Sheet2!A1 pulls cell A1 from Sheet2 into your current sheet. If the sheet name has spaces, wrap it in single quotes: ='Shop Sales'!B10." },
-      { front: "Is a filter safe? Will I lose my data?", back: "No -- filtering only HIDES rows, it doesn't delete them. Turn the filter off (Data > Filter again) and every row comes back. That's why filtering is 'non-destructive'." },
-    ],
-
-    // Topic 7: MS PowerPoint -- Creating Presentations
-    7: [
-      { front: "What file type does MS PowerPoint make?", back: "A .pptx file. Just like Word makes .docx and Excel makes .xlsx, PowerPoint has its own format for presentations. Each Office app has a three-letter extension starting with the app's name." },
-      { front: "What are the 3 building blocks of a presentation?", back: "Slides (one page each), Themes (a ready-made look -- colours, fonts, background for ALL slides), and Layouts (ready-made shapes like Title Slide, Title + Content, Two Content)." },
-      { front: "How do I add a new slide?", back: "Press Ctrl+M, or click Home tab > New Slide. Click the little arrow under 'New Slide' to pick a specific layout (like Two Content for a comparison slide)." },
-      { front: "What's a theme and why should I pick one first?", back: "A theme sets the colours, fonts, and background for EVERY slide at once. Pick one on the Design tab before you start typing -- then all your slides look the same, no per-slide design work needed." },
-      { front: "How many words should I put on a slide?", back: "Keep it short -- about 5 short lines per slide, no long paragraphs. If you dump a full essay on a slide, your class reads it faster than you speak and stops listening. Slides are KEY POINTS, your mouth gives the detail." },
-      { front: "Which layout for 'before vs after' on one slide?", back: "Two Content. It gives you a title at the top and two equal content boxes side by side below. Perfect for any side-by-side comparison -- healthy food vs junk food, summer vs winter, before vs after." },
-    ],
-
-    // Topic 8: MS PowerPoint -- Master Slides & Slide Shows
-    8: [
-      { front: "What is a Slide Master?", back: "A 'parent slide' that sets how every slide in your presentation looks. Put the school logo on it ONCE, and every slide automatically shows the logo. Find it at View tab > Slide Master." },
-      { front: "F5 vs Shift+F5 -- what's the difference?", back: "F5 starts the slideshow from slide 1 (for the real presentation). Shift+F5 starts from the slide you're currently on (handy for practicing just one section)." },
-      { front: "Transitions vs animations -- what's the difference?", back: "A Transition is the effect BETWEEN slides -- the little fade or wipe when you go from slide 3 to slide 4. An Animation is the effect on something INSIDE one slide -- a bullet point flying in, a picture appearing on click." },
-      { front: "I have 20 slides and need my school logo on every one. What's fastest?", back: "View > Slide Master > paste the logo ONCE on the master slide > Close Master View. All 20 slides now show the logo in the same place. Much faster than pasting 20 times." },
-      { front: "What is Presenter View?", back: "A secret window YOU see while presenting: your speaker notes, a timer, and the next slide. The class sees only the current slide on the big screen. Great for remembering what to say without reading the slides out loud." },
-      { front: "Why shouldn't I use lots of flashy animations?", back: "Too much motion distracts your audience -- they watch the spinning text instead of listening to YOU. Use animations only to REVEAL points one by one, not to decorate. Simple is professional." },
-    ],
-
-    // Topic 9: Which Tool When?
-    9: [
-      { front: "The 3-second decision rule -- which tool when?", back: "Am I writing? -> MS Word. Am I doing numbers? -> MS Excel. Am I presenting? -> PowerPoint. Match the main job of the task to the tool, and you'll never pick wrong." },
-      { front: "Which tool for a CV?", back: "MS Word (or Google Docs). A CV is a formatted one-page document with name at the top, bullet-list jobs, and education -- exactly what a word processor does. Not Excel (it's a grid) and not PowerPoint (it's for slides)." },
-      { front: "Which tool for a family monthly budget in UZS?", back: "MS Excel. You need rows of amounts, SUM at the bottom, AVERAGE for the month, and maybe a sort by date. That's Excel's home ground." },
-      { front: "Which tool for a 5-minute class presentation?", back: "MS PowerPoint. When you stand up and speak to people, slides on the big screen help the audience follow you. Keep each slide short and visual." },
-      { front: "Can Word, Excel, and PowerPoint work together?", back: "Yes! You can paste an Excel chart into a Word report. You can copy an Excel table onto a PowerPoint slide. A big school project usually uses all three -- data in Excel, report in Word, presentation in PowerPoint." },
-      { front: "Why can't one single app do everything well?", back: "Each tool was built for one main job: Word for prose, Excel for numbers, PowerPoint for slides. Forcing one tool to do another's job is like using a hammer on a screw -- it sort of works, but badly. Pick the right tool and the work is fast." },
-    ],
+    1: [],
+    2: [],
+    3: [],
+    4: [],
   },
 
   // ━━━ Module 3: Social Media (rewritten Apr 26 2026) ━━━
