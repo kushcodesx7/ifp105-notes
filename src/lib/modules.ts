@@ -15,7 +15,7 @@ export type { ModuleMeta };
 
 export const MODULES: ModuleMeta[] = [
   { id: 1, title: "Hardware", fullTitle: "Hardware & Software",  subtitle: "Computer fundamentals",    accent: "#6366F1", topicCount: 11 },
-  { id: 2, title: "Office",   fullTitle: "Office Automation",    subtitle: "Word, Excel, PowerPoint",  accent: "#10B981", topicCount: 9 },
+  { id: 2, title: "Office",   fullTitle: "Office Automation",    subtitle: "Gamma · NotebookLM · Excel", accent: "#10B981", topicCount: 4 },
   // M3 subtitle was "Internet & web basics" — leftover from the
   // pre-Apr-2026 module structure. That subject lives in M4 now.
   // Current M3 is the self-study Social Media + LinkedIn unit.
