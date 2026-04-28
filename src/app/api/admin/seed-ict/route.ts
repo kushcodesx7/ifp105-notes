@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
   let modulesUpserted = 0;
   let topicsUpserted = 0;
   let questionsUpserted = 0;
+  let topicsSoftDeleted = 0;
   const warnings: string[] = [];
   // Collect the seeded module→topic-ids map while we're walking the
   // upsert tree anyway, so the revalidatePath loop below can reuse it
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
       return Response.json(
         {
           error: `Module ${m.id} upsert failed: ${modErr?.message || "no row returned"}`,
-          counts: { modulesUpserted, topicsUpserted, questionsUpserted },
+          counts: { modulesUpserted, topicsUpserted, topicsSoftDeleted, questionsUpserted },
         },
         { status: 500 }
       );
@@ -144,6 +145,61 @@ export async function POST(req: NextRequest) {
     // ── 2. Upsert topics for this module ──────────────────────
     const { topics: tsTopics, mcq: tsMcq } = await loadModuleData(m.id);
     seededTopicIds[m.id] = tsTopics.map((t) => t.id);
+
+    // ── 2a. Soft-delete topics no longer in the TS file ───────
+    // When the TS source shrinks (e.g. Module 2 went from 9 → 4 topics
+    // in the Apr 27 2026 rewrite), the upsert loop below will refresh
+    // topics 1-4 but leaves rows 5-9 sitting in the DB. The student
+    // module loader filters `deleted_at IS NULL` so flipping the stale
+    // rows to deleted hides them from students immediately.
+    //
+    // This is non-destructive — content_json is preserved on the row,
+    // and a future re-seed that brings back topic 5 in the TS file
+    // will UN-soft-delete it via the existing `deleted_at: null` clause
+    // in the upsert below.
+    const tsTopicNumbers = new Set(tsTopics.map((t) => t.id));
+    const { data: existingTopics } = await supabase
+      .from("topics")
+      .select("id, number, deleted_at")
+      .eq("module_id", moduleId);
+    const staleTopicIds: string[] = [];
+    for (const row of (existingTopics || []) as Array<{
+      id: string;
+      number: number;
+      deleted_at: string | null;
+    }>) {
+      if (!tsTopicNumbers.has(row.number) && row.deleted_at == null) {
+        staleTopicIds.push(row.id);
+      }
+    }
+    if (staleTopicIds.length > 0) {
+      const nowIso = new Date().toISOString();
+      const { error: deleteErr } = await supabase
+        .from("topics")
+        .update({ deleted_at: nowIso })
+        .in("id", staleTopicIds);
+      if (deleteErr) {
+        warnings.push(
+          `Module ${m.id}: failed to soft-delete ${staleTopicIds.length} stale topic(s): ${deleteErr.message}`
+        );
+      } else {
+        topicsSoftDeleted += staleTopicIds.length;
+        // Cascade the soft-delete to the questions under those topics
+        // so the orphan questions don't keep counting toward the
+        // module's question total. Best-effort — if this fails the
+        // topic is hidden anyway and the questions just become
+        // unreachable orphans rather than visible junk.
+        const { error: qDeleteErr } = await supabase
+          .from("questions")
+          .update({ deleted_at: nowIso })
+          .in("topic_id", staleTopicIds);
+        if (qDeleteErr) {
+          warnings.push(
+            `Module ${m.id}: questions under stale topics not cascaded: ${qDeleteErr.message}`
+          );
+        }
+      }
+    }
 
     for (const topic of tsTopics) {
       const { data: topicRow, error: topicErr } = await supabase
@@ -220,6 +276,7 @@ export async function POST(req: NextRequest) {
     details: {
       modulesUpserted,
       topicsUpserted,
+      topicsSoftDeleted,
       questionsUpserted,
       moduleScope,
       warnings: warnings.length,
@@ -265,7 +322,12 @@ export async function POST(req: NextRequest) {
 
   return Response.json({
     ok: true,
-    counts: { modulesUpserted, topicsUpserted, questionsUpserted },
+    counts: {
+      modulesUpserted,
+      topicsUpserted,
+      topicsSoftDeleted,
+      questionsUpserted,
+    },
     scope: moduleScope != null ? `module_${moduleScope}` : "all_modules",
     warnings,
   });
