@@ -546,15 +546,10 @@ export default function McqQuiz({
     const nowAllAnswered =
       fingerprints.length > 0 && newAnswers.every((a) => a !== null);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnswered(newAnswers);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfidences(newConfidences);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setScore(newScore);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompleted(nowAllAnswered);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentQ((c) => {
       if (fingerprints.length === 0) return 0;
       // Prefer the first unanswered slot so the student lands on a
@@ -565,9 +560,7 @@ export default function McqQuiz({
       return Math.min(c, fingerprints.length - 1);
     });
     if (nowAllAnswered) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowResult(true);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewMode("review");
     }
 
@@ -614,7 +607,16 @@ export default function McqQuiz({
   const sq = shuffled[currentQ];
   const picked = answered[currentQ];
   const isAnswered = picked !== null;
-  const isCorrect = picked === sq.ans;
+  // 2026-04-27: `sq` can be undefined when `questions` is empty (every
+  // question soft-deleted) or when `currentQ` survived in localStorage
+  // past a topic that shrank — e.g. the topic used to have 12 questions,
+  // admin deleted 2, saved currentQ=11 now points off the end. We can't
+  // early-return here (hooks below this point would then run
+  // conditionally and trip rules-of-hooks), so the JSX return below
+  // checks `sqMissing` and renders a graceful empty state. The clamp
+  // effect realigns currentQ on the next render anyway.
+  const sqMissing = !q || !sq;
+  const isCorrect = !sqMissing && picked === sq.ans;
 
   // Derive a Bloom + calibration payload from an arbitrary
   // answered/confidences pair. Identical math to the bloomBreakdown
@@ -1043,6 +1045,24 @@ export default function McqQuiz({
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+    );
+  }
+
+  // Empty-bank graceful fallback — see `sqMissing` above. All hooks
+  // have run by this point, so this early return is safe.
+  if (sqMissing) {
+    return (
+      <div
+        className="mt-6 rounded-2xl p-6 text-center"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <p className="text-sm text-zinc-400">
+          No practice questions for this topic yet — check back soon.
+        </p>
       </div>
     );
   }

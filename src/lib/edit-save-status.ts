@@ -79,10 +79,9 @@ export function useLastSavedAgo(): string | null {
       setLabel(null);
       return;
     }
-    // Initial label, then refresh every second. The setLabel calls
-    // are whitelisted: `at` is the only meaningful input to the
-    // formatter and it's already in deps; `Date.now()` is the
-    // unavoidable side-channel that motivates the effect.
+    // Initial label, then refresh every second. `Date.now()` is the
+    // unavoidable side-channel that motivates the effect — `at` alone
+    // doesn't change as the seconds tick by.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLabel(formatAgo(at, Date.now()));
     const id = setInterval(() => {

@@ -317,7 +317,49 @@ export function useStudentProgress({
           const tokenForRetry = getIdToken();
           if (tokenForRetry) {
             for (const topicId of localOnly) {
-              saveToSupabase({ topicId, completed: true });
+              // 2026-04-27: pull the saved MCQ score out of the per-
+              // topic quiz state blob so the admin's progress dashboard
+              // shows the actual mark, not just a "done" tick. Before
+              // this, students who silent-failed their saves had their
+              // completion recovered but their score appeared blank in
+              // /admin/progress. The teacher's report ("students show
+              // not done any module") traced to this gap — even when
+              // recovery DID push completed:true, the missing
+              // mcqScore/mcqTotal made the row look incomplete.
+              let mcqScore: number | undefined;
+              let mcqTotal: number | undefined;
+              try {
+                const blobKey = quizStateKey(
+                  courseSlug,
+                  moduleNumber,
+                  topicId
+                );
+                const raw = localStorage.getItem(blobKey);
+                if (raw) {
+                  const saved = JSON.parse(raw) as {
+                    score?: number;
+                    answers?: unknown[];
+                  };
+                  if (
+                    typeof saved.score === "number" &&
+                    Array.isArray(saved.answers)
+                  ) {
+                    mcqScore = saved.score;
+                    mcqTotal = saved.answers.length;
+                  }
+                }
+              } catch {
+                // Quiz blob unreadable — fall through and recover the
+                // completion only. Better than throwing the whole
+                // recovery loop.
+              }
+              saveToSupabase({
+                topicId,
+                completed: true,
+                ...(mcqScore != null && mcqTotal != null
+                  ? { mcqScore, mcqTotal }
+                  : {}),
+              });
             }
           }
           // UI shows both sets unioned so the student doesn't see

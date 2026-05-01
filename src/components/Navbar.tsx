@@ -92,9 +92,8 @@ export default function Navbar({ showBack = false, title, moduleNumber }: Navbar
   // pass.
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // Whitelisted — one-shot mounted flag so SSR and the first client
-    // render are byte-identical (signed-out shape). Runs exactly once.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // One-shot mounted flag so SSR and the first client render are
+    // byte-identical (signed-out shape). Runs exactly once.
     setMounted(true);
   }, []);
   const showAuthedUI = mounted && isLoggedIn && !!user;
