@@ -29,8 +29,7 @@ export default function XpBar() {
     // lazy useState would diverge between SSR (window undefined → 0)
     // and client first render (real count from storage), tripping a
     // hydration mismatch. The effect path runs after hydration, so
-    // it's the right place — even though set-state-in-effect normally
-    // warns against this pattern.
+    // it's the right place.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStreakCount(count);
     if (isNew && count > 1) {
