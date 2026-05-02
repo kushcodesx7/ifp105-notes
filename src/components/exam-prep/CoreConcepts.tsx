@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CORE_CONCEPTS,
@@ -29,6 +29,40 @@ import {
 type Status = "not-yet" | "reviewed" | "confident";
 
 const STORAGE_KEY = "examPrep:coreConcepts:v1";
+// Whether the student has globally opted out of the "try it first"
+// prompt. Some students prefer to read the model answer directly
+// (revision-sprint mode); others want the active-recall friction.
+// Stored separately from progress data because it's a UI preference.
+const SKIP_TRY_FIRST_KEY = "examPrep:skipTryFirst:v1";
+
+// URL hash prefix for deep-linking to a specific concept. Visiting
+// `/exam-prep#concept-hardware` opens that card automatically and
+// scrolls to it. Used by the "copy link" button on each card so
+// students can share specific concepts in study-group chats.
+const HASH_PREFIX = "concept-";
+
+/**
+ * Build the prompt question shown in "try it first" mode. Synthesised
+ * from the concept title: comparison concepts ("X vs Y") get a
+ * "Differentiate" prompt; everything else gets a generic "Define +
+ * examples + diagram" prompt that maps cleanly onto the D·E·E·D
+ * recipe taught at the top of the page. Keeps every prompt one short
+ * sentence so a nervous student isn't reading instructions when they
+ * should be writing.
+ */
+function tryFirstPrompt(title: string): string {
+  // Strip a parenthetical so "Hardware (something)" still reads cleanly.
+  const cleaned = title.replace(/\s*\(.*?\)\s*/g, "").trim();
+  // "X vs Y" pattern → comparison prompt
+  const vsMatch = cleaned.match(/^(.*?)\s+vs\s+(.*)$/i);
+  if (vsMatch) {
+    return `Differentiate ${vsMatch[1].trim()} and ${vsMatch[2].trim()}. Give an example of each and a labelled diagram.`;
+  }
+  // "X — sub-detail" → use the X part for the prompt
+  const dashMatch = cleaned.match(/^(.*?)\s+—\s+/);
+  const subject = dashMatch ? dashMatch[1].trim() : cleaned;
+  return `Define ${subject}. Explain why it matters, give 2–3 examples, and draw a labelled diagram.`;
+}
 
 interface StoredMap {
   // concept-id → status
@@ -91,13 +125,129 @@ export default function CoreConcepts() {
   const [search, setSearch] = useState("");
   const [statuses, setStatuses] = useState<StoredMap>({});
   const [openId, setOpenId] = useState<string | null>(null);
+  // Concepts the student has revealed in THIS session (memory-only,
+  // not persisted). When a card opens for the first time AND the
+  // global skip flag is off, we show a "try it first" gate before the
+  // model answer. Keeping this in-memory means a concept revealed
+  // yesterday gets the prompt again today — that's the spaced-recall
+  // benefit. Persisting it would defeat the point.
+  const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
+  // Global "skip the try-first prompt" preference. Persisted because
+  // it's a UI choice, not progress data. Some students just want to
+  // read.
+  const [skipTryFirst, setSkipTryFirst] = useState(false);
+  // Briefly highlights a card when it opens via deep-link, so the
+  // student visually clocks where they landed.
+  const [flashId, setFlashId] = useState<string | null>(null);
+  // Toast feedback for the "copy link" button — id of the concept
+  // whose URL was just copied.
+  const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
 
-  // Hydrate statuses from localStorage AFTER mount so SSR and the
-  // first client render are byte-identical (no studied chips on first
-  // paint), avoiding hydration mismatches.
+  // Hydrate statuses + skip-preference from localStorage AFTER mount
+  // so SSR and the first client render are byte-identical (no studied
+  // chips on first paint), avoiding hydration mismatches.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatuses(loadStatuses());
+    if (typeof window !== "undefined") {
+      try {
+        setSkipTryFirst(localStorage.getItem(SKIP_TRY_FIRST_KEY) === "1");
+      } catch {
+        // localStorage may throw in privacy mode — leave default.
+      }
+    }
+  }, []);
+
+  const reveal = useCallback((id: string) => {
+    setRevealed((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  function toggleSkipTryFirst() {
+    setSkipTryFirst((prev) => {
+      const next = !prev;
+      try {
+        if (next) localStorage.setItem(SKIP_TRY_FIRST_KEY, "1");
+        else localStorage.removeItem(SKIP_TRY_FIRST_KEY);
+      } catch {}
+      return next;
+    });
+  }
+
+  // Deep-link: `/exam-prep#concept-<id>` opens that concept and
+  // scrolls to it. Listens to hashchange so an in-page link click or
+  // a URL pasted into a new tab both work. Auto-reveals the model
+  // answer too (deep-link == "I want this specific answer now") so
+  // the student doesn't hit the try-first gate on a navigation they
+  // explicitly chose.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function applyHash() {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash.startsWith(HASH_PREFIX)) return;
+      const id = hash.slice(HASH_PREFIX.length);
+      const concept = CORE_CONCEPTS.find((c) => c.id === id);
+      if (!concept) return;
+      // Switch to the right group tab so the card is in the visible
+      // pool, otherwise filter would hide it after we open it.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveGroup(concept.group);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpenId(id);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFlashId(id);
+      reveal(id);
+      // Wait for the next frame so the open-state has rendered, then
+      // scroll. Otherwise we'd scroll to the card BEFORE the body
+      // expanded, leaving the student staring at a half-scrolled page.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`concept-card-${id}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      // Clear the flash highlight after 1.6s so the card returns to
+      // its normal styling.
+      setTimeout(() => setFlashId(null), 1600);
+    }
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [reveal]);
+
+  // Copy a shareable URL for one concept to the clipboard. Uses the
+  // modern Clipboard API; falls back to a textarea hack on old
+  // browsers / non-secure contexts. Also rewrites the address bar via
+  // history.replaceState so what the student sees and what's on the
+  // clipboard match exactly.
+  const copyLink = useCallback(async (id: string) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}${window.location.pathname}#${HASH_PREFIX}${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } catch {}
+      document.body.removeChild(ta);
+    }
+    setLinkCopiedId(id);
+    try {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}#${HASH_PREFIX}${id}`
+      );
+    } catch {}
+    setTimeout(() => setLinkCopiedId(null), 1800);
   }, []);
 
   function bumpStatus(id: string) {
@@ -275,6 +425,22 @@ export default function CoreConcepts() {
         </p>
       )}
 
+      {/* Try-first preference — small inline toggle on the right side
+           so it's discoverable but not loud. Defaults OFF so first-time
+           students get the active-recall benefit; once a student
+           prefers reading, one tap dismisses it forever. */}
+      <div className="flex items-center justify-end mb-3 px-1">
+        <label className="inline-flex items-center gap-2 text-[11px] text-zinc-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            className="w-3.5 h-3.5 rounded accent-indigo-500"
+            checked={skipTryFirst}
+            onChange={toggleSkipTryFirst}
+          />
+          <span>Skip the &ldquo;try it first&rdquo; prompt — show answers directly</span>
+        </label>
+      </div>
+
       {/* Empty state */}
       {visibleConcepts.length === 0 ? (
         <div
@@ -300,8 +466,13 @@ export default function CoreConcepts() {
               concept={c}
               status={statuses[c.id] ?? "not-yet"}
               isOpen={openId === c.id}
+              isRevealed={revealed.has(c.id) || skipTryFirst}
+              isFlashing={flashId === c.id}
+              isLinkCopied={linkCopiedId === c.id}
               onToggle={() => setOpenId((cur) => (cur === c.id ? null : c.id))}
               onBumpStatus={() => bumpStatus(c.id)}
+              onReveal={() => reveal(c.id)}
+              onCopyLink={() => copyLink(c.id)}
             />
           ))}
         </div>
@@ -361,20 +532,48 @@ function ConceptAccordion({
   concept,
   status,
   isOpen,
+  isRevealed,
+  isFlashing,
+  isLinkCopied,
   onToggle,
   onBumpStatus,
+  onReveal,
+  onCopyLink,
 }: {
   concept: TConceptCard;
   status: Status;
   isOpen: boolean;
+  /** True when the model answer should render directly (revealed in
+   *  this session OR global skip-try-first preference is on). */
+  isRevealed: boolean;
+  /** Briefly true after a deep-link navigation lands on this card. */
+  isFlashing: boolean;
+  /** True for ~1.8s after the copy-link button was tapped on this
+   *  card; flips the icon to a checkmark to confirm. */
+  isLinkCopied: boolean;
   onToggle: () => void;
   onBumpStatus: () => void;
+  /** Marks the concept as revealed in-session — model answer renders
+   *  in place of the try-first gate. */
+  onReveal: () => void;
+  /** Copy a shareable URL of this concept to the clipboard. */
+  onCopyLink: () => void;
 }) {
   const groupMeta = CONCEPT_GROUPS[concept.group];
   const statusMeta = STATUS_LABELS[status];
 
   return (
-    <div className="card-glass rounded-2xl overflow-hidden">
+    <div
+      id={`concept-card-${concept.id}`}
+      className="card-glass rounded-2xl overflow-hidden transition-all duration-500"
+      style={
+        isFlashing
+          ? {
+              boxShadow: `0 0 0 2px ${groupMeta.accent}80, 0 12px 40px ${groupMeta.accent}30`,
+            }
+          : undefined
+      }
+    >
       {/* Header — clickable to expand */}
       <div className="w-full flex items-stretch">
         <button
@@ -423,6 +622,21 @@ function ConceptAccordion({
             ▼
           </span>
         </button>
+        {/* Copy-link button — share the concept's deep-link with a
+             classmate. Renders a checkmark for ~1.8s after copy so
+             the student knows the action took effect. */}
+        <button
+          onClick={onCopyLink}
+          className="shrink-0 px-2.5 sm:px-3 text-[14px] transition-colors hover:bg-white/[0.04] flex items-center justify-center"
+          style={{
+            color: isLinkCopied ? "#34D399" : "#A1A1AA",
+            borderLeft: "1px solid rgba(255,255,255,0.05)",
+          }}
+          aria-label={isLinkCopied ? "Link copied" : `Copy link to ${concept.title}`}
+          title={isLinkCopied ? "Link copied!" : "Copy link to share"}
+        >
+          {isLinkCopied ? "✓" : "🔗"}
+        </button>
         {/* Status chip — separate button so toggling status doesn't
              expand the card. */}
         <button
@@ -440,7 +654,10 @@ function ConceptAccordion({
       </div>
 
       {/* Body — only mounted when open, so the SVG diagrams don't
-           load for collapsed cards. */}
+           load for collapsed cards. When the card hasn't been
+           revealed yet, we show a try-first gate instead of the
+           model answer; the student attempts the answer in their
+           head/on paper before peeking. Active recall > re-reading. */}
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
@@ -455,18 +672,79 @@ function ConceptAccordion({
               className="px-4 sm:px-5 py-5"
               style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
             >
-              <div className="grid lg:grid-cols-[1fr_320px] gap-5">
-                {/* LEFT — student's model answer */}
-                <div className="min-w-0">
-                  <ModelAnswer concept={concept} />
+              {isRevealed ? (
+                <div className="grid lg:grid-cols-[1fr_320px] gap-5">
+                  {/* LEFT — student's model answer */}
+                  <div className="min-w-0">
+                    <ModelAnswer concept={concept} />
+                  </div>
+                  {/* RIGHT — examiner's notes */}
+                  <ExaminerNotes concept={concept} />
                 </div>
-                {/* RIGHT — examiner's notes */}
-                <ExaminerNotes concept={concept} />
-              </div>
+              ) : (
+                <TryFirstGate
+                  concept={concept}
+                  groupAccent={groupMeta.accent}
+                  onReveal={onReveal}
+                />
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Try-first gate ───────────────────────────────────────────────
+// Shown when a concept opens for the first time in this session and
+// the student hasn't globally opted out. Frames the concept as a
+// question, gives them a moment to think, and only reveals the model
+// answer when they tap. The active-recall bump from this is the
+// biggest single learning multiplier on this page.
+function TryFirstGate({
+  concept,
+  groupAccent,
+  onReveal,
+}: {
+  concept: TConceptCard;
+  groupAccent: string;
+  onReveal: () => void;
+}) {
+  const prompt = tryFirstPrompt(concept.title);
+  return (
+    <div
+      className="rounded-xl p-5 sm:p-6 text-center"
+      style={{
+        background: `linear-gradient(180deg, ${groupAccent}0F, transparent)`,
+        border: `1px solid ${groupAccent}33`,
+      }}
+    >
+      <div
+        className="inline-block text-[10px] font-bold uppercase tracking-widest mb-3"
+        style={{ color: groupAccent }}
+      >
+        ✏️ Try it first
+      </div>
+      <p className="text-[15px] sm:text-base text-white font-semibold leading-relaxed max-w-xl mx-auto">
+        &ldquo;{prompt}&rdquo;
+      </p>
+      <p className="text-[12px] text-zinc-400 mt-3 max-w-md mx-auto leading-relaxed">
+        Take 30 seconds. Sketch your D·E·E·D in your head or on paper.
+        Reading after attempting is far stickier than just reading.
+      </p>
+      <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
+        <button
+          onClick={onReveal}
+          className="text-[13px] font-bold px-4 py-2 rounded-full text-white transition-transform hover:scale-105"
+          style={{
+            background: `linear-gradient(135deg, ${groupAccent}, ${groupAccent}CC)`,
+            boxShadow: `0 4px 16px ${groupAccent}55`,
+          }}
+        >
+          Show the model answer →
+        </button>
+      </div>
     </div>
   );
 }
