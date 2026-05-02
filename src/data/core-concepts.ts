@@ -206,7 +206,7 @@ export const CORE_CONCEPTS: ConceptCard[] = [
     tags: ["memory", "ram", "rom", "hard disk", "storage", "primary", "secondary"],
     relatedModules: [1],
     define:
-      "<strong>Primary memory</strong> (RAM, ROM) is the fast working memory the CPU uses while the computer is running. <strong>Secondary memory</strong> (hard disk, SSD, USB) is slower long-term storage that keeps your data when the computer is off.",
+      "<strong>Primary memory</strong> (RAM, ROM) is the fast memory the computer uses <em>while it's switched on</em>. <strong>Secondary memory</strong> (hard disk, SSD, USB) is slower long-term storage that keeps your data <em>even when the computer is off</em>.",
     explain:
       "Primary memory is <em>fast but small and temporary</em> — when you turn off the computer, RAM forgets everything. Secondary memory is <em>slower but bigger and permanent</em> — your photos, music, and files survive a restart. The CPU pulls programs from secondary into primary so it can actually use them.",
     examples: [
@@ -1206,7 +1206,7 @@ export const CORE_CONCEPTS: ConceptCard[] = [
     tags: ["html", "bold", "italic", "underline", "b", "i", "u"],
     relatedModules: [4],
     define:
-      "HTML provides three simple tags for text emphasis: <code>&lt;b&gt;</code> for <strong>bold</strong>, <code>&lt;i&gt;</code> for <em>italic</em>, and <code>&lt;u&gt;</code> for <u>underline</u>. (Modern HTML also has <code>&lt;strong&gt;</code> and <code>&lt;em&gt;</code> with the same look but stronger semantic meaning.)",
+      "HTML has three simple tags for text emphasis: <code>&lt;b&gt;</code> for <strong>bold</strong>, <code>&lt;i&gt;</code> for <em>italic</em>, and <code>&lt;u&gt;</code> for <u>underline</u>. Wrap your text in the tag, and the browser shows it in that style.",
     explain:
       "Each tag wraps the text you want to format: open the tag, put your text, then close it. You can combine them — bold AND italic = nest one inside the other. Use these only for emphasis on individual words; for whole-page styling, CSS is better.",
     examples: [
@@ -1471,9 +1471,9 @@ export const CORE_CONCEPTS: ConceptCard[] = [
     tags: ["blockchain", "bitcoin", "crypto", "ledger"],
     relatedModules: [5],
     define:
-      "<strong>Blockchain</strong> is a digital record-keeping system where information is stored in a chain of <em>linked blocks</em> — each block contains data plus a fingerprint of the previous block. Once written, a block cannot be changed without breaking the whole chain.",
+      "<strong>Blockchain</strong> is a digital record book where information is stored in a chain of <em>linked blocks</em>. Each block has a unique fingerprint of the block before it, so changing one old block would break every block after it.",
     explain:
-      "Instead of one central authority (like a bank) keeping the records, copies of the chain live on thousands of computers around the world. To add a new block, the network must agree it's valid; to fake an old block, an attacker would have to change every later block on every copy — practically impossible. That's why blockchain is called <em>tamper-resistant</em>.",
+      "Unlike a bank that keeps one master copy, a blockchain has copies spread across thousands of computers around the world. To add a new block, most computers have to agree it's valid. To fake an old block, an attacker would need to change it on every copy at the same time — which is practically impossible. That's why blockchain records are very hard to tamper with.",
     examples: [
       "<strong>Bitcoin</strong> — the first popular blockchain, used to transfer money without a bank",
       "<strong>Ethereum smart contracts</strong> — small programs that run on a blockchain",
@@ -1510,7 +1510,7 @@ export const CORE_CONCEPTS: ConceptCard[] = [
       "Three blocks in a chain, each linked to the previous via a hash — change one and the whole chain breaks.",
     keyPhrases: [
       "chain of linked blocks",
-      "tamper-resistant",
+      "very hard to change once written",
       "no central authority",
       "shared across many computers",
     ],
@@ -1585,7 +1585,7 @@ export const CORE_CONCEPTS: ConceptCard[] = [
     tags: ["gpt", "chatgpt", "ai", "ethics", "plagiarism"],
     relatedModules: [5],
     define:
-      "<strong>GPTs</strong> (Generative Pre-trained Transformers) are AI tools — like ChatGPT, Gemini, or Claude — that generate <em>new</em> text, images, or code based on a prompt. <strong>Ethical use</strong> means using them honestly: as a study aid, not as a way to fake your own work.",
+      "<strong>GPTs</strong> are AI chat tools — like ChatGPT, Gemini, or Claude — that <em>create new</em> text, images, or code based on a prompt you type. <strong>Ethical use</strong> means using them honestly: as a study helper, not to fake your own work.",
     explain:
       "GPTs are powerful: they can explain a topic, draft an essay, debug code, or summarise a chapter. The risks come when students paste an AI answer into their assignment without learning anything, or trust a confidently wrong answer (AI sometimes makes up facts — \"hallucinates\"). The ethical rule: use AI to <em>understand</em>, then write your own work; always check important facts; cite the AI if you used it directly.",
     examples: [

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import WorkedExample from "@/components/exam-prep/WorkedExample";
-import PracticeQuestions from "@/components/exam-prep/PracticeQuestions";
 import CoreConcepts from "@/components/exam-prep/CoreConcepts";
 
 // /exam-prep — How-to-attempt-exam-questions guide.
@@ -202,7 +201,29 @@ export default function ExamPrepPage() {
               <span>·</span>
               <span><strong className="text-white">4-step</strong> recipe</span>
               <span>·</span>
-              <span><strong className="text-white">10</strong> worked examples</span>
+              <span><strong className="text-white">28 concepts</strong> to master</span>
+            </div>
+
+            {/* Start-here strip — gives a nervous student a clear path
+                 through the page in two lines. Sits inside the hero
+                 so it never feels like a separate task. */}
+            <div
+              className="mt-8 inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-4 px-4 py-3 rounded-2xl text-[12.5px]"
+              style={{
+                background: "rgba(99,102,241,0.06)",
+                border: "1px solid rgba(99,102,241,0.20)",
+              }}
+            >
+              <span className="font-bold text-indigo-300 uppercase tracking-wider text-[10px]">
+                Start here
+              </span>
+              <span className="text-zinc-300">
+                <strong className="text-white">1.</strong> Learn the recipe
+                <span className="mx-2 text-zinc-600">→</span>
+                <strong className="text-white">2.</strong> Read the worked example
+                <span className="mx-2 text-zinc-600">→</span>
+                <strong className="text-white">3.</strong> Practice the 28 core concepts
+              </span>
             </div>
           </motion.div>
 
@@ -336,10 +357,7 @@ export default function ExamPrepPage() {
             </div>
           </section>
 
-          {/* ─── Practice questions accordion ─── */}
-          <PracticeQuestions />
-
-          {/* ─── Core concepts bank ─── */}
+          {/* ─── Core concepts bank — main study material ─── */}
           <CoreConcepts />
 
           {/* ─── Common mistakes ─── */}
