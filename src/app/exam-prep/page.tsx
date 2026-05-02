@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import WorkedExample from "@/components/exam-prep/WorkedExample";
 import PracticeQuestions from "@/components/exam-prep/PracticeQuestions";
+import CoreConcepts from "@/components/exam-prep/CoreConcepts";
 
 // /exam-prep — How-to-attempt-exam-questions guide.
 //
@@ -337,6 +338,9 @@ export default function ExamPrepPage() {
 
           {/* ─── Practice questions accordion ─── */}
           <PracticeQuestions />
+
+          {/* ─── Core concepts bank ─── */}
+          <CoreConcepts />
 
           {/* ─── Common mistakes ─── */}
           <section className="mb-14">
