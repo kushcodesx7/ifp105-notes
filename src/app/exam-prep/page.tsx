@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import WorkedExample from "@/components/exam-prep/WorkedExample";
-import PracticeQuestions from "@/components/exam-prep/PracticeQuestions";
 import CoreConcepts from "@/components/exam-prep/CoreConcepts";
 
 // /exam-prep — How-to-attempt-exam-questions guide.
@@ -360,22 +359,6 @@ export default function ExamPrepPage() {
 
           {/* ─── Core concepts bank — main study material ─── */}
           <CoreConcepts />
-
-          {/* Visual divider so students don't read the next section as
-               a continuation of CoreConcepts. PracticeQuestions covers
-               specific past-style questions; CoreConcepts is the
-               concept-by-concept syllabus bank. */}
-          <div
-            className="my-12 flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-zinc-500"
-            aria-hidden
-          >
-            <span className="flex-1 h-px bg-white/[0.06]" />
-            <span>More practice — model answers to past-style questions</span>
-            <span className="flex-1 h-px bg-white/[0.06]" />
-          </div>
-
-          {/* ─── Practice questions accordion ─── */}
-          <PracticeQuestions />
 
           {/* ─── Common mistakes ─── */}
           <section className="mb-14">
