@@ -189,12 +189,12 @@ export default function ExamPrepPage() {
               📝 Exam Technique
             </div>
             <h1 className="text-3xl sm:text-5xl font-bold tracking-tight mb-4">
-              Score full marks on every long-answer question
+              Structure your long-answer questions
             </h1>
             <p className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              One simple recipe. Same structure every time. Use it for 4, 6,
-              and 10-mark answers — the examiner is looking for the same four
-              things.
+              One simple recipe — <strong className="text-zinc-200">D · E · E · D</strong>.
+              The same four steps for 4, 6, and 10-mark answers, so you always
+              know how to begin.
             </p>
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-zinc-500">
               <span><strong className="text-white">1 minute</strong> per mark</span>

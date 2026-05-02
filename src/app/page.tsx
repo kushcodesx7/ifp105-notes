@@ -872,10 +872,10 @@ export default function Home() {
                   New · Exam Technique
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
-                  Score full marks on every long-answer question
+                  Structure your long-answer questions
                 </h3>
                 <p className="text-[13px] sm:text-sm text-zinc-400 leading-relaxed">
-                  One simple recipe (<strong className="text-zinc-200">D · E · E · D</strong>) for 4, 6, and 10-mark answers. Includes a worked example with examiner&apos;s notes + 10 sample questions covering Modules 1, 3, and 5.
+                  Learn the <strong className="text-zinc-200">D · E · E · D</strong> method — Define, Explain, Examples, Diagram. Includes a worked example with examiner&apos;s notes plus 28 core ICT concepts you can practise on.
                 </p>
               </div>
               <span className="shrink-0 self-center text-indigo-300 text-sm font-semibold">
