@@ -202,7 +202,29 @@ export default function ExamPrepPage() {
               <span>·</span>
               <span><strong className="text-white">4-step</strong> recipe</span>
               <span>·</span>
-              <span><strong className="text-white">10</strong> worked examples</span>
+              <span><strong className="text-white">28 concepts</strong> to master</span>
+            </div>
+
+            {/* Start-here strip — gives a nervous student a clear path
+                 through the page in two lines. Sits inside the hero
+                 so it never feels like a separate task. */}
+            <div
+              className="mt-8 inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-4 px-4 py-3 rounded-2xl text-[12.5px]"
+              style={{
+                background: "rgba(99,102,241,0.06)",
+                border: "1px solid rgba(99,102,241,0.20)",
+              }}
+            >
+              <span className="font-bold text-indigo-300 uppercase tracking-wider text-[10px]">
+                Start here
+              </span>
+              <span className="text-zinc-300">
+                <strong className="text-white">1.</strong> Learn the recipe
+                <span className="mx-2 text-zinc-600">→</span>
+                <strong className="text-white">2.</strong> Read the worked example
+                <span className="mx-2 text-zinc-600">→</span>
+                <strong className="text-white">3.</strong> Practice the 28 core concepts
+              </span>
             </div>
           </motion.div>
 
@@ -336,11 +358,24 @@ export default function ExamPrepPage() {
             </div>
           </section>
 
+          {/* ─── Core concepts bank — main study material ─── */}
+          <CoreConcepts />
+
+          {/* Visual divider so students don't read the next section as
+               a continuation of CoreConcepts. PracticeQuestions covers
+               specific past-style questions; CoreConcepts is the
+               concept-by-concept syllabus bank. */}
+          <div
+            className="my-12 flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-zinc-500"
+            aria-hidden
+          >
+            <span className="flex-1 h-px bg-white/[0.06]" />
+            <span>More practice — model answers to past-style questions</span>
+            <span className="flex-1 h-px bg-white/[0.06]" />
+          </div>
+
           {/* ─── Practice questions accordion ─── */}
           <PracticeQuestions />
-
-          {/* ─── Core concepts bank ─── */}
-          <CoreConcepts />
 
           {/* ─── Common mistakes ─── */}
           <section className="mb-14">
