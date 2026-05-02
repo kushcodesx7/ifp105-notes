@@ -103,6 +103,73 @@ export const CORE_CONCEPTS: ConceptCard[] = [
   // 💻 COMPUTER BASICS
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {
+    id: "why-computers-were-invented",
+    group: "computer-basics",
+    title: "Why Were Computers Invented? (S·A·S·C)",
+    tags: [
+      "history",
+      "speed",
+      "accuracy",
+      "storage",
+      "connectivity",
+      "reasons",
+      "sasc",
+    ],
+    relatedModules: [1],
+    define:
+      "Computers were invented to solve <strong>four big human problems</strong>: we are <em>slow</em>, we make <em>mistakes</em>, we cannot <em>remember</em> everything, and we cannot easily <em>share</em> information across distance. These four needs are remembered as <strong>S·A·S·C — Speed, Accuracy, Storage, Connectivity</strong>.",
+    explain:
+      "Humans get tired and make errors; computers don't. Marking 1,000 exam papers by hand takes weeks; a computer does it in seconds. Filing rooms full of paper can burn down or get lost; one USB stick holds an entire library. A letter to another country used to take two weeks; a video call now connects you instantly. Every modern device — phones, ATMs, hospital scanners, cars — exists because one of these four problems still needs solving.",
+    examples: [
+      "<strong>Speed</strong> — calculating bank interest for 1 million customers by hand vs in 2 seconds on a computer",
+      "<strong>Accuracy</strong> — your phone's calculator never makes a typo on a maths question",
+      "<strong>Storage</strong> — your whole music library, photos, and notes fit on one phone instead of filling a room",
+      "<strong>Connectivity</strong> — WhatsApp lets you message a friend in Tashkent and a cousin in London at the same time, instantly",
+    ],
+    diagramSvg: `<svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="40" width="160" height="120" rx="12" fill="rgba(251,191,36,0.12)" stroke="#FBBF24" stroke-width="1.6"/>
+      <text x="100" y="68" text-anchor="middle" font-size="22">⚡</text>
+      <text x="100" y="96" text-anchor="middle" fill="#FCD34D" font-size="13" font-weight="700" font-family="system-ui">SPEED</text>
+      <text x="100" y="118" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">milliseconds vs</text>
+      <text x="100" y="134" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">weeks by hand</text>
+      <rect x="195" y="40" width="160" height="120" rx="12" fill="rgba(96,165,250,0.12)" stroke="#60A5FA" stroke-width="1.6"/>
+      <text x="275" y="68" text-anchor="middle" font-size="22">🎯</text>
+      <text x="275" y="96" text-anchor="middle" fill="#93C5FD" font-size="13" font-weight="700" font-family="system-ui">ACCURACY</text>
+      <text x="275" y="118" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">zero errors when</text>
+      <text x="275" y="134" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">programmed right</text>
+      <rect x="370" y="40" width="160" height="120" rx="12" fill="rgba(167,139,250,0.12)" stroke="#A78BFA" stroke-width="1.6"/>
+      <text x="450" y="68" text-anchor="middle" font-size="22">🗃️</text>
+      <text x="450" y="96" text-anchor="middle" fill="#C4B5FD" font-size="13" font-weight="700" font-family="system-ui">STORAGE</text>
+      <text x="450" y="118" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">a library on a</text>
+      <text x="450" y="134" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">thumb drive</text>
+      <rect x="545" y="40" width="160" height="120" rx="12" fill="rgba(52,211,153,0.12)" stroke="#34D399" stroke-width="1.6"/>
+      <text x="625" y="68" text-anchor="middle" font-size="22">🌐</text>
+      <text x="625" y="96" text-anchor="middle" fill="#6EE7B7" font-size="13" font-weight="700" font-family="system-ui">CONNECTIVITY</text>
+      <text x="625" y="118" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">global reach in</text>
+      <text x="625" y="134" text-anchor="middle" fill="#A1A1AA" font-size="10" font-family="system-ui">a single tap</text>
+      <text x="360" y="184" text-anchor="middle" fill="#FCD34D" font-size="12" font-weight="700" font-family="system-ui">Memory trick — S·A·S·C: "Some Amazing Students Compute"</text>
+    </svg>`,
+    diagramCaption:
+      "Four boxes side by side, one per reason, with the SASC mnemonic underneath.",
+    keyPhrases: [
+      "Speed · Accuracy · Storage · Connectivity",
+      "solve four human limitations",
+      "faster, error-free, more storage, instant sharing",
+      "S·A·S·C mnemonic",
+    ],
+    earnsMarks: [
+      "All FOUR reasons named — partial answers (only 2–3) lose marks",
+      "One real-life example per reason, not just the names",
+      "Mentioning that humans are slow / tired / forgetful — gives the contrast",
+    ],
+    losesMarks: [
+      "Naming only Speed and stopping",
+      "Confusing Storage with Memory (Memory is RAM/ROM; Storage = hard disk, USB)",
+      "Generic examples (\"used in offices\") — be specific",
+    ],
+    tip: "Memorise the mnemonic <strong>S·A·S·C</strong> — \"Some Amazing Students Compute\". Four words, four reasons, one example each = full marks every time.",
+  },
+  {
     id: "hardware",
     group: "computer-basics",
     title: "Hardware",
