@@ -177,8 +177,8 @@ export default function CoreConcepts() {
         <p className="text-sm text-zinc-400 mt-2 max-w-2xl leading-relaxed">
           These are the fundamental ICT concepts in your IFP105 syllabus. Practice
           the <strong className="text-indigo-300">D·E·E·D method</strong> on each
-          one — if you can write all of them clearly, you&rsquo;ll handle any ICT
-          question with confidence in exams, assignments, and real life.
+          one — write all of them clearly and you can handle any ICT question
+          with confidence in exams, assignments, and real life.
         </p>
       </div>
 
@@ -620,7 +620,7 @@ function ExaminerNotes({ concept }: { concept: TConceptCard }) {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">
-            📋 Examiner&rsquo;s Notes
+            📋 Examiner Notes
           </span>
         </div>
         <p className="text-[11px] text-zinc-500 leading-relaxed">
