@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   AnimatePresence,
@@ -169,6 +169,125 @@ export default function LiveBlockEditor({
 }: LiveBlockEditorProps) {
   const stableKeys = useBlockIds(value);
 
+  // ── Undo / redo stack ────────────────────────────────────
+  // Stores the LAST N snapshots of `value` so the admin can ⌘Z out of
+  // a typo, accidental delete, or a misplaced drag. Capped to keep
+  // memory bounded — block content can be a few KB per snapshot, so
+  // 50 entries is ~500KB worst case, comfortable.
+  //
+  // Behaviour:
+  //   · Every wrapped onChange (`commitChange` below) pushes the
+  //     PREVIOUS value to the past stack, then clears the redo stack
+  //     (because forward history is invalidated by a new edit).
+  //   · ⌘Z / Ctrl+Z pops the past stack, applies that snapshot, and
+  //     pushes the current snapshot onto the redo stack.
+  //   · ⌘⇧Z (or Ctrl+Y) does the reverse.
+  //   · A `suppressNext` flag prevents the undo/redo's own onChange
+  //     call from being recorded as a NEW edit — that would create
+  //     an infinite history loop and break redo entirely.
+  const past = useRef<ContentBlock[][]>([]);
+  const future = useRef<ContentBlock[][]>([]);
+  const suppressNext = useRef(false);
+  const lastValueRef = useRef<ContentBlock[]>(value);
+  const HISTORY_LIMIT = 50;
+  // Force re-render when undo/redo changes button-enabled state. Local
+  // state suffices — refs above hold the actual stacks.
+  const [, forceRender] = useState(0);
+
+  // Sync `lastValueRef` so the snapshot we push on the NEXT edit is
+  // the value as it was BEFORE the edit. If we push `value` at edit
+  // time, we'd be storing the post-edit state, which is wrong.
+  useEffect(() => {
+    if (suppressNext.current) {
+      // Edit came from undo/redo itself — don't disturb the stacks.
+      suppressNext.current = false;
+    }
+    lastValueRef.current = value;
+  }, [value]);
+
+  /**
+   * Wraps onChange to record a history snapshot before applying the
+   * change. Use this in place of `onChange(...)` for every mutation
+   * except the undo/redo paths themselves.
+   */
+  const commitChange = useCallback(
+    (next: ContentBlock[]) => {
+      // Skip dedupe-identical edits (typing-time autosave can
+      // produce many onChange calls with the same shape if React
+      // batches differently across renders).
+      const prev = lastValueRef.current;
+      try {
+        if (JSON.stringify(prev) === JSON.stringify(next)) {
+          onChange(next);
+          return;
+        }
+      } catch {
+        // Fallthrough — JSON.stringify can throw on circular refs;
+        // we'd rather record a redundant snapshot than swallow the
+        // edit.
+      }
+      past.current.push(structuredClone(prev));
+      if (past.current.length > HISTORY_LIMIT) past.current.shift();
+      // A fresh edit invalidates the redo stack — you can't redo into
+      // a future you've now diverged from.
+      future.current = [];
+      forceRender((n) => n + 1);
+      onChange(next);
+    },
+    [onChange]
+  );
+
+  const undo = useCallback(() => {
+    const prev = past.current.pop();
+    if (!prev) return;
+    future.current.push(structuredClone(lastValueRef.current));
+    if (future.current.length > HISTORY_LIMIT) future.current.shift();
+    suppressNext.current = true;
+    forceRender((n) => n + 1);
+    onChange(prev);
+  }, [onChange]);
+
+  const redo = useCallback(() => {
+    const next = future.current.pop();
+    if (!next) return;
+    past.current.push(structuredClone(lastValueRef.current));
+    if (past.current.length > HISTORY_LIMIT) past.current.shift();
+    suppressNext.current = true;
+    forceRender((n) => n + 1);
+    onChange(next);
+  }, [onChange]);
+
+  // Keyboard shortcuts: ⌘Z (undo), ⌘⇧Z or Ctrl+Y (redo). Captured at
+  // the document level so the admin can hit them from anywhere on the
+  // page — including while a contentEditable surface has focus, since
+  // contentEditable's native undo is unreliable across blur/save
+  // cycles. We preventDefault to override the browser's own undo
+  // behaviour, otherwise the browser would try to undo character-level
+  // edits inside the contenteditable while we'd undo block-level
+  // edits — confusing race.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      const key = e.key.toLowerCase();
+      // ⌘Z (no shift) → undo
+      if (key === "z" && !e.shiftKey) {
+        if (past.current.length === 0) return;
+        e.preventDefault();
+        undo();
+        return;
+      }
+      // ⌘⇧Z or Ctrl+Y → redo
+      if ((key === "z" && e.shiftKey) || key === "y") {
+        if (future.current.length === 0) return;
+        e.preventDefault();
+        redo();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
+
   // Slash-menu state.
   const [slashAnchor, setSlashAnchor] = useState<DOMRect | null>(null);
   const [slashSourceIndex, setSlashSourceIndex] = useState<number | null>(
@@ -182,23 +301,23 @@ export default function LiveBlockEditor({
   function update(i: number, patch: ContentBlock) {
     const copy = [...value];
     copy[i] = patch;
-    onChange(copy);
+    commitChange(copy);
   }
   function remove(i: number) {
-    onChange(value.filter((_, idx) => idx !== i));
+    commitChange(value.filter((_, idx) => idx !== i));
   }
   function duplicate(i: number) {
     const next = [...value];
     next.splice(i + 1, 0, structuredClone(value[i]));
-    onChange(next);
+    commitChange(next);
   }
   function insertAfter(i: number, type: BlockType) {
     const next = [...value];
     next.splice(i + 1, 0, makeEmpty(type));
-    onChange(next);
+    commitChange(next);
   }
   function appendNew(type: BlockType) {
-    onChange([...value, makeEmpty(type)]);
+    commitChange([...value, makeEmpty(type)]);
   }
 
   // Drag-reorder. Framer Motion's Reorder works best with values that
@@ -214,7 +333,7 @@ export default function LiveBlockEditor({
       const b = idToBlock.get(id);
       if (b) nextBlocks.push(b);
     }
-    if (nextBlocks.length === value.length) onChange(nextBlocks);
+    if (nextBlocks.length === value.length) commitChange(nextBlocks);
   }
 
   const onSlash = useCallback(

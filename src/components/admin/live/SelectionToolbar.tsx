@@ -135,10 +135,23 @@ export default function SelectionToolbar() {
     document.addEventListener("selectionchange", update);
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
+    // visualViewport reports the area NOT covered by the on-screen
+    // keyboard on iOS (and Android). Without listening to its
+    // resize/scroll, the toolbar can end up under the keyboard when
+    // the admin starts typing on mobile. Best-effort — older browsers
+    // don't expose visualViewport.
+    const vv =
+      typeof window !== "undefined" && "visualViewport" in window
+        ? window.visualViewport
+        : null;
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
     return () => {
       document.removeEventListener("selectionchange", update);
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
     };
   }, []);
 
@@ -295,11 +308,21 @@ function ToolbarBtn({
     <button
       type="button"
       onMouseDown={(e) => e.preventDefault()}
+      // touchstart preventDefault prevents iOS from collapsing the
+      // selection when the admin taps a toolbar button on mobile.
+      // Without this the touch sequence runs blur → selection loss
+      // before the click handler fires.
+      onTouchStart={(e) => e.preventDefault()}
       onClick={onClick}
       title={label}
       aria-label={label}
       aria-pressed={active}
-      className={`min-w-[28px] h-7 px-2 text-[12px] rounded-full transition-colors ${
+      // 2026-05-02 mobile audit: bumped the tap target from 28×28 to
+      // 36×36 (with px-2.5 horizontal padding for labels). 44px is the
+      // iOS HIG ideal but the toolbar is constrained — 36px is the
+      // pragmatic compromise that keeps the floating pill compact and
+      // gives mobile thumbs a reachable target.
+      className={`min-w-[36px] h-9 px-2.5 text-[13px] rounded-full transition-colors ${
         active ? "text-white" : "text-zinc-200 hover:text-white"
       } ${className ?? ""}`}
       style={{
