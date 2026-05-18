@@ -29,11 +29,8 @@ const OFFLINE_HTML = `<!doctype html>
 <body>
 <main>
   <section class="card" role="alert" aria-live="polite">
-    <div class="badge">Exam in progress</div>
-    <h1>The site is temporarily offline</h1>
-    <p>IFP105 Notes is paused during your exam window. Please close this tab and focus on your paper — good luck.</p>
-    <p>It will come back online automatically once the exam window ends.</p>
-    <div class="foot">If you reached this page by accident, try again later.</div>
+    <h1>Site is offline</h1>
+    <p>All the best for your exam.</p>
   </section>
 </main>
 </body>
