@@ -2,9 +2,10 @@
 
 import { motion } from "framer-motion";
 
-// WorkedExample — a single 6-mark question fully answered using the
-// D-E-E-D framework, with study notes in the right margin explaining
-// why each part of the answer works.
+// WorkedExample — a practice question fully answered using the D-E-E-D
+// framework, with study notes in the right margin explaining why each
+// part of the answer works. No marks framing — this is revision
+// material, not a graded paper.
 //
 // Why this is a useful block on /exam-prep:
 //   Students who feel shaky on a topic often know the content but
@@ -26,8 +27,6 @@ interface AnswerSection {
   body: React.ReactNode;
   /** Study note explaining why this part of the answer works. */
   comment: string;
-  /** Approximate marks allocated to this section. Used to colour the chip. */
-  marks: number;
   /** Tone of the study note — green for a strong part, amber for
    *  "could be tighter", red for a common slip to watch for. */
   tone?: "good" | "ok" | "warn";
@@ -50,7 +49,6 @@ const SECTIONS: AnswerSection[] = [
       </>
     ),
     comment: "Both terms are defined cleanly in the student's own words. Two distinct ideas, no copy-paste from the question.",
-    marks: 2,
     tone: "good",
   },
   {
@@ -64,7 +62,6 @@ const SECTIONS: AnswerSection[] = [
       </p>
     ),
     comment: "Good link between the two terms. The reader can see the student understands HOW they relate, not just what they are.",
-    marks: 2,
     tone: "good",
   },
   {
@@ -84,7 +81,6 @@ const SECTIONS: AnswerSection[] = [
       </>
     ),
     comment: "Two for each — exactly what the question asked. Concrete, well-known apps anyone can recognise.",
-    marks: 1.5,
     tone: "good",
   },
   {
@@ -113,7 +109,6 @@ const SECTIONS: AnswerSection[] = [
       </div>
     ),
     comment: "Concentric circles show containment clearly. Every part is labelled. A simple sketch like this is enough — no artistic skill needed.",
-    marks: 0.5,
     tone: "good",
   },
 ];
@@ -125,14 +120,12 @@ const toneColor = {
 } as const;
 
 export default function WorkedExample() {
-  const totalMarks = SECTIONS.reduce((s, x) => s + x.marks, 0);
-
   return (
     <section className="mb-14">
       <div className="text-center mb-6">
         <div className="text-xs font-bold tracking-widest uppercase text-zinc-500 mb-1">Worked Example</div>
         <h2 className="text-2xl sm:text-3xl font-bold">A worked example of a clear answer</h2>
-        <p className="text-sm text-zinc-400 mt-2">A 6-mark practice question, a sample student answer, and study notes in the margin to show why each part works.</p>
+        <p className="text-sm text-zinc-400 mt-2">A practice question, a sample student answer, and study notes in the margin to show why each part works.</p>
       </div>
 
       {/* The question card */}
@@ -148,9 +141,8 @@ export default function WorkedExample() {
             className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
             style={{ background: "rgba(99,102,241,0.18)", color: "#A5B4FC" }}
           >
-            6 MARKS
+            PRACTICE QUESTION
           </span>
-          <span className="text-[10px] text-zinc-500">~6 min</span>
         </div>
         <p className="text-base sm:text-lg text-zinc-100 font-medium leading-relaxed">
           &ldquo;Define <strong>AI</strong> and <strong>ML</strong>. Give 2
@@ -194,7 +186,7 @@ export default function WorkedExample() {
                       className="text-[10px] font-bold tracking-wide uppercase mb-1"
                       style={{ color: toneColor[s.tone || "good"].text }}
                     >
-                      ✓ ~{s.marks} {s.marks === 1 ? "mark" : "marks"} · study note
+                      ✓ Study note
                     </div>
                     <div className="text-zinc-300">{s.comment}</div>
                   </div>
@@ -228,7 +220,7 @@ export default function WorkedExample() {
                     className="text-[10px] font-bold tracking-wide uppercase mb-1"
                     style={{ color: toneColor[s.tone || "good"].text }}
                   >
-                    ✓ ~{s.marks} {s.marks === 1 ? "mark" : "marks"}
+                    ✓ Strong
                   </div>
                   <div className="text-zinc-300 leading-relaxed">{s.comment}</div>
                 </div>
@@ -243,7 +235,7 @@ export default function WorkedExample() {
           style={{ background: "rgba(52,211,153,0.06)", borderTop: "1px solid rgba(52,211,153,0.22)" }}
         >
           <div className="text-[12px] text-zinc-400">
-            Covers all 6 marks: <strong className="text-emerald-300">{totalMarks} / 6</strong>
+            All four sections of <strong className="text-emerald-300">D · E · E · D</strong> covered
           </div>
           <div className="text-[11px] text-emerald-300 font-semibold">
             ✓ Strong answer

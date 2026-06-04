@@ -221,7 +221,7 @@ export const CORE_CONCEPTS: ConceptCard[] = [
     losesMarks: [
       "Listing only screens and keyboards (too narrow)",
       "Calling Windows or MS Word hardware (that's software!)",
-      "Skipping the diagram on a 6-mark question",
+      "Skipping the diagram when the question asks for one",
     ],
     tip: "Think of the four blocks: <strong>input → process → output</strong>, with storage underneath. If you draw that, you've already covered the diagram part.",
   },

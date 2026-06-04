@@ -19,7 +19,8 @@ import CoreConcepts from "@/components/exam-prep/CoreConcepts";
 //   E — Examples (2-3 real ones)
 //   D — Diagram (only if the question fits)
 //
-// Time rule: roughly 1 minute per mark when practising.
+// Framing rule: this is revision material, not exam prediction.
+// No mark allocations, no "this will be on the paper" — just structure.
 //
 // Page is "use client" because the practice-questions accordion is
 // interactive (expand on tap). Everything else is static so the
@@ -32,7 +33,6 @@ const recipe = [
     icon: "📖",
     color: "#818CF8",
     line: "The key term(s) in your own words. 1-2 lines is enough.",
-    weight: "~2 marks",
   },
   {
     letter: "E",
@@ -40,7 +40,6 @@ const recipe = [
     icon: "💡",
     color: "#60A5FA",
     line: "Why it matters or how it works. 2-3 sentences. Don't repeat the definition.",
-    weight: "~2 marks",
   },
   {
     letter: "E",
@@ -48,7 +47,6 @@ const recipe = [
     icon: "🎯",
     color: "#34D399",
     line: "2-3 real examples. Bullets are fine. Concrete > abstract.",
-    weight: "~1.5 marks",
   },
   {
     letter: "D",
@@ -56,16 +54,15 @@ const recipe = [
     icon: "📊",
     color: "#A78BFA",
     line: "Simple labelled visual. Only if the question fits.",
-    weight: "~0.5 marks",
   },
 ];
 
-const markGuide = [
-  { mark: "1", look: "1 line definition", strategy: "Just the definition. No examples. ~1 minute." },
-  { mark: "2", look: "Definition + 1 example", strategy: "1 line define + 1 example. Skip the diagram. ~2 minutes." },
-  { mark: "4", look: "D-E-E (drop the diagram)", strategy: "Define + Explain + 2 Examples. ~4 minutes." },
-  { mark: "6", look: "Full D-E-E-D recipe", strategy: "All four steps. Diagram covers the last point. ~6 minutes." },
-  { mark: "10", look: "D-E-E-D + extended", strategy: "Bigger explanation, 4-5 examples, 1-2 diagrams, short conclusion. ~10 minutes." },
+const depthGuide = [
+  { depth: "Short", look: "1 line definition", strategy: "Just the definition. No examples." },
+  { depth: "Brief", look: "Definition + 1 example", strategy: "1 line define + 1 example. Skip the diagram." },
+  { depth: "Medium", look: "D-E-E (drop the diagram)", strategy: "Define + Explain + 2 Examples." },
+  { depth: "Full", look: "Full D-E-E-D recipe", strategy: "All four steps. Diagram covers the last point." },
+  { depth: "Extended", look: "D-E-E-D + extended", strategy: "Bigger explanation, 4-5 examples, 1-2 diagrams, short conclusion." },
 ];
 
 const diagramTips = [
@@ -154,7 +151,7 @@ const mistakes = [
   { line: "Skipping the diagram on a 'with a diagram' question", cost: "A required part is missing" },
   { line: "Rambling — readers skim, clear structure helps", cost: "The point gets buried" },
   { line: "Repeating yourself instead of adding new info", cost: "Repeats add nothing new" },
-  { line: "Spending 15 mins on a 6-mark question", cost: "Eats time from other questions" },
+  { line: "Spending too long on a short question", cost: "Eats time from other questions" },
 ];
 
 export default function ExamPrepPage() {
@@ -198,11 +195,11 @@ export default function ExamPrepPage() {
               you can reuse on any long-answer question while revising.
             </p>
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-zinc-500">
-              <span><strong className="text-white">Roughly 1 min</strong> per mark</span>
-              <span>·</span>
               <span><strong className="text-white">4-step</strong> structure</span>
               <span>·</span>
               <span><strong className="text-white">28 concepts</strong> to revise</span>
+              <span>·</span>
+              <span><strong className="text-white">Worked example</strong> included</span>
             </div>
 
             {/* Start-here strip — gives a nervous student a clear path
@@ -260,12 +257,6 @@ export default function ExamPrepPage() {
                   </div>
                   <div className="text-base font-bold text-white mb-1">{r.word}</div>
                   <p className="text-[12px] text-zinc-400 leading-relaxed">{r.line}</p>
-                  <div
-                    className="mt-3 inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: `${r.color}18`, color: r.color }}
-                  >
-                    {r.weight}
-                  </div>
                 </motion.div>
               ))}
             </div>
@@ -273,42 +264,42 @@ export default function ExamPrepPage() {
               className="mt-4 rounded-xl p-3 text-[12px] text-zinc-300 text-center"
               style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.22)" }}
             >
-              ⏱ <strong>Time guide:</strong> roughly 1 minute per mark when practising. A 6-mark question fits in about 6 minutes — keep it focused.
+              ⏱ <strong>Tip:</strong> match the depth of your answer to the depth of the question. Short question → short answer.
             </div>
           </section>
 
-          {/* ─── Mark distribution ─── */}
+          {/* ─── Answer depth guide ─── */}
           <section className="mb-14">
             <div className="text-center mb-6">
-              <div className="text-xs font-bold tracking-widest uppercase text-zinc-500 mb-1">Question Sizes</div>
-              <h2 className="text-2xl sm:text-3xl font-bold">How to approach each mark size</h2>
-              <p className="text-sm text-zinc-400 mt-2">A 1-mark question doesn&apos;t need a diagram. A 10-mark one usually does.</p>
+              <div className="text-xs font-bold tracking-widest uppercase text-zinc-500 mb-1">Answer Depth</div>
+              <h2 className="text-2xl sm:text-3xl font-bold">How to scale your answer</h2>
+              <p className="text-sm text-zinc-400 mt-2">A short question doesn&apos;t need a diagram. A long one usually does.</p>
             </div>
             <div className="card-glass rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12))" }}>
-                      <th className="px-4 py-3 text-left font-semibold text-white tracking-wide">Marks</th>
+                      <th className="px-4 py-3 text-left font-semibold text-white tracking-wide">Depth</th>
                       <th className="px-4 py-3 text-left font-semibold text-white tracking-wide">Looks like</th>
                       <th className="px-4 py-3 text-left font-semibold text-white tracking-wide">Strategy</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {markGuide.map((m, i) => (
+                    {depthGuide.map((m, i) => (
                       <tr
-                        key={m.mark}
+                        key={m.depth}
                         className="hover:bg-white/[0.02] transition-colors"
                         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
                       >
                         <td className="px-4 py-3">
                           <span
-                            className="inline-block w-9 h-9 rounded-full text-center leading-9 font-bold text-white text-sm"
+                            className="inline-block px-3 py-1 rounded-full font-semibold text-white text-[11px] tracking-wide"
                             style={{
                               background: i === 4 ? "linear-gradient(135deg,#A78BFA,#7C3AED)" : `linear-gradient(135deg, rgba(99,102,241,${0.4 + i * 0.12}), rgba(139,92,246,${0.4 + i * 0.12}))`,
                             }}
                           >
-                            {m.mark}
+                            {m.depth}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-zinc-300 font-medium">{m.look}</td>
@@ -414,12 +405,11 @@ export default function ExamPrepPage() {
                   <div key={r.letter + r.word} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div className="text-xs font-bold mb-1" style={{ color: r.color }}>{r.letter}</div>
                     <div className="text-[13px] font-semibold text-white">{r.word}</div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">{r.weight}</div>
                   </div>
                 ))}
               </div>
               <div className="mt-5 text-center text-[12px] text-zinc-300">
-                ⏱ <strong>Roughly 1 minute per mark.</strong> Add a diagram for 6+ mark questions. Always label.
+                ⏱ <strong>Match depth to depth.</strong> Add a diagram for longer questions. Always label every part.
               </div>
             </div>
           </section>
