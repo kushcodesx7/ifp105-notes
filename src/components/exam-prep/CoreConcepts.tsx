@@ -118,10 +118,13 @@ function saveStatuses(map: StoredMap) {
 const ALL_GROUPS = Object.keys(CONCEPT_GROUPS) as ConceptGroup[];
 
 export default function CoreConcepts() {
-  // Active group tab. "all" shows every concept (used when search is
-  // active so cross-group matches all show up).
+  // Active group tab. Default to "all" so a student landing fresh sees
+  // every concept immediately — if the first thing they see is only one
+  // group's slice, they may scroll, miss what they wanted, and bounce.
+  // Switches automatically to "all" when a search is active (further
+  // down) so cross-group matches still show up.
   const [activeGroup, setActiveGroup] = useState<ConceptGroup | "all">(
-    "computer-basics"
+    "all"
   );
   const [search, setSearch] = useState("");
   const [statuses, setStatuses] = useState<StoredMap>({});
