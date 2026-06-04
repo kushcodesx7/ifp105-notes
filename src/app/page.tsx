@@ -830,6 +830,58 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── REVISION GUIDE CARD ─── */}
+      {/* Card linking to /exam-prep — a plain revision guide using the
+           D-E-E-D structure plus 28 core ICT concepts. Targeted at
+           students preparing or retaking the subject; no promises about
+           exam content. */}
+      <section className="relative px-6 pb-4">
+        <div className="max-w-5xl mx-auto">
+          <Link
+            href="/exam-prep"
+            className="block rounded-2xl p-5 sm:p-6 transition-all hover:scale-[1.005] active:scale-[0.995]"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(99,102,241,0.10), rgba(139,92,246,0.06))",
+              border: "1px solid rgba(99,102,241,0.30)",
+            }}
+          >
+            <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
+              <div
+                className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                style={{
+                  background: "rgba(99,102,241,0.18)",
+                  border: "1px solid rgba(99,102,241,0.30)",
+                }}
+                aria-hidden="true"
+              >
+                📝
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full mb-1.5"
+                  style={{
+                    background: "rgba(99,102,241,0.16)",
+                    color: "#A5B4FC",
+                  }}
+                >
+                  Revision Guide
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+                  Revise the core ICT concepts
+                </h3>
+                <p className="text-[13px] sm:text-sm text-zinc-400 leading-relaxed">
+                  A study guide for students preparing or retaking the subject. Uses the <strong className="text-zinc-200">D · E · E · D</strong> structure — Define, Explain, Examples, Diagram — across 28 core ICT concepts with worked examples and study notes.
+                </p>
+              </div>
+              <span className="shrink-0 self-center text-indigo-300 text-sm font-semibold">
+                Open guide →
+              </span>
+            </div>
+          </Link>
+        </div>
+      </section>
+
       {/* ─── FEATURES ─── */}
       <section className="relative py-20 px-6 border-t border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
